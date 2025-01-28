@@ -1,3 +1,5 @@
+import json
+
 import dash_bootstrap_components as dbc
 import dash
 from dash import html, dash_table, Input, Output, State, callback
@@ -129,12 +131,20 @@ def layout(**kwargs):
     Output("table", "data"),
     Output("table", "style_data_conditional"),
     Input("list_table", "active_cell"),
+    Input("selected_dates", "data"),
     State("list_table", "data"),
 )
-def point_list_click(active_cell, data_list):
+def point_list_click(active_cell, date_data, data_list):
     if active_cell:
+        date_dicts = json.loads(date_data)
         row = active_cell["row"]
-        new_data = get_daily_data(gas_volume_calc_id=data_list[row]["id"])
+        params = {"gas_volume_calc_id": data_list[row]["id"]}
+        if date_dicts["date_check"]:
+            params["from_date"] = date_dicts["from_date"]
+            params["to_date"] = date_dicts["to_date"]
+        new_data = get_daily_data(**params)
+        if not new_data:
+            new_data = []
         new_style_data_conditional = [
             {
                 "if": {

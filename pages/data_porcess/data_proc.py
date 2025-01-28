@@ -24,16 +24,17 @@ def get_daily_data(
     ).api_request()
     validated_data = [DailyArchive(**archive).model_dump() for archive in response]
     df = pd.DataFrame(validated_data)
-    agg_func = {
-        "volume": "sum",
-        "w_volume_dp": "sum",
-        "pressure": "mean",
-        "temperature": "mean",
-        "density": "mean",
-    }
-    sum_row = df.iloc[:, 1:].agg(agg_func)
-    sum_row = pd.DataFrame([["Итого"] + sum_row.tolist()], columns=df.columns)
-    df = pd.concat([df, sum_row], ignore_index=True)
+    if not df.empty:
+        agg_func = {
+            "volume": "sum",
+            "w_volume_dp": "sum",
+            "pressure": "mean",
+            "temperature": "mean",
+            "density": "mean",
+        }
+        sum_row = df.iloc[:, 1:].agg(agg_func)
+        sum_row = pd.DataFrame([["Итого"] + sum_row.tolist()], columns=df.columns)
+        df = pd.concat([df, sum_row], ignore_index=True)
 
     return df.to_dict("records")
 

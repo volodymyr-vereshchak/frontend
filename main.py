@@ -1,9 +1,10 @@
+import json
+
 import dash
 
-from dash import Dash, html, dcc
+from dash import Dash, html, dcc, callback, Input, Output, State
 import dash_bootstrap_components as dbc
-from datetime import date
-
+from datetime import date, datetime
 
 # Create the Dash app
 app = Dash(
@@ -22,6 +23,7 @@ app.layout = dbc.Container(
             [
                 dbc.Button(
                     html.Img(src="assets/icons/day.svg", style={"height": "54px"}),
+                    id="daily_button",
                     href="/",
                     className="me-md-2",
                 ),
@@ -33,7 +35,8 @@ app.layout = dbc.Container(
                 [
                     dbc.Col(
                         dcc.DatePickerSingle(
-                            date=date(2017, 6, 21),
+                            date=datetime.today(),
+                            id="from_date",
                             display_format="MMMM Y, DD",
                             style={"zIndex": 1050},
                         ),
@@ -41,13 +44,15 @@ app.layout = dbc.Container(
                     ),
                     dbc.Col(
                         dcc.DatePickerSingle(
-                            date=date(2017, 6, 21),
+                            date=datetime.today(),
+                            id="to_date",
                             display_format="MMMM Y, DD",
                             style={"zIndex": 1050},
                         ),
                         width="auto",
                     ),
-                    dbc.Col(dbc.Checkbox(), width="auto"),
+                    dbc.Col(dbc.Checkbox(id="date_checkbox"), width="auto"),
+                    dcc.Store(id="selected_dates"),
                 ],
                 justify="center",
                 align="center",
@@ -59,6 +64,27 @@ app.layout = dbc.Container(
     ],
     fluid=True,
 )
+
+
+@callback(
+    Output("selected_dates", "data"),
+    Input("date_checkbox", "value"),
+    Input("from_date", "date"),
+    Input("to_date", "date"),
+)
+def set_href_with_selected_date(
+    date_check: bool = False, from_date: date = None, to_date: date = None
+):
+    result_dict = {
+        "date_check": date_check,
+    }
+    if date_check:
+        dates_dict = {
+            "from_date": from_date,
+            "to_date": to_date,
+        }
+        result_dict.update(dates_dict)
+    return json.dumps(result_dict)
 
 
 if __name__ == "__main__":
