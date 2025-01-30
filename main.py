@@ -84,7 +84,7 @@ def set_href_with_selected_date(
             "to_date": to_date,
         }
         result_dict.update(dates_dict)
-    return json.dumps(result_dict)
+    return result_dict
 
 
 if __name__ == "__main__":

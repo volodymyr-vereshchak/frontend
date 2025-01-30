@@ -1,9 +1,8 @@
-import json
-
 import dash_bootstrap_components as dbc
 import dash
-from dash import html, dash_table, Input, Output, State, callback
-from dash.dash_table.Format import Format, Scheme
+import dash_ag_grid as dag
+import pandas as pd
+from dash import html, dash_table, Input, Output, State, callback, Patch
 from dash.exceptions import PreventUpdate
 
 from assets.styles import TABLE_STYLE, HEADER_STYLE, CELL_STYLE
@@ -15,40 +14,30 @@ list_columns = [dict(id="name", name="Узел учета")]
 list_data = get_list_of_points()
 
 columns = [
-    dict(id="period", name="Дата"),
+    dict(field="period", headerName="Дата"),
     dict(
-        id="volume",
-        name="Объем с.у., м3",
-        type="numeric",
-        format=Format(precision=2, scheme=Scheme.fixed).group(True),
+        field="volume",
+        headerName="Объем с.у., м3",
     ),
     dict(
-        id="w_volume_dp",
-        name="Перепад/Рабочий объем, м3",
-        type="numeric",
-        format=Format(precision=2, scheme=Scheme.fixed).group(True),
+        field="w_volume_dp",
+        headerName="Перепад/Рабочий объем, м3",
     ),
     dict(
-        id="pressure",
-        name="Давление, кг/см2",
-        type="numeric",
-        format=Format(precision=2, scheme=Scheme.fixed).group(True),
+        field="pressure",
+        headerName="Давление, кг/см2",
     ),
     dict(
-        id="temperature",
-        name="Температура, С",
-        type="numeric",
-        format=Format(precision=2, scheme=Scheme.fixed).group(True),
+        field="temperature",
+        headerName="Температура, С",
     ),
     dict(
-        id="density",
-        name="Плотность, кг/м3",
-        type="numeric",
-        format=Format(precision=2, scheme=Scheme.fixed).group(True),
+        field="density",
+        headerName="Плотность, кг/м3",
     ),
 ]
 
-data = []
+data = get_daily_data(gas_volume_calc_id=1)
 
 list_of_gas_volume_calcs = dash_table.DataTable(
     id="list_table",
@@ -60,26 +49,17 @@ list_of_gas_volume_calcs = dash_table.DataTable(
     style_cell=CELL_STYLE,
 )
 
-data_table = dash_table.DataTable(
+
+data_table = dag.AgGrid(
     id="table",
-    columns=columns,
-    data=data,
-    fixed_rows={"headers": True},
-    style_table=TABLE_STYLE,
-    style_header=HEADER_STYLE,
-    style_cell=CELL_STYLE,
-    style_data_conditional=[
-        {
-            "if": {
-                "row_index": len(data) - 1,
-            },
-            "backgroundColor": "lightblue",
-            "fontWeight": "bold",
-            "position": "sticky",
-            "color": "black",
-            "bottom": 0,
-        },
-    ],
+    rowData=data.to_dict("records"),
+    columnDefs=columns,
+    style={"height": "70vh"},
+    className="ag-theme-alpine-dark",
+    defaultColDef={
+        "cellRendererSelector": {"function": "rowPinningBottom(params)"},
+    },
+    dashGridOptions={},
 )
 
 
@@ -89,17 +69,16 @@ def layout(**kwargs):
             [
                 dbc.Col(
                     [
-                        html.H4(
+                        html.H6(
                             "Список узлов учета",  # Заголовок списка
                             id="gas_volume_calc_header",
                             className="text-center text-white mb-3",  # Классы стилей
                         ),
                         list_of_gas_volume_calcs,
                     ],
-                    width="auto",  # Set width to auto to match content width
+                    width="auto",
                     style={
-                        "height": "70vh",
-                        "overflowY": "auto",
+                        # "overflowY": "auto",
                         "display": "flex",
                         "flexDirection": "column",
                     },
@@ -107,55 +86,61 @@ def layout(**kwargs):
                 # Right column: DataTable
                 dbc.Col(
                     [
-                        html.H4(
+                        html.H6(
                             "Суточный архив, ГРС-1",  # Заголовок списка
                             className="text-center text-white mb-3",  # Классы стилей
                         ),
                         data_table,
                     ],
+                    width="auto",
                     style={
-                        "height": "70vh",
                         "overflowY": "auto",
                         "display": "flex",
                         "flexDirection": "column",
+                        # "maxWidth": "1200px",
                         "flex": 1,
                     },
                 ),
             ],
             className="mt-3",
+            justify="start",
         ),
     )
 
 
 @callback(
-    Output("table", "data"),
-    Output("table", "style_data_conditional"),
+    Output("table", "rowData"),
     Input("list_table", "active_cell"),
     Input("selected_dates", "data"),
     State("list_table", "data"),
 )
 def point_list_click(active_cell, date_data, data_list):
     if active_cell:
-        date_dicts = json.loads(date_data)
+        date_dicts = date_data
         row = active_cell["row"]
         params = {"gas_volume_calc_id": data_list[row]["id"]}
         if date_dicts["date_check"]:
             params["from_date"] = date_dicts["from_date"]
             params["to_date"] = date_dicts["to_date"]
-        new_data = get_daily_data(**params)
+        new_data = get_daily_data(**params).to_dict("records")
         if not new_data:
-            new_data = []
-        new_style_data_conditional = [
-            {
-                "if": {
-                    "row_index": len(new_data) - 1,
-                },
-                "backgroundColor": "lightblue",
-                "fontWeight": "bold",
-                "position": "sticky",
-                "color": "black",
-                "bottom": 0,
-            },
-        ]
-        return new_data, new_style_data_conditional
+            new_data = pd.DataFrame()
+        return new_data
     raise PreventUpdate
+
+
+@callback(
+    Output("table", "dashGridOptions"),
+    Input("table", "virtualRowData"),
+)
+def row_pinning_bottom(data_df):
+    dff = pd.DataFrame(data_df)
+    means = (
+        dff[["pressure", "temperature", "density"]].mean()
+        if data_df
+        else {"pressure": 0, "temperature": 0, "density": 0}
+    )
+
+    grid_option_patch = Patch()
+    grid_option_patch["pinnedBottomRowData"] = [{**means}]
+    return grid_option_patch
