@@ -52,7 +52,8 @@ columns = [
     ),
 ]
 
-data = get_daily_data(gas_volume_calc_id=1)
+# data = get_daily_data(gas_volume_calc_id=[1])
+data = pd.DataFrame()
 
 list_of_gas_volume_calcs = dag.AgGrid(
     id="gas_volumes_table",
@@ -127,21 +128,50 @@ def layout(**kwargs):
 
 @callback(
     Output("table", "rowData"),
+    Output("table", "columnDefs"),
     Input("gas_volumes_table", "cellClicked"),
+    Input("gas_volumes_table", "selectedRows"),
     Input("selected_dates", "data"),
     State("gas_volumes_table", "virtualRowData"),
 )
-def point_list_click(active_cell, date_data, data_list):
+def point_list_click(active_cell, selected_rows, date_data, data_list):
+    date_dicts = date_data
+    if selected_rows:
+        ids = [row["id"] for row in selected_rows]
+        params = {"gas_volume_calc_id": ids}
+        if date_dicts["date_check"]:
+            params["from_date"] = date_dicts["from_date"]
+            params["to_date"] = date_dicts["to_date"]
+        new_data = get_daily_data(**params)
+        if new_data.empty:
+            new_data = pd.DataFrame().to_dict("records")
+        else:
+            new_data = (
+                new_data.groupby("period")
+                .sum(numeric_only=True)
+                .reset_index()
+                .to_dict("records")
+            )
+
+        column_defs = [
+            dict(field="period", headerName="Дата"),
+            dict(
+                field="volume",
+                headerName="Объем с.у., м3",
+                valueFormatter=value_formatter,
+            ),
+        ]
+        return new_data, column_defs
+
     if active_cell:
-        date_dicts = date_data
-        params = {"gas_volume_calc_id": data_list[active_cell["rowIndex"]]["id"]}
+        params = {"gas_volume_calc_id": [data_list[active_cell["rowIndex"]]["id"]]}
         if date_dicts["date_check"]:
             params["from_date"] = date_dicts["from_date"]
             params["to_date"] = date_dicts["to_date"]
         new_data = get_daily_data(**params).to_dict("records")
         if not new_data:
             new_data = pd.DataFrame().to_dict("records")
-        return new_data
+        return new_data, columns
     raise PreventUpdate
 
 

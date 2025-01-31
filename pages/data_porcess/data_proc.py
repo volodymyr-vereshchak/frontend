@@ -17,25 +17,15 @@ class DailyArchive(BaseModel):
 
 
 def get_daily_data(
-    from_date: datetime = None, to_date: datetime = None, gas_volume_calc_id: int = None
+    from_date: datetime = None,
+    to_date: datetime = None,
+    gas_volume_calc_id: list = None,
 ):
     response = DailyArchiveClient(
         from_date=from_date, to_date=to_date, gas_volume_calc_id=gas_volume_calc_id
     ).api_request()
     validated_data = [DailyArchive(**archive).model_dump() for archive in response]
     df = pd.DataFrame(validated_data)
-    # if not df.empty:
-    #     agg_func = {
-    #         "volume": "sum",
-    #         "w_volume_dp": "sum",
-    #         "pressure": "mean",
-    #         "temperature": "mean",
-    #         "density": "mean",
-    #     }
-    #     sum_row = df.iloc[:, 1:].agg(agg_func)
-    #     sum_row = pd.DataFrame([["Итого"] + sum_row.tolist()], columns=df.columns)
-    #     df = pd.concat([df, sum_row], ignore_index=True)
-
     return df
 
 

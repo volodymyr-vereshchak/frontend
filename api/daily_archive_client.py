@@ -8,7 +8,7 @@ class DailyArchiveClient(BaseClient):
         self,
         from_date: date = None,
         to_date: date = None,
-        gas_volume_calc_id: int = None,
+        gas_volume_calc_id: list = None,
     ):
         super().__init__()
         self.endpoint = "day_archive/"
