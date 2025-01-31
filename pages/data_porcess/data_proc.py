@@ -43,4 +43,4 @@ def get_list_of_points():
     response = GasVolumeCalcClient().api_request()
     df = pd.DataFrame(response)
 
-    return df.to_dict("records")
+    return df
