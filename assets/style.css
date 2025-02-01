@@ -1,5 +1,6 @@
 .DateInput input {
     cursor: pointer;
+    padding: 0;
 }
 
 #table #list_table {

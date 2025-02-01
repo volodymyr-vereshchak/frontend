@@ -31,6 +31,6 @@ def get_daily_data(
 
 def get_list_of_points():
     response = GasVolumeCalcClient().api_request()
-    df = pd.DataFrame(response)
+    df = pd.DataFrame(response).sort_values(["address", "line"])
 
     return df
