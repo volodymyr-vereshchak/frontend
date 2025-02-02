@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime
 
 import pandas as pd
 from pydantic import BaseModel
@@ -6,8 +6,8 @@ from pydantic import BaseModel
 from api.base_client import BaseClient
 
 
-class DailyArchive(BaseModel):
-    period: date
+class HourlyArchive(BaseModel):
+    period: datetime
     volume: float
     w_volume_dp: float
     pressure: float
@@ -15,15 +15,15 @@ class DailyArchive(BaseModel):
     density: float
 
 
-class DailyArchiveClient(BaseClient):
+class HourlyArchiveClient(BaseClient):
     def __init__(
         self,
     ):
         super().__init__()
-        self.endpoint = "day_archive/"
+        self.endpoint = "hour_archive/"
 
-    def get_daily_archives(
-        self, from_date: date = None, to_date: date = None, line_id: list = None
+    def get_hourly_archives(
+        self, from_date: datetime = None, to_date: datetime = None, line_id: list = None
     ):
         params = {
             "from_date": from_date,
@@ -34,7 +34,7 @@ class DailyArchiveClient(BaseClient):
         df = pd.DataFrame()
         if response:
             validated_data = [
-                DailyArchive(**archive).model_dump() for archive in response
+                HourlyArchive(**archive).model_dump() for archive in response
             ]
             df = pd.DataFrame(validated_data)
         return df

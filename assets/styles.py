@@ -26,3 +26,13 @@ LOCALE_NUMBERS = """d3.formatLocale({
   "grouping": [3],
 })"""
 VALUE_FORMATTER = {"function": f"{LOCALE_NUMBERS}.format('$,.3f')(params.value)"}
+
+BUTTON_STYLE = {
+    "weight": "56px",
+    "height": "56px",
+    "background-color": "#3E3E3E",
+    "border": "0",
+    "border-radius": "4px",
+}
+
+ICON_STYLE = {"height": "40px"}

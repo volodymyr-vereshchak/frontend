@@ -19,18 +19,20 @@ class DailyArchive(BaseModel):
 def get_daily_data(
     from_date: datetime = None,
     to_date: datetime = None,
-    gas_volume_calc_id: list = None,
+    line_id: list = None,
 ):
-    response = DailyArchiveClient(
-        from_date=from_date, to_date=to_date, gas_volume_calc_id=gas_volume_calc_id
-    ).api_request()
+    response = DailyArchiveClient().get_daily_archives(
+        from_date=from_date, to_date=to_date, line_id=line_id
+    )
     validated_data = [DailyArchive(**archive).model_dump() for archive in response]
     df = pd.DataFrame(validated_data)
     return df
 
 
 def get_list_of_points():
-    response = GasVolumeCalcClient().api_request()
-    df = pd.DataFrame(response).sort_values(["address", "line"])
+    response = GasVolumeCalcClient().api_get()
+    df = pd.DataFrame(response)
+    if not df.empty:
+        df = df.sort_values(["address"])
 
     return df

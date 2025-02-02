@@ -1,6 +1,8 @@
 .DateInput input {
     cursor: pointer;
     padding: 0;
+    background-color: #181d1f;
+    color: white;
 }
 
 #table #list_table {

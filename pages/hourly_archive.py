@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import dash_bootstrap_components as dbc
 import dash
 import dash_ag_grid as dag
@@ -7,6 +9,7 @@ from dash.exceptions import PreventUpdate
 
 from api.daily_archive_client import DailyArchiveClient
 from api.gas_volume_calc_client import GasVolumeCalcClient
+from api.hourly_archive_client import HourlyArchiveClient
 from api.line_client import LineClient
 from assets.styles import (
     VALUE_FORMATTER,
@@ -17,7 +20,7 @@ from assets.styles import (
 from pages.data_porcess.data_proc import get_list_of_points, get_daily_data
 
 # Register Dash page
-dash.register_page(__name__, path="/")
+dash.register_page(__name__, path="/hour")
 
 # Define column definitions
 BASE_COLUMNS = [
@@ -75,7 +78,7 @@ list_of_gas_volume_calcs = dag.AgGrid(
 )
 
 data_table = dag.AgGrid(
-    id="data_table",
+    id="hour_data_table",
     rowData=data.to_dict("records"),
     columnDefs=BASE_COLUMNS,
     style=TABLE_STYLE,
@@ -105,7 +108,7 @@ def layout(**kwargs):
             ),
             dbc.Col(
                 [
-                    html.H6("Суточный архив", className="text-center text-white mb-3"),
+                    html.H6("Часовой архив", className="text-center text-white mb-3"),
                     data_table,
                 ],
                 width=8,
@@ -117,20 +120,20 @@ def layout(**kwargs):
 
 
 @callback(
-    Output("data_table", "rowData"),
-    Output("data_table", "columnDefs"),
+    Output("hour_data_table", "rowData"),
+    Output("hour_data_table", "columnDefs"),
     Input("gas_volumes_table", "cellClicked"),
     Input("gas_volumes_table", "selectedRows"),
     Input("selected_dates", "data"),
     State("gas_volumes_table", "virtualRowData"),
 )
-def update_table(active_cell, selected_rows, date_data, data_list):
+def update_hour_table(active_cell, selected_rows, date_data, data_list):
     """Update table data based on user selection."""
     if not (selected_rows or active_cell):
         raise PreventUpdate
 
     params = extract_params(selected_rows, active_cell, data_list, date_data)
-    new_data = DailyArchiveClient().get_daily_archives(**params)
+    new_data = HourlyArchiveClient().get_hourly_archives(**params)
 
     row_data = process_new_data(new_data)
     column_defs = SUMMARY_COLUMNS if len(params["line_id"]) > 1 else BASE_COLUMNS
@@ -148,8 +151,12 @@ def extract_params(selected_rows, active_cell, data_list, date_data):
 
     if date_data.get("date_check"):
         params["from_date"], params["to_date"] = (
-            date_data["from_date"],
-            date_data["to_date"],
+            datetime.strptime(date_data["from_date"], "%Y-%m-%d").replace(
+                hour=date_data["start_hour"]
+            ),
+            datetime.strptime(date_data["to_date"], "%Y-%m-%d").replace(
+                hour=date_data["end_hour"]
+            ),
         )
 
     return params
@@ -169,10 +176,10 @@ def process_new_data(new_data):
 
 
 @callback(
-    Output("data_table", "dashGridOptions"),
-    Input("data_table", "virtualRowData"),
+    Output("hour_data_table", "dashGridOptions"),
+    Input("hour_data_table", "virtualRowData"),
 )
-def update_pinned_row(data_df):
+def hour_update_pinned_row(data_df):
     """Update pinned bottom row with summary values."""
     df = pd.DataFrame(data_df)
 
