@@ -48,12 +48,12 @@ list_data = LineClient().get_lines_list_by_lumg()
 gas_volume_data = GasVolumeCalcClient().get_gas_volume_list_by_lumg()
 merge_data = list_data.merge(
     gas_volume_data.rename(columns={"name": "name_gas_volume", "id": "flow_id"})[
-        ["flow_id", "name_gas_volume"]
+        ["flow_id", "name_gas_volume", "address"]
     ],
     left_on="gas_volume_calc_id",
     right_on="flow_id",
     how="left",
-)
+).sort_values(["address", "line"], ascending=[False, True])
 
 data = pd.DataFrame()
 
