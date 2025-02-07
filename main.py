@@ -1,5 +1,5 @@
 import dash
-from dash import Dash, html, dcc, callback, Input, Output
+from dash import Dash, html, dcc, callback, Input, Output, no_update
 import dash_bootstrap_components as dbc
 from datetime import datetime, date
 
@@ -101,7 +101,6 @@ date_picker_section = dbc.Container(
                         "justifyContent": "center",
                     },
                 ),
-                dcc.Store(id="selected_dates"),
             ],
             justify="start",
             align="center",
@@ -117,7 +116,14 @@ app.layout = dbc.Container(
     [
         BUTTON_SECTION,
         date_picker_section,
-        dash.page_container,
+        dcc.Loading(
+            [
+                dcc.Store(id="selected_dates"),
+                dash.page_container,
+            ],
+            overlay_style={"visibility": "visible", "filter": "blur(1px)"},
+            type="circle",
+        ),
     ],
     fluid=True,
 )
@@ -148,9 +154,14 @@ def set_store_with_dates(
     )
 
 
-@callback(Input("update", "n_clicks"), prevent_initial_call=True)
+@callback(
+    Output("selected_dates", "clear_data"),
+    Input("update", "n_clicks"),
+    prevent_initial_call=True,
+)
 def update_db_from_archives(n_clicks: int):
     RootClient().api_post()
+    return no_update
 
 
 if __name__ == "__main__":
