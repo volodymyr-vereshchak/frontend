@@ -22,7 +22,7 @@ class DailyArchiveClient(BaseClient):
         super().__init__()
         self.endpoint = "day_archive/"
 
-    def get_daily_archives(
+    def get_archives(
         self, from_date: date = None, to_date: date = None, line_id: list = None
     ):
         params = {

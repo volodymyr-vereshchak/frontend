@@ -3,6 +3,11 @@
     padding: 0;
     background-color: #181d1f;
     color: white;
+    border: 1px solid #3E3E3E,
+}
+
+.SingleDatePickerInput__withBorder {
+    border: none
 }
 
 #table #list_table {

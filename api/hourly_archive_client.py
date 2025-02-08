@@ -22,7 +22,7 @@ class HourlyArchiveClient(BaseClient):
         super().__init__()
         self.endpoint = "hour_archive/"
 
-    def get_hourly_archives(
+    def get_archives(
         self, from_date: datetime = None, to_date: datetime = None, line_id: list = None
     ):
         params = {
