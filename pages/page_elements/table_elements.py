@@ -26,6 +26,14 @@ HOUR_DATE_COLUMNS = [
     dict(
         field="density", headerName="Плотность, кг/м3", valueFormatter=VALUE_FORMATTER
     ),
+    dict(
+        field="edit_count",
+        headerName="И",
+    ),
+    dict(
+        field="sys_count",
+        headerName="А",
+    ),
 ]
 
 SUMMARY_HOUR_DATE_COLUMNS = [

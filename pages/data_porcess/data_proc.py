@@ -3,9 +3,12 @@ from datetime import datetime
 import pandas as pd
 from dash import Patch
 from dash.exceptions import PreventUpdate
+
+from api.edit_archive_client import EditArchiveClient
 from api.gas_volume_calc_client import GasVolumeCalcClient
 from api.hourly_archive_client import HourlyArchiveClient
 from api.line_client import LineClient
+from api.sys_archive_client import SysArchiveClient
 from pages.page_elements.table_elements import (
     SUMMARY_HOUR_DATE_COLUMNS,
     HOUR_DATE_COLUMNS,
@@ -19,7 +22,7 @@ def get_lines():
         merge_data = list_data.merge(
             gas_volume_data.rename(
                 columns={"name": "name_gas_volume", "id": "flow_id"}
-            )[["flow_id", "name_gas_volume", "address"]],
+            ),  # [["flow_id", "name_gas_volume", "address"]],
             left_on="gas_volume_calc_id",
             right_on="flow_id",
             how="left",
@@ -38,6 +41,9 @@ def update_table(active_cell, selected_rows, client, date_data, data_list):
         hour_flag = True
     params = extract_params(selected_rows, active_cell, data_list, date_data, hour_flag)
     new_data = client().get_archives(**params)
+    edit_data = EditArchiveClient().get_archives(**params)
+    # print(edit_data)
+    sys_data = SysArchiveClient().get_archives(**params)
 
     row_data = process_new_data(new_data)
     column_defs = (
