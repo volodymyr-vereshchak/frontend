@@ -33,7 +33,7 @@ app.layout = dbc.Container(
         html.Hr(),
         dcc.Loading(
             [
-                dcc.Store(id="update_state"),
+                dcc.Store(id="update_state", data={"status": "init"}),
                 dcc.Store(id="selected_dates"),
                 dash.page_container,
             ],
@@ -77,7 +77,8 @@ def set_store_with_dates(
 )
 def update_db_from_archives(n_clicks: int):
     RootClient().api_post()
-    return {"status": "updated"}
+    result = "updated"
+    return {"status": result}
 
 
 if __name__ == "__main__":

@@ -1,4 +1,6 @@
 from urllib.parse import urljoin
+
+import pandas as pd
 import requests
 from config import settings
 from utils.logger import logger_setup
@@ -10,6 +12,7 @@ class BaseClient:
         self.port = settings.get("API_PORT")
         self.logger = logger_setup("frontend")
         self.endpoint = None
+        self.pydantic_class = None
 
     def get_full_url(self, item_id: int = None):
         full_url = f"http://{self.base_url}:{self.port}"
@@ -53,3 +56,18 @@ class BaseClient:
             return None
 
         return response.json()
+
+    def get_archives(self, from_date=None, to_date=None, line_id: list = None):
+        params = {
+            "from_date": from_date,
+            "to_date": to_date,
+            "line_id": line_id,
+        }
+        response = self.api_get(params=params)
+        df = pd.DataFrame()
+        if response:
+            validated_data = [
+                self.pydantic_class(**archive).model_dump() for archive in response
+            ]
+            df = pd.DataFrame(validated_data)
+        return df
