@@ -151,17 +151,28 @@ def update_pinned_row(data_df):
             "sys_counts": 0,
         }
     else:
-        aggregated_values = df.agg(
-            {
-                "volume": "sum",
-                "w_volume_dp": "mean",
-                "pressure": "mean",
-                "temperature": "mean",
-                "density": "mean",
-                "edit_counts": "sum",
-                "sys_counts": "sum",
-            }
-        ).round(3)
+        if "edit_counts" in df.columns:
+            aggregated_values = df.agg(
+                {
+                    "volume": "sum",
+                    "w_volume_dp": "mean",
+                    "pressure": "mean",
+                    "temperature": "mean",
+                    "density": "mean",
+                    "edit_counts": "sum",
+                    "sys_counts": "sum",
+                }
+            ).round(3)
+        else:
+            aggregated_values = df.agg(
+                {
+                    "volume": "sum",
+                    "w_volume_dp": "mean",
+                    "pressure": "mean",
+                    "temperature": "mean",
+                    "density": "mean",
+                }
+            ).round(3)
 
     patch = Patch()
     patch["pinnedBottomRowData"] = [{**aggregated_values}]

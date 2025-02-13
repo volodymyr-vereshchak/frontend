@@ -13,15 +13,13 @@ HEADER_STYLE = {
     "fontSize": "12px",
 }
 
+ROW_STYLE = {"background": "#1a1a1a"}
+
 CELL_STYLE = {
-    # "backgroundColor": "#2a2a2a",
-    # "color": "#ffffff",
     "textAlign": "center",
-    # "fontSize": "12px",
     "cursor": "pointer",
     "border": "1px solid #2a2a2a",
     "border-collapse": "collapse",
-    # "width": "auto",
 }
 
 # Define localization for numeric formatting
@@ -35,7 +33,7 @@ VALUE_FORMATTER = {"function": f"{LOCALE_NUMBERS}.format('$,.3f')(params.value)"
 BUTTON_STYLE = {
     "weight": "56px",
     "height": "56px",
-    "background-color": "#3E3E3E",
+    # "background-color": "#3E3E3E",
     "border": "0",
     "border-radius": "4px",
 }

@@ -6,6 +6,7 @@ from assets.styles import (
     TABLE_CLASS_NAME,
     DEFAULT_COL_DEF,
     CELL_STYLE,
+    ROW_STYLE,
 )
 import dash_ag_grid as dag
 
@@ -60,9 +61,17 @@ def get_table_of_lines(id_name: str, data: pd.DataFrame):
     return dag.AgGrid(
         id=id_name,
         rowData=data.to_dict("records"),
+        rowStyle=ROW_STYLE,
         columnDefs=[
-            dict(field="name_gas_volume", headerName="Узел учета"),
-            dict(field="name", headerName="Линия", checkboxSelection=True),
+            dict(
+                field="name_gas_volume", headerName="Узел учета", cellStyle=CELL_STYLE
+            ),
+            dict(
+                field="name",
+                headerName="Линия",
+                checkboxSelection=True,
+                cellStyle=CELL_STYLE,
+            ),
         ],
         columnSize="sizeToFit",
         style=TABLE_STYLE,
@@ -79,6 +88,7 @@ def get_data_table(id_name: str):
     return dag.AgGrid(
         id=id_name,
         rowData=pd.DataFrame().to_dict("records"),
+        rowStyle=ROW_STYLE,
         columnDefs=HOUR_DATE_COLUMNS,
         columnSize="responsiveSizeToFit",
         style=TABLE_STYLE,

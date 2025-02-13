@@ -1,10 +1,8 @@
 import dash
-from dash import Dash, html, dcc, callback, Input, Output, no_update
+from dash import Dash, html, dcc, callback, Input, Output
 import dash_bootstrap_components as dbc
-from datetime import datetime, date
 
 from api.root_client import RootClient
-from assets.styles import BUTTON_STYLE, ICON_STYLE
 from pages.page_elements.main_button_elemets import BUTTON_SECTION
 from pages.page_elements.main_date_time_picker_elements import get_date_picker_section
 
@@ -57,17 +55,15 @@ app.layout = dbc.Container(
 def set_store_with_dates(
     date_check=False, from_date=None, start_hour=None, to_date=None, end_hour=None
 ):
-    return (
-        {
-            "date_check": date_check,
-            "from_date": from_date,
-            "start_hour": start_hour,
-            "end_hour": end_hour,
-            "to_date": to_date,
-        }
-        if date_check
-        else {"date_check": False}
-    )
+    if not date_check:
+        return {"date_check": False}
+    return {
+        "date_check": date_check,
+        "from_date": from_date,
+        "start_hour": start_hour,
+        "end_hour": end_hour,
+        "to_date": to_date,
+    }
 
 
 @callback(
@@ -79,6 +75,44 @@ def update_db_from_archives(n_clicks: int):
     RootClient().api_post()
     result = "updated"
     return {"status": result}
+
+
+@app.callback(
+    Output("active-button", "data"),  # Сохраняем активную кнопку
+    [
+        Input("settings", "n_clicks"),
+        Input("update", "n_clicks"),
+        Input("lumgs", "n_clicks"),
+        Input("days", "n_clicks"),
+        Input("hours", "n_clicks"),
+        Input("sys", "n_clicks"),
+        Input("edits", "n_clicks"),
+    ],
+)
+def update_active_button(*args):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return None
+    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    return button_id
+
+
+@app.callback(
+    [
+        Output("settings", "active"),
+        Output("update", "active"),
+        Output("lumgs", "active"),
+        Output("days", "active"),
+        Output("hours", "active"),
+        Output("sys", "active"),
+        Output("edits", "active"),
+    ],
+    [Input("active-button", "data")],  # Следим за активной кнопкой
+)
+def set_button_active(active_button):
+    # Для каждой кнопки присваиваем класс 'active', если она выбрана
+    buttons = ["settings", "update", "lumgs", "days", "hours", "sys", "edits"]
+    return [True if button == active_button else False for button in buttons]
 
 
 if __name__ == "__main__":

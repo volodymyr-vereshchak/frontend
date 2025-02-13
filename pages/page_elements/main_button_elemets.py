@@ -1,5 +1,5 @@
 import dash_bootstrap_components as dbc
-from dash import html
+from dash import html, dcc
 
 from assets.styles import ICON_STYLE, BUTTON_STYLE
 
@@ -10,7 +10,7 @@ def get_button(icon_pass: str, id_name: str, href: str = None):
         id=id_name,
         href=href,
         style=BUTTON_STYLE,
-        className="me-md-2",
+        className="me-md-2 btn-custom",
     )
 
 
@@ -26,6 +26,7 @@ BUTTON_SECTION = dbc.Container(
             icon_pass="assets/icons/iconoir_pc-warning.svg", id_name="sys", href="/"
         ),
         get_button(icon_pass="assets/icons/page-edit.svg", id_name="edits", href="/"),
+        dcc.Store(id="active-button", data=None),
     ],
     className="d-md-flex justify-content-start",
     style={

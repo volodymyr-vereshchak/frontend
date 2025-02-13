@@ -17,3 +17,19 @@
 .ag-header-cell-label {
     justify-content: center;
 }
+
+.btn-custom {
+        transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+        background-color: #3E3E3E;
+    }
+
+.btn-custom:hover {
+    transform: scale(1.1);
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-custom:active {
+    transform: scale(0.95);
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: black;
+}
