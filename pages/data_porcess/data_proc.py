@@ -41,23 +41,60 @@ def update_table(active_cell, selected_rows, client, date_data, data_list):
         hour_flag = True
     params = extract_params(selected_rows, active_cell, data_list, date_data, hour_flag)
     new_data = client().get_archives(**params)
-    edit_data = (
-        EditArchiveClient()
-        .get_archive_counts(**params)
-        .rename(columns={"hour_group": "period", "record_count": "edit_counts"})
-    )
-    sys_data = (
-        SysArchiveClient()
-        .get_archive_counts(**params)
-        .rename(columns={"hour_group": "period", "record_count": "sys_counts"})
-    )
+    new_data = process_new_data(new_data)
+    print(new_data)
+    if len(params["line_id"]) == 1:
+        edit_data = (
+            EditArchiveClient()
+            .get_archive_counts(**params)
+            .rename(columns={"hour_group": "period", "record_count": "edit_counts"})
+        )
+        if not edit_data.empty:
+            edit_data["period"] = pd.to_datetime(edit_data["period"])
+            if hour_flag:
+                edit_data = edit_data.set_index("period")
+                new_data = pd.concat([new_data, edit_data], axis=1)
+            else:
+                edit_data["date"] = edit_data["period"].dt.date
+                edit_data.loc[edit_data["period"].dt.hour < 7, "date"] -= pd.Timedelta(
+                    days=1
+                )
+                edit_data = edit_data.fillna(0)
+                edit_data = edit_data.groupby("date").sum(numeric_only=True)
+                edit_data = edit_data[["edit_counts"]]
+                new_data = pd.concat([new_data, edit_data], axis=1)
 
-    row_data = process_new_data(new_data)
+        sys_data = (
+            SysArchiveClient()
+            .get_archive_counts(**params)
+            .rename(columns={"hour_group": "period", "record_count": "sys_counts"})
+        )
+
+        if not sys_data.empty:
+            sys_data["period"] = pd.to_datetime(sys_data["period"])
+            if hour_flag:
+                sys_data = sys_data.set_index("period")
+                new_data = pd.concat([new_data, sys_data], axis=1)
+            else:
+                sys_data["date"] = sys_data["period"].dt.date
+                sys_data.loc[sys_data["period"].dt.hour < 7, "date"] -= pd.Timedelta(
+                    days=1
+                )
+                sys_data = sys_data.groupby("date").sum(numeric_only=True)
+                sys_data = sys_data[["sys_counts"]]
+                new_data = pd.concat([new_data, sys_data], axis=1)
+
+    new_data = (
+        new_data.fillna(0)
+        .reset_index()
+        .rename(columns={"index": "period"})
+        .to_dict("records")
+    )
     column_defs = (
         SUMMARY_HOUR_DATE_COLUMNS if len(params["line_id"]) > 1 else HOUR_DATE_COLUMNS
     )
 
-    return row_data, column_defs
+    return new_data, column_defs
 
 
 def extract_params(selected_rows, active_cell, data_list, date_data, hour_flag):
@@ -92,12 +129,7 @@ def process_new_data(new_data):
     if new_data.empty:
         return pd.DataFrame().to_dict("records")
 
-    return (
-        new_data.groupby("period")
-        .sum(numeric_only=True)
-        .reset_index()
-        .to_dict("records")
-    )
+    return new_data.groupby("period").sum(numeric_only=True)
 
 
 def update_pinned_row(data_df):
@@ -111,6 +143,8 @@ def update_pinned_row(data_df):
             "pressure": 0,
             "temperature": 0,
             "density": 0,
+            "edit_counts": 0,
+            "sys_counts": 0,
         }
     else:
         aggregated_values = df.agg(
@@ -120,6 +154,8 @@ def update_pinned_row(data_df):
                 "pressure": "mean",
                 "temperature": "mean",
                 "density": "mean",
+                "edit_counts": "sum",
+                "sys_counts": "sum",
             }
         ).round(3)
 
