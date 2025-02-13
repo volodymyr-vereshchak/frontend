@@ -79,7 +79,7 @@ def get_table_of_lines(id_name: str, data: pd.DataFrame):
         defaultColDef=DEFAULT_COL_DEF,
         dashGridOptions={
             "rowSelection": "multiple",
-            "suppressRowClickSelection": True,
+            # "suppressRowClickSelection": True,
         },
     )
 

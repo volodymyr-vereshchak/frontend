@@ -53,17 +53,31 @@ app.layout = dbc.Container(
     Input("end_hour", "value"),
 )
 def set_store_with_dates(
-    date_check=False, from_date=None, start_hour=None, to_date=None, end_hour=None
+    date_check=False,
+    from_date=None,
+    start_hour=None,
+    to_date=None,
+    end_hour=None,
 ):
-    if not date_check:
-        return {"date_check": False}
-    return {
-        "date_check": date_check,
-        "from_date": from_date,
-        "start_hour": start_hour,
-        "end_hour": end_hour,
-        "to_date": to_date,
-    }
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        button_id = None
+    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    change = False
+    if button_id in ["from_date", "start_hour", "to_date", "end_hour"]:
+        change = True
+    return (
+        {
+            "date_check": date_check,
+            "change": change,
+            "from_date": from_date,
+            "start_hour": start_hour,
+            "end_hour": end_hour,
+            "to_date": to_date,
+        }
+        if date_check
+        else {"date_check": False, "change": change}
+    )
 
 
 @callback(

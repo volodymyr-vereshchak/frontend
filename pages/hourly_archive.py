@@ -48,7 +48,6 @@ def layout(**kwargs):
 @callback(
     Output("hourly_data_table", "rowData"),
     Output("hourly_data_table", "columnDefs"),
-    # Output("hourly_data_table", "columnSize"),
     Input("hourly_gas_volumes", "cellClicked"),
     Input("hourly_gas_volumes", "selectedRows"),
     Input("selected_dates", "data"),
@@ -58,7 +57,6 @@ def update_hour_table(active_cell, selected_rows, date_data, data_list):
     row_data, column_defs = update_table(
         active_cell, selected_rows, HourlyArchiveClient, date_data, data_list
     )
-    # column_size = "autoSize"
     return row_data, column_defs
 
 
