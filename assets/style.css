@@ -13,3 +13,7 @@
 #table #list_table {
     height: 100%
 }
+
+.ag-header-cell-label {
+    justify-content: center;
+}

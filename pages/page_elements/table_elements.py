@@ -5,35 +5,49 @@ from assets.styles import (
     TABLE_STYLE,
     TABLE_CLASS_NAME,
     DEFAULT_COL_DEF,
+    CELL_STYLE,
 )
 import dash_ag_grid as dag
 
 
 HOUR_DATE_COLUMNS = [
-    dict(field="period", headerName="Дата"),
-    dict(field="volume", headerName="Объем с.у., м3", valueFormatter=VALUE_FORMATTER),
+    dict(
+        field="period",
+        headerName="Дата",
+        cellStyle=CELL_STYLE,
+    ),
+    dict(
+        field="volume",
+        headerName="Объем с.у., м3",
+        valueFormatter=VALUE_FORMATTER,
+        cellStyle=CELL_STYLE,
+    ),
     dict(
         field="w_volume_dp",
         headerName="Перепад/Рабочий объем, м3",
         valueFormatter=VALUE_FORMATTER,
+        cellStyle=CELL_STYLE,
     ),
     dict(
-        field="pressure", headerName="Давление, кг/см2", valueFormatter=VALUE_FORMATTER
+        field="pressure",
+        headerName="Давление, кг/см2",
+        valueFormatter=VALUE_FORMATTER,
+        cellStyle=CELL_STYLE,
     ),
     dict(
-        field="temperature", headerName="Температура, С", valueFormatter=VALUE_FORMATTER
+        field="temperature",
+        headerName="Температура, С",
+        valueFormatter=VALUE_FORMATTER,
+        cellStyle=CELL_STYLE,
     ),
     dict(
-        field="density", headerName="Плотность, кг/м3", valueFormatter=VALUE_FORMATTER
+        field="density",
+        headerName="Плотность, кг/м3",
+        valueFormatter=VALUE_FORMATTER,
+        cellStyle=CELL_STYLE,
     ),
-    dict(
-        field="edit_counts",
-        headerName="И",
-    ),
-    dict(
-        field="sys_counts",
-        headerName="А",
-    ),
+    dict(field="edit_counts", headerName="И", cellStyle=CELL_STYLE),
+    dict(field="sys_counts", headerName="А", cellStyle=CELL_STYLE),
 ]
 
 SUMMARY_HOUR_DATE_COLUMNS = [
@@ -50,7 +64,7 @@ def get_table_of_lines(id_name: str, data: pd.DataFrame):
             dict(field="name_gas_volume", headerName="Узел учета"),
             dict(field="name", headerName="Линия", checkboxSelection=True),
         ],
-        columnSize="autoSize",
+        columnSize="sizeToFit",
         style=TABLE_STYLE,
         className=TABLE_CLASS_NAME,
         defaultColDef=DEFAULT_COL_DEF,
@@ -66,6 +80,7 @@ def get_data_table(id_name: str):
         id=id_name,
         rowData=pd.DataFrame().to_dict("records"),
         columnDefs=HOUR_DATE_COLUMNS,
+        columnSize="responsiveSizeToFit",
         style=TABLE_STYLE,
         className=TABLE_CLASS_NAME,
         defaultColDef=DEFAULT_COL_DEF,

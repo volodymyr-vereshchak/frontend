@@ -42,7 +42,6 @@ def update_table(active_cell, selected_rows, client, date_data, data_list):
     params = extract_params(selected_rows, active_cell, data_list, date_data, hour_flag)
     new_data = client().get_archives(**params)
     new_data = process_new_data(new_data)
-    print(new_data)
     if len(params["line_id"]) == 1:
         edit_data = (
             EditArchiveClient()
@@ -63,6 +62,8 @@ def update_table(active_cell, selected_rows, client, date_data, data_list):
                 edit_data = edit_data.groupby("date").sum(numeric_only=True)
                 edit_data = edit_data[["edit_counts"]]
                 new_data = pd.concat([new_data, edit_data], axis=1)
+        else:
+            new_data["edit_counts"] = 0
 
         sys_data = (
             SysArchiveClient()
@@ -83,9 +84,12 @@ def update_table(active_cell, selected_rows, client, date_data, data_list):
                 sys_data = sys_data.groupby("date").sum(numeric_only=True)
                 sys_data = sys_data[["sys_counts"]]
                 new_data = pd.concat([new_data, sys_data], axis=1)
+        else:
+            new_data["sys_counts"] = 0
 
     new_data = (
-        new_data.fillna(0)
+        new_data.dropna(subset=["volume"])
+        .fillna(0)
         .reset_index()
         .rename(columns={"index": "period"})
         .to_dict("records")

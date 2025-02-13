@@ -48,16 +48,27 @@ def layout(**kwargs):
 @callback(
     Output("hourly_data_table", "rowData"),
     Output("hourly_data_table", "columnDefs"),
+    # Output("hourly_data_table", "columnSize"),
     Input("hourly_gas_volumes", "cellClicked"),
     Input("hourly_gas_volumes", "selectedRows"),
     Input("selected_dates", "data"),
     State("hourly_gas_volumes", "virtualRowData"),
-    prevent_initial_call=True,
 )
 def update_hour_table(active_cell, selected_rows, date_data, data_list):
-    return update_table(
+    row_data, column_defs = update_table(
         active_cell, selected_rows, HourlyArchiveClient, date_data, data_list
     )
+    # column_size = "autoSize"
+    return row_data, column_defs
+
+
+@callback(
+    Output("hourly_data_table", "columnSize"),
+    Input("hourly_data_table", "rowData"),
+)
+def update_width_table(_):
+    column_size = "autoSize"
+    return column_size
 
 
 @callback(

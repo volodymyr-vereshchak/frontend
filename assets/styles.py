@@ -1,6 +1,9 @@
 TABLE_STYLE = {"height": "70vh"}
 TABLE_CLASS_NAME = "ag-theme-alpine-dark"
-DEFAULT_COL_DEF = {"cellRendererSelector": {"function": "rowPinningBottom(params)"}}
+DEFAULT_COL_DEF = {
+    "cellRendererSelector": {"function": "rowPinningBottom(params)"},
+    "resizable": True,
+}
 
 HEADER_STYLE = {
     "backgroundColor": "#1a1a1a",
@@ -11,12 +14,14 @@ HEADER_STYLE = {
 }
 
 CELL_STYLE = {
-    "backgroundColor": "#2a2a2a",
-    "color": "#ffffff",
+    # "backgroundColor": "#2a2a2a",
+    # "color": "#ffffff",
     "textAlign": "center",
-    "fontSize": "12px",
+    # "fontSize": "12px",
     "cursor": "pointer",
-    "width": "100px",
+    "border": "1px solid #2a2a2a",
+    "border-collapse": "collapse",
+    # "width": "auto",
 }
 
 # Define localization for numeric formatting

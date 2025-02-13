@@ -55,12 +55,22 @@ def layout(**kwargs):
     Input("daily_gas_volumes", "selectedRows"),
     Input("selected_dates", "data"),
     State("daily_gas_volumes", "virtualRowData"),
-    prevent_initial_call=True,
+    # prevent_initial_call=True,
 )
 def update_daily_table(active_cell, selected_rows, date_data, data_list):
-    return update_table(
+    row_data, column_defs = update_table(
         active_cell, selected_rows, DailyArchiveClient, date_data, data_list
     )
+    return row_data, column_defs
+
+
+@callback(
+    Output("daily_data_table", "columnSize"),
+    Input("daily_data_table", "rowData"),
+)
+def update_width_table(_):
+    column_size = "autoSize"
+    return column_size
 
 
 @callback(
