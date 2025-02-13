@@ -41,9 +41,16 @@ def update_table(active_cell, selected_rows, client, date_data, data_list):
         hour_flag = True
     params = extract_params(selected_rows, active_cell, data_list, date_data, hour_flag)
     new_data = client().get_archives(**params)
-    edit_data = EditArchiveClient().get_archives(**params)
-    # print(edit_data)
-    sys_data = SysArchiveClient().get_archives(**params)
+    edit_data = (
+        EditArchiveClient()
+        .get_archive_counts(**params)
+        .rename(columns={"hour_group": "period", "record_count": "edit_counts"})
+    )
+    sys_data = (
+        SysArchiveClient()
+        .get_archive_counts(**params)
+        .rename(columns={"hour_group": "period", "record_count": "sys_counts"})
+    )
 
     row_data = process_new_data(new_data)
     column_defs = (

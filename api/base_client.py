@@ -23,12 +23,11 @@ class BaseClient:
 
         return full_url
 
-    def api_get(
-        self,
-        params: dict = None,
-    ):
+    def api_get(self, params: dict = None, url: str = None):
+        if url is None:
+            url = self.get_full_url()
         try:
-            response = requests.get(url=self.get_full_url(), params=params)
+            response = requests.get(url=url, params=params)
             response.raise_for_status()
         except requests.exceptions.HTTPError as http_err:
             self.logger.debug(http_err)
@@ -70,4 +69,17 @@ class BaseClient:
                 self.pydantic_class(**archive).model_dump() for archive in response
             ]
             df = pd.DataFrame(validated_data)
+        return df
+
+    def get_archive_counts(self, from_date=None, to_date=None, line_id: list = None):
+        params = {
+            "from_date": from_date,
+            "to_date": to_date,
+            "line_id": line_id,
+        }
+        url = self.get_full_url()[:-1] + "_counts/"
+        response = self.api_get(params=params, url=url)
+        df = pd.DataFrame()
+        if response:
+            df = pd.DataFrame(response)
         return df
