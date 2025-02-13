@@ -58,8 +58,18 @@ def layout(**kwargs):
     # prevent_initial_call=True,
 )
 def update_daily_table(active_cell, selected_rows, date_data, data_list):
+    ctx = dash.callback_context
+    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    selected_gas_volume = False
+    if button_id == "daily_gas_volumes":
+        selected_gas_volume = True
     row_data, column_defs = update_table(
-        active_cell, selected_rows, DailyArchiveClient, date_data, data_list
+        active_cell,
+        selected_rows,
+        DailyArchiveClient,
+        date_data,
+        data_list,
+        selected_gas_volume,
     )
     return row_data, column_defs
 

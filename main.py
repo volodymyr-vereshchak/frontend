@@ -60,8 +60,6 @@ def set_store_with_dates(
     end_hour=None,
 ):
     ctx = dash.callback_context
-    if not ctx.triggered:
-        button_id = None
     button_id = ctx.triggered[0]["prop_id"].split(".")[0]
     change = False
     if button_id in ["from_date", "start_hour", "to_date", "end_hour"]:
@@ -102,6 +100,7 @@ def update_db_from_archives(n_clicks: int):
         Input("sys", "n_clicks"),
         Input("edits", "n_clicks"),
     ],
+    prevent_initial_call=True,
 )
 def update_active_button(*args):
     ctx = dash.callback_context
@@ -121,10 +120,10 @@ def update_active_button(*args):
         Output("sys", "active"),
         Output("edits", "active"),
     ],
-    [Input("active-button", "data")],  # Следим за активной кнопкой
+    [Input("active-button", "data")],
+    prevent_initial_call=True,
 )
 def set_button_active(active_button):
-    # Для каждой кнопки присваиваем класс 'active', если она выбрана
     buttons = ["settings", "update", "lumgs", "days", "hours", "sys", "edits"]
     return [True if button == active_button else False for button in buttons]
 

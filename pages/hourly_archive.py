@@ -54,8 +54,18 @@ def layout(**kwargs):
     State("hourly_gas_volumes", "virtualRowData"),
 )
 def update_hour_table(active_cell, selected_rows, date_data, data_list):
+    ctx = dash.callback_context
+    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+    selected_gas_volume = False
+    if button_id == "hourly_gas_volumes":
+        selected_gas_volume = True
     row_data, column_defs = update_table(
-        active_cell, selected_rows, HourlyArchiveClient, date_data, data_list
+        active_cell,
+        selected_rows,
+        HourlyArchiveClient,
+        date_data,
+        data_list,
+        selected_gas_volume,
     )
     return row_data, column_defs
 

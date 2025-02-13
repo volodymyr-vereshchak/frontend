@@ -32,11 +32,13 @@ def get_lines():
     return merge_data
 
 
-def update_table(active_cell, selected_rows, client, date_data, data_list):
+def update_table(
+    active_cell, selected_rows, client, date_data, data_list, selected_gas_volume=False
+):
     """Update table data based on user selection."""
     if not (selected_rows or active_cell):
         raise PreventUpdate
-    if date_data["change"] and not date_data["date_check"]:
+    if date_data["change"] and not date_data["date_check"] and not selected_gas_volume:
         raise PreventUpdate
     hour_flag = False
     if client == HourlyArchiveClient:
