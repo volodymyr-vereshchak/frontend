@@ -25,7 +25,6 @@ BUTTON_SECTION = dbc.Container(
             icon_pass="assets/icons/calendar-2.svg",
             id_name="days",
             href="/",
-            active=True,
         ),
         get_button(icon_pass="assets/icons/alarm.svg", id_name="hours", href="/hour"),
         get_button(
@@ -37,6 +36,6 @@ BUTTON_SECTION = dbc.Container(
     className="d-md-flex justify-content-start",
     style={
         "margin": 0,
-        "margin-top": 10,
+        "marginTop": 10,
     },
 )

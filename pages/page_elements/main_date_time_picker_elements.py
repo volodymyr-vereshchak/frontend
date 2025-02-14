@@ -1,3 +1,4 @@
+from calendar import firstweekday
 from datetime import date
 import dash_bootstrap_components as dbc
 
@@ -8,6 +9,7 @@ from dash import html, dcc
 def create_date_picker(picker_id):
     return dcc.DatePickerSingle(
         date=date.today(),
+        first_day_of_week=1,
         id=picker_id,
         display_format="DD.MM.YYYY",
         style={
@@ -31,15 +33,15 @@ def get_time_picker(picker_id):
             "width": "auto",
             "height": "26px",
             "padding": 0,
-            "margin-left": "8px",
-            "font-size": "large",
-            "background-color": "#181d1f",
+            "marginLeft": "8px",
+            "fontSize": "large",
+            "backgroundColor": "#181d1f",
             "color": "white",
             "border": "1px solid #3E3E3E",
-            "box-shadow": "none",
+            "boxShadow": "none",
             "appearance": "textfield",
-            "padding-right": "2px",
-            "text-align": "center",
+            "paddingRight": "2px",
+            "textAlign": "center",
         },
     )
 
@@ -69,7 +71,7 @@ def get_date_picker_section():
                 ],
                 justify="start",
                 align="center",
-                style={"margin-top": 5},
+                style={"marginTop": 5},
             ),
         ],
         fluid=True,

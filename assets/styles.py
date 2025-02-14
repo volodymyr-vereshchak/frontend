@@ -19,7 +19,6 @@ CELL_STYLE = {
     "textAlign": "center",
     "cursor": "pointer",
     "border": "1px solid #2a2a2a",
-    "border-collapse": "collapse",
 }
 
 # Define localization for numeric formatting
@@ -35,7 +34,7 @@ BUTTON_STYLE = {
     "height": "56px",
     # "background-color": "#3E3E3E",
     "border": "0",
-    "border-radius": "4px",
+    "borderRadius": "4px",
 }
 
 ICON_STYLE = {"height": "40px"}

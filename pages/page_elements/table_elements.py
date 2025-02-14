@@ -10,11 +10,15 @@ from assets.styles import (
 )
 import dash_ag_grid as dag
 
+date_obj = "d3.timeParse('%Y-%m-%dT%H:%M:%S')(params.data.period)"
 
 HOUR_DATE_COLUMNS = [
     dict(
         field="period",
         headerName="Дата",
+        valueFormatter={
+            "function": f"{date_obj} ? d3.timeFormat('%d.%m.%Y %H:%M:%S')({date_obj}) : ''"
+        },
         cellStyle=CELL_STYLE,
     ),
     dict(
@@ -79,7 +83,6 @@ def get_table_of_lines(id_name: str, data: pd.DataFrame):
         defaultColDef=DEFAULT_COL_DEF,
         dashGridOptions={
             "rowSelection": "multiple",
-            # "suppressRowClickSelection": True,
         },
     )
 
