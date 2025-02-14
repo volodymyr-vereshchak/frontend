@@ -143,7 +143,6 @@ def process_new_data(new_data):
 def update_pinned_row(data_df):
     """Update pinned bottom row with summary values."""
     df = pd.DataFrame(data_df)
-    print(df)
 
     if df.empty:
         aggregated_values = {

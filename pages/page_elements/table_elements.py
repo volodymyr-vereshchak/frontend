@@ -97,5 +97,7 @@ def get_data_table(id_name: str):
         style=TABLE_STYLE,
         className=TABLE_CLASS_NAME,
         defaultColDef=DEFAULT_COL_DEF,
-        dashGridOptions={},
+        dashGridOptions={
+            "rowSelection": "single",
+        },
     )
