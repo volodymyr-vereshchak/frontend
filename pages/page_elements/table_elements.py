@@ -10,14 +10,14 @@ from assets.styles import (
 )
 import dash_ag_grid as dag
 
-date_obj = "d3.timeParse('%Y-%m-%dT%H:%M:%S')(params.data.period)"
+date_obj = "d3.timeParse('%Y-%m-%dT%H:%M:%S')(params.data.period) || d3.timeParse('%Y-%m-%d')(params.data.period)"
 
 HOUR_DATE_COLUMNS = [
     dict(
         field="period",
         headerName="Дата",
         valueFormatter={
-            "function": f"{date_obj} ? d3.timeFormat('%d.%m.%Y %H:%M:%S')({date_obj}) : ''"
+            "function": f"{date_obj} ? (params.data.period.includes('T') ? d3.timeFormat('%d.%m.%Y %H:%M:%S')({date_obj}) : d3.timeFormat('%d.%m.%Y')({date_obj})) : ''"
         },
         cellStyle=CELL_STYLE,
     ),
