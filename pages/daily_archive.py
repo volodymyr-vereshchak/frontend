@@ -37,7 +37,11 @@ def layout(**kwargs):
             ),
             dbc.Col(
                 [
-                    html.H6("Суточный архив", className="text-center text-white mb-3"),
+                    html.H6(
+                        "Суточный архив",
+                        className="text-center text-white mb-3",
+                        id="daily_table_label",
+                    ),
                     daily_data_table,
                 ],
                 width=8,
