@@ -1,6 +1,8 @@
 import dash_bootstrap_components as dbc
 import dash
-from dash import html, Input, Output, State, callback
+import pandas as pd
+import plotly.express as px
+from dash import html, Input, Output, State, callback, dcc
 
 from api.daily_archive_client import DailyArchiveClient
 from pages.data_porcess.data_proc import get_lines, update_table, update_pinned_row
@@ -16,45 +18,55 @@ daily_list_of_gas_volume_calcs = get_table_of_lines("daily_gas_volumes", get_lin
 
 daily_data_table = get_data_table("daily_data_table")
 
+df = pd.DataFrame(columns=["period", "volume"])
+fig = px.line(df, x="period", y="volume")
+
 
 def layout(**kwargs):
-    return dbc.Row(
+    return dbc.Container(
         [
-            dbc.Col(
+            dbc.Row(
                 [
-                    html.H6(
-                        "Список узлов учета",
-                        id="gas_volume_calc_header",
-                        className="text-center text-white mb-3",
+                    dbc.Col(
+                        [
+                            html.H6(
+                                "Список узлов учета",
+                                id="gas_volume_calc_header",
+                                className="text-center text-white mb-3",
+                            ),
+                            daily_list_of_gas_volume_calcs,
+                        ],
+                        width=4,
+                        style={
+                            "display": "inline-block",
+                            "verticalAlign": "top",
+                        },
                     ),
-                    daily_list_of_gas_volume_calcs,
-                ],
-                width=4,
-                style={
-                    "display": "inline-block",
-                    "verticalAlign": "top",
-                },
-            ),
-            dbc.Col(
-                [
-                    html.H6(
-                        "Суточный архив",
-                        className="text-center text-white mb-3",
-                        id="daily_table_label",
+                    dbc.Col(
+                        [
+                            html.H6(
+                                "Суточный архив",
+                                className="text-center text-white mb-3",
+                                id="daily_table_label",
+                            ),
+                            daily_data_table,
+                        ],
+                        width=8,
                     ),
-                    daily_data_table,
                 ],
-                width=8,
+                className="mt-3",
+                justify="start",
             ),
+            dcc.Graph(figure=fig, id="daily_graph"),
         ],
-        className="mt-3",
-        justify="start",
+        fluid=True,
     )
 
 
 @callback(
     Output("daily_data_table", "rowData"),
     Output("daily_data_table", "columnDefs"),
+    Output("daily_graph", "figure"),
     Input("daily_gas_volumes", "cellClicked"),
     Input("daily_gas_volumes", "selectedRows"),
     Input("selected_dates", "data"),
@@ -75,7 +87,8 @@ def update_daily_table(active_cell, selected_rows, date_data, data_list):
         data_list,
         selected_gas_volume,
     )
-    return row_data, column_defs
+    fig = px.line(pd.DataFrame(row_data), x="period", y="volume")
+    return row_data, column_defs, fig
 
 
 @callback(
