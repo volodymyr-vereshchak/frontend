@@ -1,4 +1,4 @@
-TABLE_STYLE = {"height": "70vh"}
+TABLE_STYLE = {"height": "75vh"}
 TABLE_CLASS_NAME = "ag-theme-alpine-dark"
 DEFAULT_COL_DEF = {
     "cellRendererSelector": {"function": "rowPinningBottom(params)"},

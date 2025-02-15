@@ -20,6 +20,7 @@ daily_data_table = get_data_table("daily_data_table")
 
 df = pd.DataFrame(columns=["period", "volume"])
 fig = px.line(df, x="period", y="volume")
+fig.update_layout(plot_bgcolor="lightgray", paper_bgcolor="#1a1a1a", height=600)
 
 
 def layout(**kwargs):
@@ -57,7 +58,7 @@ def layout(**kwargs):
                 className="mt-3",
                 justify="start",
             ),
-            dcc.Graph(figure=fig, id="daily_graph"),
+            dcc.Graph(figure=fig, id="daily_graph", style={"margin-top": "5vh"}),
         ],
         fluid=True,
     )
@@ -88,6 +89,7 @@ def update_daily_table(active_cell, selected_rows, date_data, data_list):
         selected_gas_volume,
     )
     fig = px.line(pd.DataFrame(row_data), x="period", y="volume")
+    fig.update_layout(plot_bgcolor="#1a1a1a", paper_bgcolor="white", height=600)
     return row_data, column_defs, fig
 
 
