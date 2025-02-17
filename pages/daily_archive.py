@@ -6,9 +6,11 @@ from dash import html, Input, Output, State, callback, dcc
 
 from api.daily_archive_client import DailyArchiveClient
 from pages.data_porcess.data_proc import get_lines, update_table, update_pinned_row
+from pages.page_elements.graph_elements import get_period_graph
 from pages.page_elements.table_elements import (
     get_table_of_lines,
     get_data_table,
+    HOUR_DATE_COLUMNS,
 )
 
 dash.register_page(__name__, path="/")
@@ -19,8 +21,8 @@ daily_list_of_gas_volume_calcs = get_table_of_lines("daily_gas_volumes", get_lin
 daily_data_table = get_data_table("daily_data_table")
 
 df = pd.DataFrame(columns=["period", "volume"])
-fig = px.line(df, x="period", y="volume")
-fig.update_layout(plot_bgcolor="lightgray", paper_bgcolor="#1a1a1a", height=600)
+
+daily_data = pd.DataFrame(columns=[column["field"] for column in HOUR_DATE_COLUMNS])
 
 
 def layout(**kwargs):
@@ -58,7 +60,22 @@ def layout(**kwargs):
                 className="mt-3",
                 justify="start",
             ),
-            dcc.Graph(figure=fig, id="daily_graph", style={"margin-top": "5vh"}),
+            dcc.Dropdown(
+                id="daily_graph_dropbox",
+                options=[
+                    {"label": column["headerName"], "value": column["field"]}
+                    for column in HOUR_DATE_COLUMNS
+                    if column["field"] != "period"
+                ],
+                value="volume",
+                style={"color": "black"},
+                className="mt-3",
+            ),
+            dcc.Graph(
+                figure=get_period_graph(df=daily_data, y_axis="volume"),
+                id="daily_graph",
+                className="mt-3",
+            ),
         ],
         fluid=True,
     )
@@ -71,10 +88,11 @@ def layout(**kwargs):
     Input("daily_gas_volumes", "cellClicked"),
     Input("daily_gas_volumes", "selectedRows"),
     Input("selected_dates", "data"),
+    Input("daily_graph_dropbox", "value"),
     State("daily_gas_volumes", "virtualRowData"),
     # prevent_initial_call=True,
 )
-def update_daily_table(active_cell, selected_rows, date_data, data_list):
+def update_daily_table(active_cell, selected_rows, date_data, drop_value, data_list):
     ctx = dash.callback_context
     button_id = ctx.triggered[0]["prop_id"].split(".")[0]
     selected_gas_volume = False
@@ -88,8 +106,7 @@ def update_daily_table(active_cell, selected_rows, date_data, data_list):
         data_list,
         selected_gas_volume,
     )
-    fig = px.line(pd.DataFrame(row_data), x="period", y="volume")
-    fig.update_layout(plot_bgcolor="#1a1a1a", paper_bgcolor="white", height=600)
+    fig = get_period_graph(df=pd.DataFrame(row_data), y_axis=drop_value)
     return row_data, column_defs, fig
 
 
