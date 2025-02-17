@@ -132,10 +132,10 @@ def extract_params(selected_rows, active_cell, data_list, date_data, hour_flag):
     return params
 
 
-def process_new_data(new_data):
+def process_new_data(new_data) -> pd.DataFrame:
     """Process data and return formatted records."""
     if new_data.empty:
-        return pd.DataFrame().to_dict("records")
+        return pd.DataFrame()
 
     return new_data.groupby("period").sum(numeric_only=True)
 

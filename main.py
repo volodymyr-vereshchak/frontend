@@ -80,13 +80,15 @@ def set_store_with_dates(
 
 @callback(
     Output("update_state", "data"),
+    Output("update_in_progress", "displayed"),
     Input("update", "n_clicks"),
     prevent_initial_call=True,
 )
 def update_db_from_archives(n_clicks: int):
-    RootClient().api_post()
+    result = RootClient().api_post()
+    update_flag = False if result else True
     result = "updated"
-    return {"status": result}
+    return {"status": result}, update_flag
 
 
 @app.callback(
