@@ -9,7 +9,6 @@ from pages.page_elements.main_date_time_picker_elements import get_date_picker_s
 # External stylesheets
 EXTERNAL_STYLESHEETS = [
     dbc.themes.DARKLY,
-    "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css",
 ]
 
 # Create the Dash app
@@ -40,7 +39,7 @@ app.layout = dbc.Container(
         ),
     ],
     fluid=True,
-    style={"background-color": "#141414"},
+    style={"backgroundColor": "#141414"},
 )
 
 

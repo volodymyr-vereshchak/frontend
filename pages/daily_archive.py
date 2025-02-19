@@ -1,9 +1,6 @@
-from cProfile import label
-
 import dash_bootstrap_components as dbc
 import dash
 import pandas as pd
-import plotly.express as px
 from dash import html, Input, Output, State, callback, dcc
 
 from api.daily_archive_client import DailyArchiveClient
@@ -70,7 +67,7 @@ def layout(**kwargs):
                     if column["field"] != "period"
                 ],
                 value="volume",
-                style={"color": "black"},
+                style={"color": "black", "backgroundColor": "#3e3e3e"},
                 className="mt-3",
             ),
             dcc.Graph(
