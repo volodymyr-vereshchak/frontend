@@ -25,21 +25,22 @@ date_picker_section = get_date_picker_section()
 # Layout
 app.layout = dbc.Container(
     [
-        BUTTON_SECTION,
-        html.Hr(),
-        date_picker_section,
-        html.Hr(),
         dcc.Loading(
             [
+                BUTTON_SECTION,
+                html.Hr(),
+                date_picker_section,
+                html.Hr(),
                 dcc.Store(id="update_state", data={"status": "init"}),
                 dcc.Store(id="selected_dates"),
                 dash.page_container,
             ],
             overlay_style={"visibility": "visible", "filter": "blur(1px)"},
-            type="circle",
+            type="dot",
         ),
     ],
     fluid=True,
+    style={"background-color": "#141414"},
 )
 
 

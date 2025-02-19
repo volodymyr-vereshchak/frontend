@@ -1,3 +1,5 @@
+from cProfile import label
+
 import dash_bootstrap_components as dbc
 import dash
 import pandas as pd
@@ -72,7 +74,9 @@ def layout(**kwargs):
                 className="mt-3",
             ),
             dcc.Graph(
-                figure=get_period_graph(df=daily_data, y_axis="volume"),
+                figure=get_period_graph(
+                    df=daily_data, y_axis="volume", y_label="Объем с.у., м3"
+                ),
                 id="daily_graph",
                 className="mt-3",
             ),
@@ -106,7 +110,12 @@ def update_daily_table(active_cell, selected_rows, date_data, drop_value, data_l
         data_list,
         selected_gas_volume,
     )
-    fig = get_period_graph(df=pd.DataFrame(row_data), y_axis=drop_value)
+    label = [
+        column["headerName"]
+        for column in HOUR_DATE_COLUMNS
+        if column["field"] == drop_value
+    ][0]
+    fig = get_period_graph(df=pd.DataFrame(row_data), y_axis=drop_value, y_label=label)
     return row_data, column_defs, fig
 
 

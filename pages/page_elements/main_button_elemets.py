@@ -38,8 +38,5 @@ BUTTON_SECTION = dbc.Container(
         dcc.Store(id="active-button", data="days"),
     ],
     className="d-md-flex justify-content-start",
-    style={
-        "margin": 0,
-        "marginTop": 10,
-    },
+    style={"margin": 0, "marginTop": 10},
 )

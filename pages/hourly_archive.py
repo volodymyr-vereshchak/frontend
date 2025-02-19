@@ -67,7 +67,9 @@ def layout(**kwargs):
                 className="mt-3",
             ),
             dcc.Graph(
-                figure=get_period_graph(df=hourly_data, y_axis="volume"),
+                figure=get_period_graph(
+                    df=hourly_data, y_axis="volume", y_label="Объем с.у., м3"
+                ),
                 id="hourly_graph",
                 className="mt-3",
             ),
@@ -84,9 +86,12 @@ def layout(**kwargs):
     Input("hourly_gas_volumes", "selectedRows"),
     Input("selected_dates", "data"),
     Input("hourly_graph_dropbox", "value"),
+    Input("hourly_graph_dropbox", "label"),
     State("hourly_gas_volumes", "virtualRowData"),
 )
-def update_hour_table(active_cell, selected_rows, date_data, drop_value, data_list):
+def update_hour_table(
+    active_cell, selected_rows, date_data, drop_value, drop_label, data_list
+):
     ctx = dash.callback_context
     button_id = ctx.triggered[0]["prop_id"].split(".")[0]
     selected_gas_volume = False
@@ -100,7 +105,9 @@ def update_hour_table(active_cell, selected_rows, date_data, drop_value, data_li
         data_list,
         selected_gas_volume,
     )
-    fig = get_period_graph(df=pd.DataFrame(row_data), y_axis=drop_value)
+    fig = get_period_graph(
+        df=pd.DataFrame(row_data), y_axis=drop_value, y_label=drop_label
+    )
     return row_data, column_defs, fig
 
 
