@@ -43,7 +43,6 @@ app.layout = dbc.Container(
 )
 
 
-# Callback to store selected dates
 @callback(
     Output("selected_dates", "data"),
     Input("date_checkbox", "value"),

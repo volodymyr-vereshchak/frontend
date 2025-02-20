@@ -1,9 +1,12 @@
+import io
+
 import dash_bootstrap_components as dbc
 import dash
 import pandas as pd
 from dash import html, Input, Output, State, callback, Patch, dcc
 
 from api.hourly_archive_client import HourlyArchiveClient
+from assets.styles import BUTTON_STYLE_XLS, ICON_STYLE_XLS
 from pages.data_porcess.data_proc import get_lines, update_table, update_pinned_row
 from pages.page_elements.graph_elements import get_period_graph
 from pages.page_elements.table_elements import (
@@ -54,6 +57,23 @@ def layout(**kwargs):
                 ],
                 className="mt-3",
                 justify="start",
+            ),
+            dbc.Row(
+                dbc.Col(
+                    [
+                        dbc.Button(
+                            html.Img(
+                                src="assets/icons/settings.svg", style=ICON_STYLE_XLS
+                            ),
+                            id="hourly_xls",
+                            style=BUTTON_STYLE_XLS,
+                            className="btn-custom",
+                        ),
+                        dcc.Download(id="hourly_xlsx_download"),
+                    ],
+                    width=12,
+                    className="d-flex justify-content-end",
+                ),
             ),
             dcc.Dropdown(
                 id="hourly_graph_dropbox",
@@ -126,3 +146,26 @@ def update_width_table(_):
 )
 def hour_update_pinned_row(data_df):
     return update_pinned_row(data_df)
+
+
+@callback(
+    Output("hourly_xlsx_download", "data"),
+    Input("hourly_xls", "n_clicks"),
+    State("hourly_data_table", "rowData"),
+    State("hourly_gas_volumes", "selectedRows"),
+    prevent_initial_call=True,
+)
+def download_hourly_xlsx(n_clicks, data, selected_rows):
+    output = io.BytesIO()
+    df_hourly = pd.DataFrame(data)
+    lines = None
+    if selected_rows:
+        lines = [row["id"] for row in selected_rows]
+    if lines and len(lines) == 1:
+        line = lines[0]
+    else:
+        line = ""
+    from_date = df_hourly.period.min()
+    to_date = df_hourly.period.max()
+    df_hourly.to_excel(output)  # TODO ExcelWriter?
+    return dcc.send_bytes(output.getvalue(), f"hourly{line}_{from_date}_{to_date}.xlsx")

@@ -1,9 +1,12 @@
+import io
+
 import dash_bootstrap_components as dbc
 import dash
 import pandas as pd
 from dash import html, Input, Output, State, callback, dcc
 
 from api.daily_archive_client import DailyArchiveClient
+from assets.styles import ICON_STYLE_XLS, BUTTON_STYLE_XLS
 from pages.data_porcess.data_proc import get_lines, update_table, update_pinned_row
 from pages.page_elements.graph_elements import get_period_graph
 from pages.page_elements.table_elements import (
@@ -58,6 +61,23 @@ def layout(**kwargs):
                 ],
                 className="mt-3",
                 justify="start",
+            ),
+            dbc.Row(
+                dbc.Col(
+                    [
+                        dbc.Button(
+                            html.Img(
+                                src="assets/icons/settings.svg", style=ICON_STYLE_XLS
+                            ),
+                            id="daily_xls",
+                            style=BUTTON_STYLE_XLS,
+                            className="btn-custom",
+                        ),
+                        dcc.Download(id="daily_xlsx_download"),
+                    ],
+                    width=12,
+                    className="d-flex justify-content-end",
+                ),
             ),
             dcc.Dropdown(
                 id="daily_graph_dropbox",
@@ -131,3 +151,26 @@ def update_width_table(_):
 )
 def update_daily_pinned_row(data_df):
     return update_pinned_row(data_df)
+
+
+@callback(
+    Output("daily_xlsx_download", "data"),
+    Input("daily_xls", "n_clicks"),
+    State("daily_data_table", "rowData"),
+    State("daily_gas_volumes", "selectedRows"),
+    prevent_initial_call=True,
+)
+def download_daily_xlsx(n_clicks, data, selected_rows):
+    output = io.BytesIO()
+    df_daily = pd.DataFrame(data)
+    lines = None
+    if selected_rows:
+        lines = [row["id"] for row in selected_rows]
+    if lines and len(lines) == 1:
+        line = f"_{lines[0]}"
+    else:
+        line = ""
+    from_date = df_daily.period.min()
+    to_date = df_daily.period.max()
+    df_daily.to_excel(output)  # TODO ExcelWriter?
+    return dcc.send_bytes(output.getvalue(), f"daily{line}_{from_date}_{to_date}.xlsx")
