@@ -130,4 +130,4 @@ def set_button_active(active_button):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=False)
