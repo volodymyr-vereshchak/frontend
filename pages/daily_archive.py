@@ -17,13 +17,7 @@ from pages.page_elements.table_elements import (
 
 dash.register_page(__name__, path="/")
 
-
-daily_list_of_gas_volume_calcs = get_table_of_lines("daily_gas_volumes", get_lines())
-
 daily_data_table = get_data_table("daily_data_table")
-
-df = pd.DataFrame(columns=["period", "volume"])
-
 daily_data = pd.DataFrame(columns=[column["field"] for column in HOUR_DATE_COLUMNS])
 
 
@@ -39,7 +33,7 @@ def layout(**kwargs):
                                 id="gas_volume_calc_header",
                                 className="text-center text-white mb-3",
                             ),
-                            daily_list_of_gas_volume_calcs,
+                            get_table_of_lines("daily_gas_volumes", get_lines()),
                         ],
                         width=4,
                         style={

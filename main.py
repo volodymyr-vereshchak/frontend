@@ -3,6 +3,7 @@ from dash import Dash, html, dcc, callback, Input, Output
 import dash_bootstrap_components as dbc
 
 from api.root_client import RootClient
+from pages.data_porcess.data_proc import get_lines
 from pages.page_elements.main_button_elemets import BUTTON_SECTION
 from pages.page_elements.main_date_time_picker_elements import get_date_picker_section
 
@@ -64,16 +65,18 @@ def set_store_with_dates(
     if button_id in ["from_date", "start_hour", "to_date", "end_hour"]:
         change = True
     return (
-        {
-            "date_check": date_check,
-            "change": change,
-            "from_date": from_date,
-            "start_hour": start_hour,
-            "end_hour": end_hour,
-            "to_date": to_date,
-        }
-        if date_check
-        else {"date_check": False, "change": change}
+        (
+            {
+                "date_check": date_check,
+                "change": change,
+                "from_date": from_date,
+                "start_hour": start_hour,
+                "end_hour": end_hour,
+                "to_date": to_date,
+            }
+            if date_check
+            else {"date_check": False, "change": change}
+        ),
     )
 
 

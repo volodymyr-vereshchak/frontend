@@ -18,10 +18,7 @@ from pages.page_elements.table_elements import (
 # Register Dash page
 dash.register_page(__name__, path="/hour")
 
-hourly_list_of_gas_volume_calcs = get_table_of_lines("hourly_gas_volumes", get_lines())
-
 hourly_data_table = get_data_table("hourly_data_table")
-
 hourly_data = pd.DataFrame(columns=[column["field"] for column in HOUR_DATE_COLUMNS])
 
 
@@ -37,7 +34,7 @@ def layout(**kwargs):
                                 id="hourly_gas_volume_calc_header",
                                 className="text-center text-white mb-3",
                             ),
-                            hourly_list_of_gas_volume_calcs,
+                            get_table_of_lines("hourly_gas_volumes", get_lines()),
                         ],
                         width=4,
                         style={
