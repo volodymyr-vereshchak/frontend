@@ -18,7 +18,7 @@ app = Dash(
     external_stylesheets=EXTERNAL_STYLESHEETS,
     suppress_callback_exceptions=True,
 )
-
+server = app.server
 date_picker_section = get_date_picker_section()
 
 # Layout
@@ -129,5 +129,5 @@ def set_button_active(active_button):
     return [True if button == active_button else False for button in buttons]
 
 
-if __name__ == "__main__":
-    app.run_server(debug=False)
+# if __name__ == "__main__":
+#     app.run_server(host="0.0.0.0", debug=False)
