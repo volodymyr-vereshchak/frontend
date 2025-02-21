@@ -10,7 +10,7 @@ services:
       - hostlib_network
     ports:
       - "8050:8050"
-    command: ["gunicorn", "-b", "0.0.0.0:8050", "main:server"]
+    command: ["gunicorn", "-b", "0.0.0.0:8050", "-w", "4", "main:server"]
 
 networks:
   hostlib_network:
