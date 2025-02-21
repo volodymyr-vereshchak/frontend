@@ -65,18 +65,16 @@ def set_store_with_dates(
     if button_id in ["from_date", "start_hour", "to_date", "end_hour"]:
         change = True
     return (
-        (
-            {
-                "date_check": date_check,
-                "change": change,
-                "from_date": from_date,
-                "start_hour": start_hour,
-                "end_hour": end_hour,
-                "to_date": to_date,
-            }
-            if date_check
-            else {"date_check": False, "change": change}
-        ),
+        {
+            "date_check": date_check,
+            "change": change,
+            "from_date": from_date,
+            "start_hour": start_hour,
+            "end_hour": end_hour,
+            "to_date": to_date,
+        }
+        if date_check
+        else {"date_check": False, "change": change}
     )
 
 

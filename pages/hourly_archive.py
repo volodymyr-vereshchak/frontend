@@ -18,11 +18,11 @@ from pages.page_elements.table_elements import (
 # Register Dash page
 dash.register_page(__name__, path="/hour")
 
-hourly_data_table = get_data_table("hourly_data_table")
-hourly_data = pd.DataFrame(columns=[column["field"] for column in HOUR_DATE_COLUMNS])
-
 
 def layout(**kwargs):
+    hourly_data = pd.DataFrame(
+        columns=[column["field"] for column in HOUR_DATE_COLUMNS]
+    )
     return dbc.Container(
         [
             dbc.Row(
@@ -47,7 +47,7 @@ def layout(**kwargs):
                             html.H6(
                                 "Часовой архив", className="text-center text-white mb-3"
                             ),
-                            hourly_data_table,
+                            get_data_table("hourly_data_table"),
                         ],
                         width=8,
                     ),

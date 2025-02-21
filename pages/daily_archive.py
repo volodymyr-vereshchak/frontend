@@ -17,11 +17,9 @@ from pages.page_elements.table_elements import (
 
 dash.register_page(__name__, path="/")
 
-daily_data_table = get_data_table("daily_data_table")
-daily_data = pd.DataFrame(columns=[column["field"] for column in HOUR_DATE_COLUMNS])
-
 
 def layout(**kwargs):
+    daily_data = pd.DataFrame(columns=[column["field"] for column in HOUR_DATE_COLUMNS])
     return dbc.Container(
         [
             dbc.Row(
@@ -48,7 +46,7 @@ def layout(**kwargs):
                                 className="text-center text-white mb-3",
                                 id="daily_table_label",
                             ),
-                            daily_data_table,
+                            get_data_table("daily_data_table"),
                         ],
                         width=8,
                     ),
