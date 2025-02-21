@@ -1,0 +1,11 @@
+services:
+  frontend:
+    build:
+      context: .
+    container_name: dash_app
+    volumes:
+      - .:/app
+    working_dir: /app
+    ports:
+      - "8050:8050"
+    command: ["python", "main.py"]
