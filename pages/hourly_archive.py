@@ -80,7 +80,7 @@ def layout(**kwargs):
                     if column["field"] != "period"
                 ],
                 value="volume",
-                style={"color": "black"},
+                style={"backgroundColor": "#3e3e3e"},
                 className="mt-3",
             ),
             dcc.Graph(
