@@ -1,1 +1,1 @@
-settings = {"BASE_API_URL": "fastapi_app", "API_PORT": 8000}
+settings = {"BASE_API_URL": "localhost", "API_PORT": 8000}

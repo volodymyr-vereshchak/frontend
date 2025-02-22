@@ -122,9 +122,13 @@ def update_hour_table(
         data_list,
         selected_gas_volume,
     )
-    fig = get_period_graph(
-        df=pd.DataFrame(row_data), y_axis=drop_value, y_label=drop_label
-    )
+    label = [
+        column["headerName"]
+        for column in HOUR_DATE_COLUMNS
+        if column["field"] == drop_value
+    ][0]
+
+    fig = get_period_graph(df=pd.DataFrame(row_data), y_axis=drop_value, y_label=label)
     return row_data, column_defs, fig
 
 

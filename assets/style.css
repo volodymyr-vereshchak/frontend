@@ -46,6 +46,10 @@ body {
     background-color: #3E3E3E;
 }
 
+.Select-value-label {
+    color: white !important;
+}
+
 #react-select-2--value-item{
     color: white;
 }
