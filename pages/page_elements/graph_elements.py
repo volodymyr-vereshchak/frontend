@@ -3,7 +3,6 @@ import plotly.express as px
 
 
 def get_period_graph(df: pd.DataFrame, y_axis: str, y_label: str):
-    print(y_label)
     fig = px.line(df, x="period", y=y_axis)
     fig.update_layout(
         plot_bgcolor="#1a1a1a",

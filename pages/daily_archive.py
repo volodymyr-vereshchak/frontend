@@ -124,7 +124,6 @@ def update_daily_table(active_cell, selected_rows, date_data, drop_value, data_l
         for column in HOUR_DATE_COLUMNS
         if column["field"] == drop_value
     ][0]
-    print(label)
     fig = get_period_graph(df=pd.DataFrame(row_data), y_axis=drop_value, y_label=label)
     return row_data, column_defs, fig
 
