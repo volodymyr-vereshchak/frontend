@@ -59,7 +59,7 @@ def layout(**kwargs):
                     [
                         dbc.Button(
                             html.Img(
-                                src="assets/icons/settings.svg", style=ICON_STYLE_XLS
+                                src="assets/icons/excel.svg", style=ICON_STYLE_XLS
                             ),
                             id="daily_xls",
                             style=BUTTON_STYLE_XLS,
