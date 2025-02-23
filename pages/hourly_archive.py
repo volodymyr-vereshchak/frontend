@@ -65,6 +65,7 @@ def layout(**kwargs):
                             id="hourly_xls",
                             style=BUTTON_STYLE_XLS,
                             className="btn-custom",
+                            title="Экспорт в excel",
                         ),
                         dcc.Download(id="hourly_xlsx_download"),
                     ],

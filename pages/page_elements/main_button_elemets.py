@@ -4,7 +4,13 @@ from dash import html, dcc
 from assets.styles import ICON_STYLE, BUTTON_STYLE
 
 
-def get_button(icon_pass: str, id_name: str, href: str = None, active: bool = False):
+def get_button(
+    icon_pass: str,
+    id_name: str,
+    href: str = None,
+    active: bool = False,
+    title: str = None,
+):
     return dbc.Button(
         html.Img(src=icon_pass, style=ICON_STYLE),
         id=id_name,
@@ -12,6 +18,7 @@ def get_button(icon_pass: str, id_name: str, href: str = None, active: bool = Fa
         style=BUTTON_STYLE,
         className="me-md-2 btn-custom",
         active=active,
+        title=title,
     )
 
 
@@ -29,8 +36,14 @@ BUTTON_SECTION = dbc.Container(
             icon_pass="assets/icons/calendar-2.svg",
             id_name="days",
             href="/",
+            title="Суточный архив",
         ),
-        get_button(icon_pass="assets/icons/alarm.svg", id_name="hours", href="/hour"),
+        get_button(
+            icon_pass="assets/icons/alarm.svg",
+            id_name="hours",
+            href="/hour",
+            title="Часовой архив",
+        ),
         get_button(
             icon_pass="assets/icons/iconoir_pc-warning.svg", id_name="sys", href="/"
         ),
