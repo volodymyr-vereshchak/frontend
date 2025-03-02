@@ -10,6 +10,7 @@ class EditArchive(BaseModel):
     edit_id: int
     old_value: int
     new_value: int
+    edit_name: str
 
 
 class EditArchiveClient(BaseClient):

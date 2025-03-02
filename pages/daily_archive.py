@@ -46,7 +46,7 @@ def layout(**kwargs):
                                 className="text-center text-white mb-3",
                                 id="daily_table_label",
                             ),
-                            get_data_table("daily_data_table"),
+                            get_data_table("daily_data_table", HOUR_DATE_COLUMNS),
                         ],
                         width=8,
                     ),

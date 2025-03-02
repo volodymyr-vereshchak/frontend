@@ -47,7 +47,12 @@ BUTTON_SECTION = dbc.Container(
         get_button(
             icon_pass="assets/icons/iconoir_pc-warning.svg", id_name="sys", href="/"
         ),
-        get_button(icon_pass="assets/icons/page-edit.svg", id_name="edits", href="/"),
+        get_button(
+            icon_pass="assets/icons/page-edit.svg",
+            id_name="edits",
+            href="/edit",
+            title="Архив вмешательств",
+        ),
         dcc.Store(id="active-button", data="days"),
     ],
     className="d-md-flex justify-content-start",

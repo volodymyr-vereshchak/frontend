@@ -1,3 +1,4 @@
+import struct
 from datetime import datetime
 
 import pandas as pd
@@ -22,7 +23,7 @@ def get_lines():
         merge_data = list_data.merge(
             gas_volume_data.rename(
                 columns={"name": "name_gas_volume", "id": "flow_id"}
-            ),  # [["flow_id", "name_gas_volume", "address"]],
+            ),
             left_on="gas_volume_calc_id",
             right_on="flow_id",
             how="left",
@@ -105,6 +106,26 @@ def update_table(
     return new_data, column_defs
 
 
+def update_table_edit(
+    active_cell, selected_rows, client, date_data, data_list, selected_gas_volume=False
+):
+    """Update table data based on user selection."""
+    if not (selected_rows or active_cell):
+        raise PreventUpdate
+    if date_data["change"] and not date_data["date_check"] and not selected_gas_volume:
+        raise PreventUpdate
+    hour_flag = True
+    params = extract_params(selected_rows, active_cell, data_list, date_data, hour_flag)
+    new_data = client().get_archives(**params)
+    new_data["old_value"] = new_data.apply(
+        lambda r: convert_int_to_hex_to_float(r.old_value), axis=1
+    )
+    new_data["new_value"] = new_data.apply(
+        lambda r: convert_int_to_hex_to_float(r.new_value), axis=1
+    )
+    return new_data
+
+
 def extract_params(selected_rows, active_cell, data_list, date_data, hour_flag):
     """Extract parameters for fetching data based on user selection."""
     params = {}
@@ -181,3 +202,8 @@ def update_pinned_row(data_df):
     patch = Patch()
     patch["pinnedBottomRowData"] = [{**aggregated_values}]
     return patch
+
+
+def convert_int_to_hex_to_float(value: int):
+    float_value = struct.unpack("!f", struct.pack("!I", value))[0]
+    return float_value

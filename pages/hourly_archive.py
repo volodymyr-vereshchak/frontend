@@ -47,7 +47,7 @@ def layout(**kwargs):
                             html.H6(
                                 "Часовой архив", className="text-center text-white mb-3"
                             ),
-                            get_data_table("hourly_data_table"),
+                            get_data_table("hourly_data_table", HOUR_DATE_COLUMNS),
                         ],
                         width=8,
                     ),

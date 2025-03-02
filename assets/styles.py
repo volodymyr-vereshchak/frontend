@@ -28,6 +28,7 @@ LOCALE_NUMBERS = """d3.formatLocale({
   "grouping": [3],
 })"""
 VALUE_FORMATTER = {"function": f"{LOCALE_NUMBERS}.format('$,.3f')(params.value)"}
+VALUE_EDIT_FORMATTER = {"function": f"{LOCALE_NUMBERS}.format('$,.4f')(params.value)"}
 
 BUTTON_STYLE = {
     "weight": "56px",
