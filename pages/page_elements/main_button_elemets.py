@@ -25,13 +25,13 @@ def get_button(
 # Button section
 BUTTON_SECTION = dbc.Container(
     [
-        get_button(icon_pass="assets/icons/settings.svg", id_name="settings", href="/"),
+        # get_button(icon_pass="assets/icons/settings.svg", id_name="settings", href="/"),
         get_button(icon_pass="assets/icons/refresh-double.svg", id_name="update"),
         dcc.ConfirmDialog(
             id="update_in_progress",
             message="Обновление уже запущено. Попробуйте позже!",
         ),
-        get_button(icon_pass="assets/icons/bank.svg", id_name="lumgs", href="/"),
+        # get_button(icon_pass="assets/icons/bank.svg", id_name="lumgs", href="/"),
         get_button(
             icon_pass="assets/icons/calendar-2.svg",
             id_name="days",
@@ -44,9 +44,9 @@ BUTTON_SECTION = dbc.Container(
             href="/hour",
             title="Часовой архив",
         ),
-        get_button(
-            icon_pass="assets/icons/iconoir_pc-warning.svg", id_name="sys", href="/"
-        ),
+        # get_button(
+        #     icon_pass="assets/icons/iconoir_pc-warning.svg", id_name="sys", href="/"
+        # ),
         get_button(
             icon_pass="assets/icons/page-edit.svg",
             id_name="edits",
