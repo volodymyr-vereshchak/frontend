@@ -1,4 +1,3 @@
-from calendar import firstweekday
 from datetime import date
 import dash_bootstrap_components as dbc
 

@@ -26,7 +26,7 @@ def get_button(
 BUTTON_SECTION = dbc.Container(
     [
         # get_button(icon_pass="assets/icons/settings.svg", id_name="settings", href="/"),
-        get_button(icon_pass="assets/icons/refresh-double.svg", id_name="update"),
+        # get_button(icon_pass="assets/icons/refresh-double.svg", id_name="update"),
         dcc.ConfirmDialog(
             id="update_in_progress",
             message="Обновление уже запущено. Попробуйте позже!",
