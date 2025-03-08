@@ -1,3 +1,4 @@
 .idea
 /front_repo/
 .venv
+.env
