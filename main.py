@@ -3,7 +3,6 @@ from dash import Dash, html, dcc, callback, Input, Output
 import dash_bootstrap_components as dbc
 
 from api.root_client import RootClient
-from pages.data_porcess.data_proc import get_lines
 from pages.page_elements.main_button_elemets import BUTTON_SECTION
 from pages.page_elements.main_date_time_picker_elements import get_date_picker_section
 
@@ -20,7 +19,7 @@ app = Dash(
     suppress_callback_exceptions=True,
 )
 server = app.server
-date_picker_section = get_date_picker_section()
+# date_picker_section = get_date_picker_section()
 
 # Layout
 app.layout = dbc.Container(
@@ -29,7 +28,7 @@ app.layout = dbc.Container(
             [
                 BUTTON_SECTION,
                 html.Hr(),
-                date_picker_section,
+                get_date_picker_section(),
                 html.Hr(),
                 dcc.Store(id="update_state", data={"status": "init"}),
                 dcc.Store(id="selected_dates"),
