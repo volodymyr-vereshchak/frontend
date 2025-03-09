@@ -68,7 +68,7 @@ class BaseClient:
             validated_data = [
                 self.pydantic_class(**archive).model_dump() for archive in response
             ]
-            df = pd.DataFrame(validated_data)
+            df = pd.DataFrame(validated_data).sort_values("period")
         return df
 
     def get_archive_counts(self, from_date=None, to_date=None, line_id: list = None):

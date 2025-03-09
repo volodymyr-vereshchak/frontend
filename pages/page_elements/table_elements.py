@@ -89,6 +89,28 @@ EDIT_COLUMNS = [
     ),
 ]
 
+SYS_COLUMNS = [
+    dict(
+        field="period",
+        headerName="Дата",
+        valueFormatter={
+            "function": f"{date_obj} ? (params.data.period.includes('T') ? d3.timeFormat('%d.%m.%Y %H:%M:%S')({date_obj}) : d3.timeFormat('%d.%m.%Y')({date_obj})) : ''"
+        },
+        cellStyle=CELL_STYLE,
+    ),
+    dict(
+        field="sys_name",
+        headerName="Тип аварии",
+        cellStyle=CELL_STYLE,
+    ),
+    # dict(
+    #     field="standard_volume",
+    #     headerName="Объем",
+    #     valueFormatter=VALUE_EDIT_FORMATTER,
+    #     cellStyle=CELL_STYLE,
+    # ),
+]
+
 
 def get_table_of_lines(id_name: str, data: pd.DataFrame, multiple: bool = True):
     return dag.AgGrid(

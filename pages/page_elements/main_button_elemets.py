@@ -44,9 +44,12 @@ BUTTON_SECTION = dbc.Container(
             href="/hour",
             title="Часовой архив",
         ),
-        # get_button(
-        #     icon_pass="assets/icons/iconoir_pc-warning.svg", id_name="sys", href="/"
-        # ),
+        get_button(
+            icon_pass="assets/icons/iconoir_pc-warning.svg",
+            id_name="sys",
+            href="/sys",
+            title="Архив аварий",
+        ),
         get_button(
             icon_pass="assets/icons/page-edit.svg",
             id_name="edits",

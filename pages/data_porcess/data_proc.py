@@ -126,6 +126,20 @@ def update_table_edit(
     return new_data
 
 
+def update_table_sys(
+    active_cell, selected_rows, client, date_data, data_list, selected_gas_volume=False
+):
+    """Update table data based on user selection."""
+    if not (selected_rows or active_cell):
+        raise PreventUpdate
+    if date_data["change"] and not date_data["date_check"] and not selected_gas_volume:
+        raise PreventUpdate
+    hour_flag = True
+    params = extract_params(selected_rows, active_cell, data_list, date_data, hour_flag)
+    new_data = client().get_archives(**params)
+    return new_data
+
+
 def extract_params(selected_rows, active_cell, data_list, date_data, hour_flag):
     """Extract parameters for fetching data based on user selection."""
     params = {}

@@ -9,6 +9,7 @@ class SysArchive(BaseModel):
     line_id: int
     sys_type_id: int
     standard_volume: float
+    sys_name: str
 
 
 class SysArchiveClient(BaseClient):
