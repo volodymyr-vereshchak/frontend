@@ -21,26 +21,31 @@ app = Dash(
 server = app.server
 # date_picker_section = get_date_picker_section()
 
+
+def layout():
+    return dbc.Container(
+        [
+            dcc.Loading(
+                [
+                    BUTTON_SECTION,
+                    html.Hr(),
+                    get_date_picker_section(),
+                    html.Hr(),
+                    dcc.Store(id="update_state", data={"status": "init"}),
+                    dcc.Store(id="selected_dates"),
+                    dash.page_container,
+                ],
+                overlay_style={"visibility": "visible", "filter": "blur(1px)"},
+                type="dot",
+            ),
+        ],
+        fluid=True,
+        style={"backgroundColor": "#141414"},
+    )
+
+
 # Layout
-app.layout = dbc.Container(
-    [
-        dcc.Loading(
-            [
-                BUTTON_SECTION,
-                html.Hr(),
-                get_date_picker_section(),
-                html.Hr(),
-                dcc.Store(id="update_state", data={"status": "init"}),
-                dcc.Store(id="selected_dates"),
-                dash.page_container,
-            ],
-            overlay_style={"visibility": "visible", "filter": "blur(1px)"},
-            type="dot",
-        ),
-    ],
-    fluid=True,
-    style={"backgroundColor": "#141414"},
-)
+app.layout = layout
 
 
 @callback(
