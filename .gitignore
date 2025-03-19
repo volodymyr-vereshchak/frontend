@@ -2,3 +2,6 @@
 /front_repo/
 .venv
 .env
+logs/
+__pycache__/
+*.pyc

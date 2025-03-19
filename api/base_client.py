@@ -79,7 +79,8 @@ class BaseClient:
         }
         url = self.get_full_url()[:-1] + "_counts/"
         response = self.api_get(params=params, url=url)
-        df = pd.DataFrame()
+        columns = [column for column in self.pydantic_class.__fields__.keys()]
+        df = pd.DataFrame(columns=columns)
         if response:
             df = pd.DataFrame(response)
         return df
