@@ -223,5 +223,5 @@ def update_pinned_row(data_df):
 
 
 def convert_int_to_hex_to_float(value: int):
-    float_value = struct.unpack("!f", struct.pack("!I", value))[0]
+    float_value = struct.unpack("!f", struct.pack("!i", value))[0]
     return float_value
