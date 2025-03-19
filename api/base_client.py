@@ -62,8 +62,9 @@ class BaseClient:
             "to_date": to_date,
             "line_id": line_id,
         }
+        columns = [column for column in self.pydantic_class.__fields__.keys()]
         response = self.api_get(params=params)
-        df = pd.DataFrame()
+        df = pd.DataFrame(columns=columns)
         if response:
             validated_data = [
                 self.pydantic_class(**archive).model_dump() for archive in response
@@ -79,8 +80,7 @@ class BaseClient:
         }
         url = self.get_full_url()[:-1] + "_counts/"
         response = self.api_get(params=params, url=url)
-        columns = [column for column in self.pydantic_class.__fields__.keys()]
-        df = pd.DataFrame(columns=columns)
+        df = pd.DataFrame()
         if response:
             df = pd.DataFrame(response)
         return df

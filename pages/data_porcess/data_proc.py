@@ -91,14 +91,17 @@ def update_table(
                 new_data = pd.concat([new_data, sys_data], axis=1)
         else:
             new_data["sys_counts"] = 0
+    if new_data.empty:
+        new_data = []
+    else:
+        new_data = (
+            new_data.dropna(subset=["volume"])
+            .fillna(0)
+            .reset_index()
+            .rename(columns={"index": "period"})
+            .to_dict("records")
+        )
 
-    new_data = (
-        new_data.dropna(subset=["volume"])
-        .fillna(0)
-        .reset_index()
-        .rename(columns={"index": "period"})
-        .to_dict("records")
-    )
     column_defs = (
         SUMMARY_HOUR_DATE_COLUMNS if len(params["line_id"]) > 1 else HOUR_DATE_COLUMNS
     )
@@ -170,7 +173,7 @@ def extract_params(selected_rows, active_cell, data_list, date_data, hour_flag):
 def process_new_data(new_data) -> pd.DataFrame:
     """Process data and return formatted records."""
     if new_data.empty:
-        return pd.DataFrame()
+        return new_data
 
     return new_data.groupby("period").sum(numeric_only=True)
 
