@@ -7,7 +7,7 @@ from api.base_client import BaseClient
 class EditArchive(BaseModel):
     period: datetime
     line_id: int
-    edit_id: int
+    edit_type_id: int
     old_value: int
     new_value: int
     edit_name: str
