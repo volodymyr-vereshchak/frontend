@@ -8,7 +8,7 @@ class SysArchive(BaseModel):
     period: datetime
     line_id: int
     sys_type_id: int
-    standard_volume: float
+    volume: float
     sys_name: str
 
 

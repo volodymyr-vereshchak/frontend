@@ -104,7 +104,7 @@ SYS_COLUMNS = [
         cellStyle=CELL_STYLE,
     ),
     # dict(
-    #     field="standard_volume",
+    #     field="volume",
     #     headerName="Объем",
     #     valueFormatter=VALUE_EDIT_FORMATTER,
     #     cellStyle=CELL_STYLE,
