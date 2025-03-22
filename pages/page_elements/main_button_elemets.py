@@ -57,7 +57,7 @@ BUTTON_SECTION = dbc.Container(
             title="Архив вмешательств",
         ),
         get_button(
-            icon_pass="assets/icons/page-edit.svg",
+            icon_pass="assets/icons/params.svg",
             id_name="param",
             href="/param",
             title="Параметры",
