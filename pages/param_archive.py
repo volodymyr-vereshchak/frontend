@@ -1,20 +1,20 @@
 import io
 
-import dash
 import dash_bootstrap_components as dbc
+import dash
 import pandas as pd
 from dash import html, Input, Output, State, callback, dcc
 
-from api.sys_archive_client import SysArchiveClient
+from api.param_client import ParamClient
 from assets.styles import ICON_STYLE_XLS, BUTTON_STYLE_XLS
 from pages.data_porcess.data_proc import get_lines, update_table_sys
+from pages.page_elements.param_page.param_table import PARAM_COLUMNS
 from pages.page_elements.table_elements import (
     get_table_of_lines,
     get_data_table,
-    SYS_COLUMNS,
 )
 
-dash.register_page(__name__, path="/sys")
+dash.register_page(__name__, path="/param")
 
 
 def layout(**kwargs):
@@ -26,11 +26,11 @@ def layout(**kwargs):
                         [
                             html.H6(
                                 "Список узлов учета",
-                                id="sys_gas_volume_calc_header",
+                                id="param_gas_volume_calc_header",
                                 className="text-center text-white mb-3",
                             ),
                             get_table_of_lines(
-                                "sys_gas_volumes", get_lines(), multiple=False
+                                "param_gas_volumes", get_lines(), multiple=False
                             ),
                         ],
                         width=4,
@@ -42,11 +42,11 @@ def layout(**kwargs):
                     dbc.Col(
                         [
                             html.H6(
-                                "Архив аварий",
+                                "Параметры",
                                 className="text-center text-white mb-3",
-                                id="sys_table_label",
+                                id="param_table_label",
                             ),
-                            get_data_table("sys_data_table", SYS_COLUMNS),
+                            get_data_table("param_data_table", PARAM_COLUMNS),
                         ],
                         width=8,
                     ),
@@ -61,12 +61,12 @@ def layout(**kwargs):
                             html.Img(
                                 src="assets/icons/excel.svg", style=ICON_STYLE_XLS
                             ),
-                            id="sys_xls",
+                            id="param_xls",
                             style=BUTTON_STYLE_XLS,
                             className="btn-custom",
                             title="Экспорт в excel",
                         ),
-                        dcc.Download(id="sys_xlsx_download"),
+                        dcc.Download(id="param_xlsx_download"),
                     ],
                     width=12,
                     className="d-flex justify-content-end",
@@ -78,23 +78,23 @@ def layout(**kwargs):
 
 
 @callback(
-    Output("sys_data_table", "rowData"),
-    Input("sys_gas_volumes", "cellClicked"),
-    Input("sys_gas_volumes", "selectedRows"),
+    Output("param_data_table", "rowData"),
+    Input("param_gas_volumes", "cellClicked"),
+    Input("param_gas_volumes", "selectedRows"),
     Input("selected_dates", "data"),
-    State("sys_gas_volumes", "virtualRowData"),
+    State("param_gas_volumes", "virtualRowData"),
     prevent_initial_call=True,
 )
-def update_sys_table(active_cell, selected_row, date_data, data_list):
+def update_param_table(active_cell, selected_row, date_data, data_list):
     ctx = dash.callback_context
     button_id = ctx.triggered[0]["prop_id"].split(".")[0]
     selected_gas_volume = False
-    if button_id == "sys_gas_volumes":
+    if button_id == "param_gas_volumes":
         selected_gas_volume = True
     row_data = update_table_sys(
         active_cell,
         selected_row,
-        SysArchiveClient,
+        ParamClient,
         date_data,
         data_list,
         selected_gas_volume,
@@ -103,8 +103,8 @@ def update_sys_table(active_cell, selected_row, date_data, data_list):
 
 
 @callback(
-    Output("sys_data_table", "columnSize"),
-    Input("sys_data_table", "rowData"),
+    Output("param_data_table", "columnSize"),
+    Input("param_data_table", "rowData"),
 )
 def update_width_table(_):
     column_size = "autoSize"
@@ -112,20 +112,20 @@ def update_width_table(_):
 
 
 @callback(
-    Output("sys_xlsx_download", "data"),
-    Input("sys_xls", "n_clicks"),
-    State("sys_data_table", "rowData"),
-    State("sys_gas_volumes", "selectedRows"),
+    Output("param_xlsx_download", "data"),
+    Input("param_xls", "n_clicks"),
+    State("param_data_table", "rowData"),
+    State("param_gas_volumes", "selectedRows"),
     prevent_initial_call=True,
 )
-def download_sys_xlsx(n_clicks, data, selected_rows):
+def download_param_xlsx(n_clicks, data, selected_rows):
     output = io.BytesIO()
-    df_sys = pd.DataFrame(data)
+    df_param = pd.DataFrame(data)
     if selected_rows:
         line = selected_rows[0]["id"]
     else:
         line = ""
-    from_date = df_sys.period.min()
-    to_date = df_sys.period.max()
-    df_sys.to_excel(output)  # TODO ExcelWriter?
-    return dcc.send_bytes(output.getvalue(), f"sys{line}_{from_date}_{to_date}.xlsx")
+    from_date = df_param.period.min()
+    to_date = df_param.period.max()
+    df_param.to_excel(output)  # TODO ExcelWriter?
+    return dcc.send_bytes(output.getvalue(), f"param{line}_{from_date}_{to_date}.xlsx")

@@ -56,6 +56,12 @@ BUTTON_SECTION = dbc.Container(
             href="/edit",
             title="Архив вмешательств",
         ),
+        get_button(
+            icon_pass="assets/icons/page-edit.svg",
+            id_name="param",
+            href="/param",
+            title="Параметры",
+        ),
         dcc.Store(id="active-button", data="days"),
     ],
     className="d-md-flex justify-content-start",
