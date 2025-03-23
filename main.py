@@ -19,7 +19,6 @@ app = Dash(
     suppress_callback_exceptions=True,
 )
 server = app.server
-# date_picker_section = get_date_picker_section()
 
 
 def layout():
@@ -98,13 +97,11 @@ def update_db_from_archives(n_clicks: int):
 @app.callback(
     Output("active-button", "data"),  # Сохраняем активную кнопку
     [
-        Input("settings", "n_clicks"),
-        Input("update", "n_clicks"),
-        Input("lumgs", "n_clicks"),
         Input("days", "n_clicks"),
         Input("hours", "n_clicks"),
         Input("sys", "n_clicks"),
         Input("edits", "n_clicks"),
+        Input("param", "n_clicks"),
     ],
     prevent_initial_call=True,
 )
@@ -118,19 +115,17 @@ def update_active_button(*args):
 
 @app.callback(
     [
-        Output("settings", "active"),
-        Output("update", "active"),
-        Output("lumgs", "active"),
         Output("days", "active"),
         Output("hours", "active"),
         Output("sys", "active"),
         Output("edits", "active"),
+        Output("param", "active"),
     ],
     [Input("active-button", "data")],
     prevent_initial_call=True,
 )
 def set_button_active(active_button):
-    buttons = ["settings", "update", "lumgs", "days", "hours", "sys", "edits"]
+    buttons = ["days", "hours", "sys", "edits", "param"]
     return [True if button == active_button else False for button in buttons]
 
 

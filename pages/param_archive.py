@@ -8,7 +8,10 @@ from dash import html, Input, Output, State, callback, dcc
 from api.param_client import ParamClient
 from assets.styles import ICON_STYLE_XLS, BUTTON_STYLE_XLS
 from pages.data_porcess.data_proc import get_lines, update_table_sys
-from pages.page_elements.param_page.param_table import PARAM_COLUMNS
+from pages.page_elements.param_page.param_table import (
+    PARAM_COLUMNS,
+    RENAME_PARAMS_COLUMNS,
+)
 from pages.page_elements.table_elements import (
     get_table_of_lines,
     get_data_table,
@@ -99,6 +102,8 @@ def update_param_table(active_cell, selected_row, date_data, data_list):
         data_list,
         selected_gas_volume,
     )
+    row_data = row_data.drop(columns=["period"]).rename(columns=RENAME_PARAMS_COLUMNS)
+    row_data = row_data.T.reset_index().rename(columns={"index": "name", 0: "value"})
     return row_data.to_dict("records")
 
 
