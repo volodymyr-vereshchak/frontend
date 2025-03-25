@@ -27,7 +27,7 @@ class BaseClient:
         if url is None:
             url = self.get_full_url()
         try:
-            response = requests.get(url=url, params=params)
+            response = requests.get(url=url, params=params, headers={"Accept-Encoding": "gzip"})
             response.raise_for_status()
         except requests.exceptions.HTTPError as http_err:
             self.logger.debug(http_err)
@@ -36,7 +36,7 @@ class BaseClient:
         except requests.exceptions.RequestException as err:
             self.logger.debug(err)
             return None
-
+        print(response.json())
         return response.json()
 
     def api_post(
