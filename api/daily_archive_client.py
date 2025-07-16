@@ -18,5 +18,5 @@ class DailyArchiveClient(BaseClient):
         self,
     ):
         super().__init__()
-        self.endpoint = "day_archive/"
+        self.endpoint = "daily/"
         self.pydantic_class = DailyArchive

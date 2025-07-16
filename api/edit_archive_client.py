@@ -18,5 +18,5 @@ class EditArchiveClient(BaseClient):
         self,
     ):
         super().__init__()
-        self.endpoint = "edit_archive/"
+        self.endpoint = "edit/"
         self.pydantic_class = EditArchive

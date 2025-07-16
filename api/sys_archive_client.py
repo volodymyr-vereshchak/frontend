@@ -17,5 +17,5 @@ class SysArchiveClient(BaseClient):
         self,
     ):
         super().__init__()
-        self.endpoint = "sys_archive/"
+        self.endpoint = "sys/"
         self.pydantic_class = SysArchive

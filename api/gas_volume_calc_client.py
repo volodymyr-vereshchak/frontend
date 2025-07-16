@@ -6,7 +6,7 @@ from api.base_client import BaseClient
 class GasVolumeCalcClient(BaseClient):
     def __init__(self):
         super().__init__()
-        self.endpoint = "gas_volume_calcs/"
+        self.endpoint = "gas-volume-calcs/"
 
     def get_gas_volume_list_by_lumg(self, lumg_id: int = 1):
         params = {"lumg_id": lumg_id}

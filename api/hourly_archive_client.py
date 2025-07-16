@@ -18,5 +18,5 @@ class HourlyArchiveClient(BaseClient):
         self,
     ):
         super().__init__()
-        self.endpoint = "hour_archive/"
+        self.endpoint = "hourly/"
         self.pydantic_class = HourlyArchive
