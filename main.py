@@ -6,6 +6,9 @@ from api.root_client import RootClient
 from pages.page_elements.main_button_elemets import BUTTON_SECTION
 from pages.page_elements.main_date_time_picker_elements import get_date_picker_section
 
+# Import all callbacks to register them
+import pages.callbacks
+
 # External stylesheets
 EXTERNAL_STYLESHEETS = [
     dbc.themes.DARKLY,
@@ -88,29 +91,26 @@ def set_store_with_dates(
     prevent_initial_call=True,
 )
 def update_db_from_archives(n_clicks: int):
-    result = RootClient().api_post()
-    update_flag = False if result else True
-    result = "updated"
-    return {"status": result}, update_flag
+    """Update database from archives with improved error handling"""
+    try:
+        result = RootClient().api_post()
+        if result:
+            status = "updated"
+            update_flag = False
+        else:
+            status = "failed"
+            update_flag = True
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logging.error(f"Error updating database: {e}")
+        status = f"error: {str(e)}"
+        update_flag = True
+    
+    return {"status": status}, update_flag
 
 
-@app.callback(
-    Output("active-button", "data"),  # Сохраняем активную кнопку
-    [
-        Input("days", "n_clicks"),
-        Input("hours", "n_clicks"),
-        Input("sys", "n_clicks"),
-        Input("edits", "n_clicks"),
-        Input("param", "n_clicks"),
-    ],
-    prevent_initial_call=True,
-)
-def update_active_button(*args):
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        return None
-    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    return button_id
+# Active button callback is now in pages.callbacks.utility_callbacks
 
 
 @app.callback(

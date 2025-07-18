@@ -1,17 +1,21 @@
-import io
-
 import dash
 import dash_bootstrap_components as dbc
 import pandas as pd
-from dash import html, Input, Output, State, callback, dcc
+from dash import html, dcc
 
-from api.sys_archive_client import SysArchiveClient
-from assets.styles import ICON_STYLE_XLS, BUTTON_STYLE_XLS
-from pages.data_porcess.data_proc import get_lines, update_table_sys
+from pages.data_porcess.data_proc import get_lines
 from pages.page_elements.table_elements import (
     get_table_of_lines,
     get_data_table,
     SYS_COLUMNS,
+)
+from assets.styles import ICON_STYLE_XLS, BUTTON_STYLE_XLS
+
+# Import callbacks
+from pages.callbacks import (
+    update_sys_table,
+    update_sys_width_table,
+    download_sys_xlsx
 )
 
 dash.register_page(__name__, path="/sys")
@@ -77,55 +81,4 @@ def layout(**kwargs):
     )
 
 
-@callback(
-    Output("sys_data_table", "rowData"),
-    Input("sys_gas_volumes", "cellClicked"),
-    Input("sys_gas_volumes", "selectedRows"),
-    Input("selected_dates", "data"),
-    State("sys_gas_volumes", "virtualRowData"),
-    prevent_initial_call=True,
-)
-def update_sys_table(active_cell, selected_row, date_data, data_list):
-    ctx = dash.callback_context
-    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    selected_gas_volume = False
-    if button_id == "sys_gas_volumes":
-        selected_gas_volume = True
-    row_data = update_table_sys(
-        active_cell,
-        selected_row,
-        SysArchiveClient,
-        date_data,
-        data_list,
-        selected_gas_volume,
-    )
-    return row_data.to_dict("records")
-
-
-@callback(
-    Output("sys_data_table", "columnSize"),
-    Input("sys_data_table", "rowData"),
-)
-def update_width_table(_):
-    column_size = "autoSize"
-    return column_size
-
-
-@callback(
-    Output("sys_xlsx_download", "data"),
-    Input("sys_xls", "n_clicks"),
-    State("sys_data_table", "rowData"),
-    State("sys_gas_volumes", "selectedRows"),
-    prevent_initial_call=True,
-)
-def download_sys_xlsx(n_clicks, data, selected_rows):
-    output = io.BytesIO()
-    df_sys = pd.DataFrame(data)
-    if selected_rows:
-        line = selected_rows[0]["id"]
-    else:
-        line = ""
-    from_date = df_sys.period.min()
-    to_date = df_sys.period.max()
-    df_sys.to_excel(output)  # TODO ExcelWriter?
-    return dcc.send_bytes(output.getvalue(), f"sys{line}_{from_date}_{to_date}.xlsx")
+# Callbacks are now imported from pages.callbacks module

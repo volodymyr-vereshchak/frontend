@@ -17,20 +17,53 @@ from pages.page_elements.table_elements import (
 
 
 def get_lines():
-    list_data = LineClient().get_lines_list_by_lumg()
-    gas_volume_data = GasVolumeCalcClient().get_gas_volume_list_by_lumg()
-    if not (list_data.empty and gas_volume_data.empty):
-        merge_data = list_data.merge(
-            gas_volume_data.rename(
-                columns={"name": "name_gas_volume", "id": "flow_id"}
-            ),
-            left_on="gas_volume_calc_id",
-            right_on="flow_id",
-            how="left",
-        ).sort_values(["address", "line"], ascending=[False, True])
-    else:
-        merge_data = pd.DataFrame()
-    return merge_data
+    """Get lines data with improved error handling"""
+    try:
+        list_data = LineClient().get_lines_list_by_lumg()
+        gas_volume_data = GasVolumeCalcClient().get_gas_volume_list_by_lumg()
+        
+        # Check if we have any data
+        if list_data.empty and gas_volume_data.empty:
+            import logging
+            logging.warning("No data received from both LineClient and GasVolumeCalcClient")
+            return pd.DataFrame()
+        
+        # If we have line data but no gas volume data, return line data
+        if not list_data.empty and gas_volume_data.empty:
+            import logging
+            logging.warning("No gas volume data available, returning line data only")
+            return list_data
+        
+        # If we have gas volume data but no line data, return empty
+        if list_data.empty and not gas_volume_data.empty:
+            import logging
+            logging.warning("No line data available")
+            return pd.DataFrame()
+        
+        # Merge data
+        try:
+            merge_data = list_data.merge(
+                gas_volume_data.rename(
+                    columns={"name": "name_gas_volume", "id": "flow_id"}
+                ),
+                left_on="gas_volume_calc_id",
+                right_on="flow_id",
+                how="left",
+            ).sort_values(["address", "line"], ascending=[False, True])
+            
+            import logging
+            logging.debug(f"Successfully merged {len(merge_data)} lines")
+            return merge_data
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error merging line and gas volume data: {e}")
+            return list_data  # Return line data as fallback
+            
+    except Exception as e:
+        import logging
+        logging.error(f"Error in get_lines: {e}")
+        return pd.DataFrame()
 
 
 def update_table(

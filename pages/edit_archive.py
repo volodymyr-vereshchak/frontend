@@ -1,18 +1,21 @@
-import io
-
 import dash_bootstrap_components as dbc
 import dash
 import pandas as pd
-from dash import html, Input, Output, State, callback, dcc
+from dash import html, dcc
 
-from api.edit_archive_client import EditArchiveClient
-from assets.styles import ICON_STYLE_XLS, BUTTON_STYLE_XLS
-from pages.data_porcess.data_proc import get_lines, update_table_edit
+from pages.data_porcess.data_proc import get_lines
 from pages.page_elements.table_elements import (
     get_table_of_lines,
     get_data_table,
     HOUR_DATE_COLUMNS,
     EDIT_COLUMNS,
+)
+from assets.styles import ICON_STYLE_XLS, BUTTON_STYLE_XLS
+
+# Import callbacks
+from pages.callbacks import (
+    update_edit_table,
+    download_edit_xlsx
 )
 
 dash.register_page(__name__, path="/edit")
@@ -79,55 +82,4 @@ def layout(**kwargs):
     )
 
 
-@callback(
-    Output("edit_data_table", "rowData"),
-    Input("edit_gas_volumes", "cellClicked"),
-    Input("edit_gas_volumes", "selectedRows"),
-    Input("selected_dates", "data"),
-    State("edit_gas_volumes", "virtualRowData"),
-    prevent_initial_call=True,
-)
-def update_edit_table(active_cell, selected_row, date_data, data_list):
-    ctx = dash.callback_context
-    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    selected_gas_volume = False
-    if button_id == "edit_gas_volumes":
-        selected_gas_volume = True
-    row_data = update_table_edit(
-        active_cell,
-        selected_row,
-        EditArchiveClient,
-        date_data,
-        data_list,
-        selected_gas_volume,
-    )
-    return row_data.to_dict("records")
-
-
-@callback(
-    Output("edit_data_table", "columnSize"),
-    Input("edit_data_table", "rowData"),
-)
-def update_width_table(_):
-    column_size = "autoSize"
-    return column_size
-
-
-@callback(
-    Output("edit_xlsx_download", "data"),
-    Input("edit_xls", "n_clicks"),
-    State("edit_data_table", "rowData"),
-    State("edit_gas_volumes", "selectedRows"),
-    prevent_initial_call=True,
-)
-def download_edit_xlsx(n_clicks, data, selected_rows):
-    output = io.BytesIO()
-    df_edit = pd.DataFrame(data)
-    if selected_rows:
-        line = selected_rows[0]["id"]
-    else:
-        line = ""
-    from_date = df_edit.period.min()
-    to_date = df_edit.period.max()
-    df_edit.to_excel(output)  # TODO ExcelWriter?
-    return dcc.send_bytes(output.getvalue(), f"edit{line}_{from_date}_{to_date}.xlsx")
+# Callbacks are now imported from pages.callbacks module
