@@ -74,34 +74,34 @@ def layout(**kwargs):
                     dbc.Col(
                         [
                             html.H6(
-                                "Часовой архив", 
-                                className="text-center text-white mb-3"
+                                "Часовой архив",
+                                className="text-center text-white mb-3",
+                                id="hourly_table_label",
                             ),
                             get_data_table("hourly_data_table", HOUR_DATE_COLUMNS),
-                            dbc.Row(
-                                [
-                                    dbc.Col(
-                                        dbc.Button(
-                                            [
-                                                html.Img(
-                                                    src="assets/icons/excel.svg",
-                                                    style=ICON_STYLE_XLS,
-                                                ),
-                                                " Скачать XLSX",
-                                            ],
-                                            id="download_hourly_xlsx",
-                                            style=BUTTON_STYLE_XLS,
-                                            color="success",
-                                        ),
-                                        width="auto",
-                                    ),
-                                ],
-                                className="mt-3",
-                            ),
                         ],
                         width=True,
                     ),
                 ]
+            ),
+            # Кнопка выгрузки в отдельной строке в правом нижнем углу
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Button(
+                            html.Img(
+                                src="assets/icons/excel.svg",
+                                style=ICON_STYLE_XLS,
+                            ),
+                            id="download_hourly_xlsx",
+                            style=BUTTON_STYLE_XLS,
+                            color="success",
+                        ),
+                        width="auto",
+                    ),
+                ],
+                className="mt-3",
+                justify="end",
             ),
             dcc.Dropdown(
                 id="hourly_graph_dropbox",

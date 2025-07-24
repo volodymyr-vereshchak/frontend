@@ -74,30 +74,29 @@ def layout(**kwargs):
                                 id="param_table_label",
                             ),
                             get_data_table("param_data_table", PARAM_COLUMNS),
-                            dbc.Row(
-                                [
-                                    dbc.Col(
-                                        dbc.Button(
-                                            [
-                                                html.Img(
-                                                    src="assets/icons/excel.svg",
-                                                    style=ICON_STYLE_XLS,
-                                                ),
-                                                " Скачать XLSX",
-                                            ],
-                                            id="download_param_xlsx",
-                                            style=BUTTON_STYLE_XLS,
-                                            color="success",
-                                        ),
-                                        width="auto",
-                                    ),
-                                ],
-                                className="mt-3",
-                            ),
                         ],
                         width=True,
                     ),
                 ]
+            ),
+            # Кнопка выгрузки в отдельной строке в правом нижнем углу
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Button(
+                            html.Img(
+                                src="assets/icons/excel.svg",
+                                style=ICON_STYLE_XLS,
+                            ),
+                            id="download_param_xlsx",
+                            style=BUTTON_STYLE_XLS,
+                            color="success",
+                        ),
+                        width="auto",
+                    ),
+                ],
+                className="mt-3",
+                justify="end",
             ),
         ],
         fluid=True,

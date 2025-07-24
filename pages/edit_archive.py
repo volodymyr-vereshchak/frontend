@@ -73,30 +73,29 @@ def layout(**kwargs):
                                 id="edit_table_label",
                             ),
                             get_data_table("edit_data_table", EDIT_COLUMNS),
-                            dbc.Row(
-                                [
-                                    dbc.Col(
-                                        dbc.Button(
-                                            [
-                                                html.Img(
-                                                    src="assets/icons/excel.svg",
-                                                    style=ICON_STYLE_XLS,
-                                                ),
-                                                " Скачать XLSX",
-                                            ],
-                                            id="download_edit_xlsx",
-                                            style=BUTTON_STYLE_XLS,
-                                            color="success",
-                                        ),
-                                        width="auto",
-                                    ),
-                                ],
-                                className="mt-3",
-                            ),
                         ],
                         width=True,
                     ),
                 ]
+            ),
+            # Кнопка выгрузки в отдельной строке в правом нижнем углу
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Button(
+                            html.Img(
+                                src="assets/icons/excel.svg",
+                                style=ICON_STYLE_XLS,
+                            ),
+                            id="download_edit_xlsx",
+                            style=BUTTON_STYLE_XLS,
+                            color="success",
+                        ),
+                        width="auto",
+                    ),
+                ],
+                className="mt-3",
+                justify="end",
             ),
         ],
         fluid=True,
