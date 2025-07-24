@@ -43,7 +43,7 @@ def layout(**kwargs):
                         style={
                             "display": "inline-block",
                             "verticalAlign": "top",
-                            "marginRight": "20px",
+                            "marginRight": "15px",
                         },
                     ),
                     # Средняя колонка с таблицей линий
@@ -61,7 +61,7 @@ def layout(**kwargs):
                         style={
                             "display": "inline-block",
                             "verticalAlign": "top",
-                            "marginRight": "20px",
+                            "marginRight": "15px",
                         },
                     ),
                     # Правая колонка с основной таблицей данных

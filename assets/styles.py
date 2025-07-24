@@ -1,5 +1,5 @@
 TABLE_STYLE = {"height": "75vh"}
-COMPACT_TABLE_STYLE = {"height": "75vh", "width": "fit-content", "minWidth": "300px"}
+COMPACT_TABLE_STYLE = {"height": "75vh", "width": "fit-content", "minWidth": "250px"}
 TABLE_CLASS_NAME = "ag-theme-alpine-dark"
 DEFAULT_COL_DEF = {
     "cellRendererSelector": {"function": "rowPinningBottom(params)"},
@@ -11,7 +11,7 @@ HEADER_STYLE = {
     "color": "#ffffff",
     "fontWeight": "bold",
     "textAlign": "center",
-    "fontSize": "12px",
+    "fontSize": "10px",
 }
 
 ROW_STYLE = {"background": "#1a1a1a"}
@@ -20,6 +20,7 @@ CELL_STYLE = {
     "textAlign": "center",
     "cursor": "pointer",
     "border": "1px solid #2a2a2a",
+    "fontSize": "12px",
 }
 
 # Define localization for numeric formatting
