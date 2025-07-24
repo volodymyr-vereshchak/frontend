@@ -67,10 +67,10 @@ def _validate_table_inputs(
 @callback(
     Output("daily_data_table", "rowData"),
     Output("daily_data_table", "columnDefs"),
-    Input("daily_gas_volumes", "cellClicked"),
-    Input("daily_gas_volumes", "selectedRows"),
+    Input("lines_table", "cellClicked"),
+    Input("lines_table", "selectedRows"),
     Input("selected_dates", "data"),
-    State("daily_gas_volumes", "virtualRowData"),
+    State("lines_table", "virtualRowData"),
 )
 def update_daily_table(
     active_cell: Optional[Dict], 
@@ -78,13 +78,13 @@ def update_daily_table(
     date_data: Optional[Dict],
     data_list: Optional[List]
 ) -> Tuple[List[Dict], List[Dict]]:
-    """Update daily archive table with data."""
+    """Update daily archive table with data from selected lines."""
     try:
         if not _validate_table_inputs(active_cell, selected_rows, date_data, data_list):
             raise PreventUpdate
             
         button_id = _get_triggered_component()
-        selected_gas_volume = button_id == "daily_gas_volumes"
+        selected_gas_volume = button_id == "lines_table"
         
         logger.info(f"Updating daily table with {len(selected_rows or [])} selected rows")
         
@@ -110,10 +110,10 @@ def update_daily_table(
 @callback(
     Output("hourly_data_table", "rowData"),
     Output("hourly_data_table", "columnDefs"),
-    Input("hourly_gas_volumes", "cellClicked"),
-    Input("hourly_gas_volumes", "selectedRows"),
+    Input("hourly_lines_table", "cellClicked"),
+    Input("hourly_lines_table", "selectedRows"),
     Input("selected_dates", "data"),
-    State("hourly_gas_volumes", "virtualRowData"),
+    State("hourly_lines_table", "virtualRowData"),
 )
 def update_hourly_table(
     active_cell: Optional[Dict], 
@@ -121,13 +121,13 @@ def update_hourly_table(
     date_data: Optional[Dict],
     data_list: Optional[List]
 ) -> Tuple[List[Dict], List[Dict]]:
-    """Update hourly archive table with data."""
+    """Update hourly archive table with data from selected lines."""
     try:
         if not _validate_table_inputs(active_cell, selected_rows, date_data, data_list):
             raise PreventUpdate
             
         button_id = _get_triggered_component()
-        selected_gas_volume = button_id == "hourly_gas_volumes"
+        selected_gas_volume = button_id == "hourly_lines_table"
         
         logger.info(f"Updating hourly table with {len(selected_rows or [])} selected rows")
         
@@ -152,10 +152,10 @@ def update_hourly_table(
 
 @callback(
     Output("sys_data_table", "rowData"),
-    Input("sys_gas_volumes", "cellClicked"),
-    Input("sys_gas_volumes", "selectedRows"),
+    Input("sys_lines_table", "cellClicked"),
+    Input("sys_lines_table", "selectedRows"),
     Input("selected_dates", "data"),
-    State("sys_gas_volumes", "virtualRowData"),
+    State("sys_lines_table", "virtualRowData"),
     prevent_initial_call=True,
 )
 def update_sys_table(
@@ -195,10 +195,10 @@ def update_sys_table(
 
 @callback(
     Output("param_data_table", "rowData"),
-    Input("param_gas_volumes", "cellClicked"),
-    Input("param_gas_volumes", "selectedRows"),
+    Input("param_lines_table", "cellClicked"),
+    Input("param_lines_table", "selectedRows"),
     Input("selected_dates", "data"),
-    State("param_gas_volumes", "virtualRowData"),
+    State("param_lines_table", "virtualRowData"),
     prevent_initial_call=True,
 )
 def update_param_table(
@@ -242,10 +242,10 @@ def update_param_table(
 
 @callback(
     Output("edit_data_table", "rowData"),
-    Input("edit_gas_volumes", "cellClicked"),
-    Input("edit_gas_volumes", "selectedRows"),
+    Input("edit_lines_table", "cellClicked"),
+    Input("edit_lines_table", "selectedRows"),
     Input("selected_dates", "data"),
-    State("edit_gas_volumes", "virtualRowData"),
+    State("edit_lines_table", "virtualRowData"),
     prevent_initial_call=True,
 )
 def update_edit_table(

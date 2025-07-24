@@ -6,12 +6,14 @@ This module contains all callback functions organized by functionality:
 - download_callbacks: Callbacks for file downloads
 - graph_callbacks: Callbacks for graph updates
 - utility_callbacks: Utility callbacks for UI interactions
+- table_selection_callbacks: Callbacks for gas calculator and line selection
 """
 
 from .table_callbacks import *
 from .download_callbacks import *
 from .graph_callbacks import *
 from .utility_callbacks import *
+from .table_selection_callbacks import *
 
 __all__ = [
     # Table callbacks
@@ -36,4 +38,16 @@ __all__ = [
     
     # Utility callbacks
     'update_active_button',
+    
+    # Table selection callbacks
+    'update_lines_table_for_gas_calc',
+    'update_hourly_lines_table_for_gas_calc',
+    'update_sys_lines_table_for_gas_calc',
+    'update_edit_lines_table_for_gas_calc',
+    'update_param_lines_table_for_gas_calc',
+    'update_gas_calcs_selection',
+    'update_hourly_gas_calcs_selection',
+    'update_sys_gas_calcs_selection',
+    'update_edit_gas_calcs_selection',
+    'update_param_gas_calcs_selection',
 ] 

@@ -66,6 +66,48 @@ def get_lines():
         return pd.DataFrame()
 
 
+def get_gas_calcs():
+    """Get gas volume calculators data"""
+    try:
+        gas_volume_data = GasVolumeCalcClient().get_gas_volume_list_by_lumg()
+        return gas_volume_data
+    except Exception as e:
+        import logging
+        logging.error(f"Error in get_gas_calcs: {e}")
+        return pd.DataFrame()
+
+
+def get_lines_for_gas_calc(gas_calc_id: int = None):
+    """Get lines data for specific gas calculator"""
+    try:
+        list_data = LineClient().get_lines_list_by_lumg()
+        gas_volume_data = GasVolumeCalcClient().get_gas_volume_list_by_lumg()
+        
+        if list_data.empty or gas_volume_data.empty:
+            return pd.DataFrame()
+        
+        # Merge data
+        merge_data = list_data.merge(
+            gas_volume_data.rename(
+                columns={"name": "name_gas_volume", "id": "flow_id"}
+            ),
+            left_on="gas_volume_calc_id",
+            right_on="flow_id",
+            how="left",
+        ).sort_values(["address", "line"], ascending=[False, True])
+        
+        # Filter by gas_calc_id if provided
+        if gas_calc_id is not None:
+            merge_data = merge_data[merge_data['gas_volume_calc_id'] == gas_calc_id]
+        
+        return merge_data
+        
+    except Exception as e:
+        import logging
+        logging.error(f"Error in get_lines_for_gas_calc: {e}")
+        return pd.DataFrame()
+
+
 def update_table(
     active_cell, selected_rows, client, date_data, data_list, selected_gas_volume=False
 ):

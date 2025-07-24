@@ -3,9 +3,10 @@ import dash
 import pandas as pd
 from dash import html, dcc
 
-from pages.data_porcess.data_proc import get_lines
+from pages.data_porcess.data_proc import get_gas_calcs, get_lines_for_gas_calc
 from pages.page_elements.table_elements import (
-    get_table_of_lines,
+    get_table_of_gas_calcs,
+    get_table_of_lines_for_gas_calc,
     get_data_table,
     HOUR_DATE_COLUMNS,
 )
@@ -30,21 +31,43 @@ def layout(**kwargs):
         [
             dbc.Row(
                 [
+                    # Левая колонка с таблицами вычислителей и линий
                     dbc.Col(
                         [
+                            # Таблица вычислителей
                             html.H6(
-                                "Список узлов учета",
-                                id="gas_volume_calc_header",
+                                "Вычислители",
+                                id="gas_calcs_header",
                                 className="text-center text-white mb-3",
                             ),
-                            get_table_of_lines("daily_gas_volumes", get_lines()),
+                            get_table_of_gas_calcs("gas_calcs_table", get_gas_calcs()),
                         ],
-                        width=4,
+                        width="auto",
                         style={
                             "display": "inline-block",
                             "verticalAlign": "top",
+                            "marginRight": "20px",
                         },
                     ),
+                    # Средняя колонка с таблицей линий
+                    dbc.Col(
+                        [
+                            # Таблица линий для выбранного вычислителя
+                            html.H6(
+                                "Линии выбранного вычислителя",
+                                id="lines_header",
+                                className="text-center text-white mb-3",
+                            ),
+                            get_table_of_lines_for_gas_calc("lines_table", get_lines_for_gas_calc()),
+                        ],
+                        width="auto",
+                        style={
+                            "display": "inline-block",
+                            "verticalAlign": "top",
+                            "marginRight": "20px",
+                        },
+                    ),
+                    # Правая колонка с основной таблицей данных
                     dbc.Col(
                         [
                             html.H6(
@@ -53,31 +76,32 @@ def layout(**kwargs):
                                 id="daily_table_label",
                             ),
                             get_data_table("daily_data_table", HOUR_DATE_COLUMNS),
-                        ],
-                        width=8,
-                    ),
-                ],
-                className="mt-3",
-                justify="start",
-            ),
-            dbc.Row(
-                dbc.Col(
-                    [
-                        dbc.Button(
-                            html.Img(
-                                src="assets/icons/excel.svg", style=ICON_STYLE_XLS
+                            dbc.Row(
+                                [
+                                    dbc.Col(
+                                        dbc.Button(
+                                            [
+                                                html.Img(
+                                                    src="assets/icons/excel.svg",
+                                                    style=ICON_STYLE_XLS,
+                                                ),
+                                                " Скачать XLSX",
+                                            ],
+                                            id="download_daily_xlsx",
+                                            style=BUTTON_STYLE_XLS,
+                                            color="success",
+                                        ),
+                                        width="auto",
+                                    ),
+                                ],
+                                className="mt-3",
                             ),
-                            id="daily_xls",
-                            style=BUTTON_STYLE_XLS,
-                            className="btn-custom",
-                            title="Экспорт в excel",
-                        ),
-                        dcc.Download(id="daily_xlsx_download"),
-                    ],
-                    width=12,
-                    className="d-flex justify-content-end",
-                ),
+                        ],
+                        width=True,
+                    ),
+                ]
             ),
+            # Dropdown для выбора колонки графика
             dcc.Dropdown(
                 id="daily_graph_dropbox",
                 options=[
@@ -89,12 +113,17 @@ def layout(**kwargs):
                 style={"backgroundColor": "#3e3e3e"},
                 className="mt-3",
             ),
-            dcc.Graph(
-                figure=get_period_graph(
-                    df=daily_data, y_axis="volume", y_label="Объем с.у., м3"
-                ),
-                id="daily_graph",
-                className="mt-3",
+            # График
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dcc.Graph(
+                            figure=get_period_graph(daily_data, "volume", "Объем, м3"),
+                            id="daily_graph",
+                            className="mt-3",
+                        ),
+                    ),
+                ]
             ),
         ],
         fluid=True,

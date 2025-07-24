@@ -3,6 +3,7 @@ import pandas as pd
 from assets.styles import (
     VALUE_FORMATTER,
     TABLE_STYLE,
+    COMPACT_TABLE_STYLE,
     TABLE_CLASS_NAME,
     DEFAULT_COL_DEF,
     CELL_STYLE,
@@ -130,6 +131,97 @@ def get_table_of_lines(id_name: str, data: pd.DataFrame, multiple: bool = True):
         ],
         columnSize="sizeToFit",
         style=TABLE_STYLE,
+        className=TABLE_CLASS_NAME,
+        defaultColDef=DEFAULT_COL_DEF,
+        dashGridOptions=(
+            {
+                "rowSelection": "multiple",
+            }
+            if multiple
+            else {"rowSelection": "single"}
+        ),
+    )
+
+
+def get_table_of_gas_calcs(id_name: str, data: pd.DataFrame, multiple: bool = False):
+    """Таблица вычислителей (gas_volume_calc)"""
+    # Проверяем, есть ли данные
+    if data.empty:
+        return dag.AgGrid(
+            id=id_name,
+            rowData=[],
+            rowStyle=ROW_STYLE,
+            columnDefs=[
+                dict(
+                    field="name", 
+                    headerName="Вычислитель", 
+                    checkboxSelection=True,
+                    cellStyle=CELL_STYLE,
+                ),
+            ],
+            columnSize="sizeToFit",
+            style=COMPACT_TABLE_STYLE,
+            className=TABLE_CLASS_NAME,
+            defaultColDef=DEFAULT_COL_DEF,
+            dashGridOptions=(
+                {
+                    "rowSelection": "multiple",
+                }
+                if multiple
+                else {"rowSelection": "single"}
+            ),
+        )
+    
+    # Используем данные как есть, без группировки
+    # API возвращает данные вычислителей напрямую
+    return dag.AgGrid(
+        id=id_name,
+        rowData=data.to_dict("records"),
+        rowStyle=ROW_STYLE,
+        columnDefs=[
+            dict(
+                field="name", 
+                headerName="Вычислитель", 
+                checkboxSelection=True,
+                cellStyle=CELL_STYLE,
+            ),
+        ],
+        columnSize="sizeToFit",
+        style=COMPACT_TABLE_STYLE,
+        className=TABLE_CLASS_NAME,
+        defaultColDef=DEFAULT_COL_DEF,
+        dashGridOptions=(
+            {
+                "rowSelection": "multiple",
+            }
+            if multiple
+            else {"rowSelection": "single"}
+        ),
+    )
+
+
+def get_table_of_lines_for_gas_calc(id_name: str, data: pd.DataFrame, gas_calc_id: int = None, multiple: bool = True):
+    """Таблица линий для выбранного вычислителя"""
+    if gas_calc_id is not None:
+        # Фильтруем данные по выбранному вычислителю
+        filtered_data = data[data['gas_volume_calc_id'] == gas_calc_id]
+    else:
+        filtered_data = data
+    
+    return dag.AgGrid(
+        id=id_name,
+        rowData=filtered_data.to_dict("records"),
+        rowStyle=ROW_STYLE,
+        columnDefs=[
+            dict(
+                field="name",
+                headerName="Линия",
+                checkboxSelection=True,
+                cellStyle=CELL_STYLE,
+            ),
+        ],
+        columnSize="sizeToFit",
+        style=COMPACT_TABLE_STYLE,
         className=TABLE_CLASS_NAME,
         defaultColDef=DEFAULT_COL_DEF,
         dashGridOptions=(

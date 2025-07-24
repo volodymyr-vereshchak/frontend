@@ -1,4 +1,5 @@
 TABLE_STYLE = {"height": "75vh"}
+COMPACT_TABLE_STYLE = {"height": "75vh", "width": "fit-content", "minWidth": "300px"}
 TABLE_CLASS_NAME = "ag-theme-alpine-dark"
 DEFAULT_COL_DEF = {
     "cellRendererSelector": {"function": "rowPinningBottom(params)"},

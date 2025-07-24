@@ -1,6 +1,13 @@
 import dash
 from dash import Dash, html, dcc, callback, Input, Output
 import dash_bootstrap_components as dbc
+import logging
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 from api.root_client import RootClient
 from pages.page_elements.main_button_elemets import BUTTON_SECTION
