@@ -96,6 +96,8 @@ def layout(**kwargs):
                 className="mt-3",
                 justify="end",
             ),
+            # Download component
+            dcc.Download(id="sys_xlsx_download"),
         ],
         fluid=True,
     )

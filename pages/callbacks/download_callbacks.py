@@ -73,9 +73,9 @@ def _generate_filename(prefix: str, selected_rows: Optional[List[Dict]], data: L
 
 @callback(
     Output("daily_xlsx_download", "data"),
-    Input("daily_xls", "n_clicks"),
+    Input("download_daily_xlsx", "n_clicks"),
     State("daily_data_table", "rowData"),
-    State("daily_gas_volumes", "selectedRows"),
+    State("daily_lines_table", "selectedRows"),
     prevent_initial_call=True,
 )
 def download_daily_xlsx(
@@ -111,9 +111,9 @@ def download_daily_xlsx(
 
 @callback(
     Output("hourly_xlsx_download", "data"),
-    Input("hourly_xls", "n_clicks"),
+    Input("download_hourly_xlsx", "n_clicks"),
     State("hourly_data_table", "rowData"),
-    State("hourly_gas_volumes", "selectedRows"),
+    State("hourly_lines_table", "selectedRows"),
     prevent_initial_call=True,
 )
 def download_hourly_xlsx(
@@ -149,9 +149,9 @@ def download_hourly_xlsx(
 
 @callback(
     Output("sys_xlsx_download", "data"),
-    Input("sys_xls", "n_clicks"),
+    Input("download_sys_xlsx", "n_clicks"),
     State("sys_data_table", "rowData"),
-    State("sys_gas_volumes", "selectedRows"),
+    State("sys_lines_table", "selectedRows"),
     prevent_initial_call=True,
 )
 def download_sys_xlsx(
@@ -187,9 +187,9 @@ def download_sys_xlsx(
 
 @callback(
     Output("param_xlsx_download", "data"),
-    Input("param_xls", "n_clicks"),
+    Input("download_param_xlsx", "n_clicks"),
     State("param_data_table", "rowData"),
-    State("param_gas_volumes", "selectedRows"),
+    State("param_lines_table", "selectedRows"),
     prevent_initial_call=True,
 )
 def download_param_xlsx(
@@ -225,9 +225,9 @@ def download_param_xlsx(
 
 @callback(
     Output("edit_xlsx_download", "data"),
-    Input("edit_xls", "n_clicks"),
+    Input("download_edit_xlsx", "n_clicks"),
     State("edit_data_table", "rowData"),
-    State("edit_gas_volumes", "selectedRows"),
+    State("edit_lines_table", "selectedRows"),
     prevent_initial_call=True,
 )
 def download_edit_xlsx(

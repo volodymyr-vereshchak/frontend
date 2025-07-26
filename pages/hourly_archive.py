@@ -121,6 +121,8 @@ def layout(**kwargs):
                 id="hourly_graph",
                 className="mt-3",
             ),
+            # Download component
+            dcc.Download(id="hourly_xlsx_download"),
         ],
         fluid=True,
     )

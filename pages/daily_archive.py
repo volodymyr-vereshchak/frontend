@@ -124,6 +124,8 @@ def layout(**kwargs):
                     ),
                 ]
             ),
+            # Download component
+            dcc.Download(id="daily_xlsx_download"),
         ],
         fluid=True,
     )
