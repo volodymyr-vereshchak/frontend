@@ -10,8 +10,10 @@ logging.basicConfig(
 )
 
 from api.root_client import RootClient
+from api.report_client import ReportClient
 from pages.page_elements.main_button_elemets import BUTTON_SECTION
 from pages.page_elements.main_date_time_picker_elements import get_date_picker_section
+from pages.page_elements.report_elements import create_report_modal
 
 # Import all callbacks to register them
 import pages.callbacks
@@ -42,6 +44,7 @@ def layout():
                     html.Hr(),
                     dcc.Store(id="update_state", data={"status": "init"}),
                     dcc.Store(id="selected_dates"),
+                    create_report_modal(),
                     dash.page_container,
                 ],
                 overlay_style={"visibility": "visible", "filter": "blur(1px)"},

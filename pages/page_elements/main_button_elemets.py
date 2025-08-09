@@ -31,6 +31,16 @@ BUTTON_SECTION = dbc.Container(
             id="update_in_progress",
             message="Обновление уже запущено. Попробуйте позже!",
         ),
+        dbc.Button(
+            [
+                html.I(className="fas fa-chart-line me-2"),
+                "Отчет ГРС"
+            ],
+            id="report_button",
+            color="info",
+            className="me-2",
+            title="Получить отчет по объемам газа за последние 24 часа"
+        ),
         # get_button(icon_pass="assets/icons/bank.svg", id_name="lumgs", href="/"),
         get_button(
             icon_pass="assets/icons/calendar-2.svg",

@@ -7,6 +7,7 @@ This module contains all callback functions organized by functionality:
 - graph_callbacks: Callbacks for graph updates
 - utility_callbacks: Utility callbacks for UI interactions
 - table_selection_callbacks: Callbacks for gas calculator and line selection
+- report_callbacks: Callbacks for gas volume report functionality
 """
 
 from .table_callbacks import *
@@ -14,6 +15,7 @@ from .download_callbacks import *
 from .graph_callbacks import *
 from .utility_callbacks import *
 from .table_selection_callbacks import *
+from .report_callbacks import *
 
 __all__ = [
     # Table callbacks
@@ -50,4 +52,7 @@ __all__ = [
     'update_sys_gas_calcs_selection',
     'update_edit_gas_calcs_selection',
     'update_param_gas_calcs_selection',
+    
+    # Report callbacks
+    'handle_report_modal',
 ] 
