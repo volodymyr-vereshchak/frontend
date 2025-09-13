@@ -1,0 +1,68 @@
+.datetime-pickers {
+  margin: 15px 0;
+}
+
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.picker-label {
+  color: white;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.hour-label {
+  color: white;
+  font-size: 14px;
+  margin-left: 4px;
+}
+
+.datetime-picker {
+  width: 180px;
+  height: 30px;
+  padding: 4px 8px;
+  font-size: 14px;
+  background-color: #181d1f;
+  color: white;
+  border: 1px solid #3E3E3E;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.datetime-picker:focus {
+  outline: none;
+  border-color: #0d6efd;
+}
+
+.datetime-picker::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+.enable-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-left: 12px;
+  accent-color: #0d6efd;
+}
+
+.archive-type-select {
+  width: 140px;
+  height: 30px;
+  padding: 4px 8px;
+  font-size: 14px;
+  background-color: #181d1f;
+  color: white;
+  border: 1px solid #3E3E3E;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.archive-type-select:focus {
+  outline: none;
+  border-color: #0d6efd;
+}

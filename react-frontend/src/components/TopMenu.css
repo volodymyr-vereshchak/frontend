@@ -1,0 +1,65 @@
+.top-menu {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+
+.menu-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-title {
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.menu-button {
+  padding: 8px 12px;
+  border: 1px solid #3E3E3E;
+  background-color: #373a3c;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.menu-button:hover {
+  background-color: #495057;
+  border-color: #6c757d;
+}
+
+.menu-button.active {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: white;
+}
+
+.info-button {
+  background-color: #0dcaf0;
+  border-color: #0dcaf0;
+  color: #000;
+}
+
+.info-button:hover {
+  background-color: #31d2f2;
+  border-color: #25cff2;
+}
+
+.button-icon {
+  font-size: 16px;
+}
+
+.fas {
+  margin-right: 4px;
+}
