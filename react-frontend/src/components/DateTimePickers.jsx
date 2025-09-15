@@ -2,15 +2,33 @@ import React, { useState } from 'react';
 import './DateTimePickers.css';
 
 const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType }) => {
-  // Set default datetime to today at 07:00
-  const getDefaultDateTime = () => {
-    const today = new Date();
-    today.setHours(7, 0, 0, 0);
-    return today.toISOString().slice(0, 16); // Format for datetime-local
+  // Format date for datetime-local input (without timezone conversion)
+  const formatLocalDateTime = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const [startDateTime, setStartDateTime] = useState(getDefaultDateTime());
-  const [endDateTime, setEndDateTime] = useState(getDefaultDateTime());
+  // Set default start datetime to beginning of month at 07:00
+  const getDefaultStartDateTime = () => {
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    startOfMonth.setHours(7, 0, 0, 0);
+    return formatLocalDateTime(startOfMonth);
+  };
+
+  // Set default end datetime to current date at 06:00
+  const getDefaultEndDateTime = () => {
+    const today = new Date();
+    today.setHours(6, 0, 0, 0);
+    return formatLocalDateTime(today);
+  };
+
+  const [startDateTime, setStartDateTime] = useState(getDefaultStartDateTime());
+  const [endDateTime, setEndDateTime] = useState(getDefaultEndDateTime());
   const [isEnabled, setIsEnabled] = useState(false);
 
   const parseDateTime = (datetimeStr) => {
@@ -55,7 +73,7 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
         endDateTime.setMinutes(0, 0, 0); // Set minutes and seconds to 0
 
         // Format as YYYY-MM-DD HH:MM:SS (local time without timezone)
-        const formatLocalDateTime = (date) => {
+        const formatLocalDateTimeForAPI = (date) => {
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, '0');
           const day = String(date.getDate()).padStart(2, '0');
@@ -64,8 +82,8 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
         };
 
         onDateRangeChange({
-          fromDate: formatLocalDateTime(startDateTime),
-          toDate: formatLocalDateTime(endDateTime),
+          fromDate: formatLocalDateTimeForAPI(startDateTime),
+          toDate: formatLocalDateTimeForAPI(endDateTime),
           startHour: startParsed.hour,
           endHour: endParsed.hour
         });

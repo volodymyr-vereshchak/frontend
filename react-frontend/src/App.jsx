@@ -8,23 +8,35 @@ import InteractiveChart from './components/InteractiveChart'
 
 function App() {
   const [selectedLines, setSelectedLines] = useState([]);
-  const [dateRange, setDateRange] = useState({
-    fromDate: new Date().toISOString().split('T')[0],
-    toDate: new Date().toISOString().split('T')[0],
-    startHour: 7,
-    endHour: 7
-  });
+  // Initialize dateRange with commercial day logic
+  const getInitialDateRange = () => {
+    const today = new Date();
+
+    // Start of month at 07:00
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const startDate = startOfMonth.toISOString().split('T')[0];
+
+    // Current date at 06:00
+    const endDate = today.toISOString().split('T')[0];
+
+    return {
+      fromDate: startDate,
+      toDate: endDate,
+      startHour: 7,
+      endHour: 6
+    };
+  };
+
+  const [dateRange, setDateRange] = useState(getInitialDateRange());
   const [isDateFilterEnabled, setIsDateFilterEnabled] = useState(false);
   const [archiveType, setArchiveType] = useState('daily');
   const [chartData, setChartData] = useState([]);
 
   const handleLinesSelected = useCallback((lineIds) => {
-    console.log('Lines selected in App:', lineIds);
     setSelectedLines(lineIds);
   }, []);
 
   const handleDateRangeChange = useCallback((newDateRange) => {
-    console.log('Date range changed in App:', newDateRange);
     setDateRange(prev => {
       // Only update if actually changed
       if (JSON.stringify(prev) === JSON.stringify(newDateRange)) {
@@ -35,17 +47,14 @@ function App() {
   }, []);
 
   const handleDateFilterToggle = useCallback((enabled) => {
-    console.log('Date filter enabled:', enabled);
     setIsDateFilterEnabled(enabled);
   }, []);
 
   const handleArchiveTypeChange = useCallback((type) => {
-    console.log('Archive type changed:', type);
     setArchiveType(type);
   }, []);
 
   const handleDataChange = useCallback((data) => {
-    console.log('Chart data updated:', data?.length, 'records');
     setChartData(data || []);
   }, []);
 

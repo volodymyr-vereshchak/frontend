@@ -161,7 +161,6 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       const [archiveData, editCountsData, sysCountsData] = await Promise.all(promises);
 
       if (abortController?.signal?.aborted) {
-        console.log('Request was cancelled during fetch');
         return;
       }
 
@@ -208,12 +207,6 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         }
       }
 
-      console.log('🔍 Debug data merging:');
-      console.log('Archive data sample:', archiveData?.slice(0, 2));
-      console.log('Edit counts sample:', editCountsData?.slice(0, 2));
-      console.log('Sys counts sample:', sysCountsData?.slice(0, 2));
-      console.log('Processed edit counts:', processedEditCounts?.slice(0, 2));
-      console.log('Processed sys counts:', processedSysCounts?.slice(0, 2));
 
       // Merge archive data with both edit and sys counts
       const mergedData = (archiveData || []).map((record, index) => {
@@ -229,13 +222,6 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
           count.period === record.period
         );
 
-        if (index < 3) {
-          console.log(`🔍 Merging record ${index}:`, {
-            archiveRecord: { line_id: record.line_id, period: record.period },
-            matchingEditCounts: matchingEditCounts || 'NOT FOUND',
-            matchingSysCounts: matchingSysCounts || 'NOT FOUND'
-          });
-        }
 
         return {
           ...record,
@@ -244,8 +230,6 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         };
       });
 
-      const totalTime = performance.now() - startTime;
-      console.log(`✅ Parallel fetch completed in ${Math.round(totalTime)}ms. Archive: ${archiveData?.length || 0}, Edit counts: ${processedEditCounts.length}, Sys counts: ${processedSysCounts.length}, Merged: ${mergedData.length}`);
 
       setRowData(mergedData);
       if (onDataChange) {
