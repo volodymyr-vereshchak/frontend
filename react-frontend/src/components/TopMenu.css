@@ -40,9 +40,11 @@
 }
 
 .menu-button.active {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
-  color: white;
+  background: linear-gradient(135deg, #B9E42B, #A5D323);
+  border-color: #B9E42B;
+  color: #000000;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(185, 228, 43, 0.3);
 }
 
 .info-button {
@@ -57,7 +59,20 @@
 }
 
 .button-icon {
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  transition: transform 0.2s ease;
+}
+
+.menu-button:hover .button-icon {
+  transform: scale(1.05);
+}
+
+.menu-button.active .button-icon {
+  transform: scale(1.1);
 }
 
 .fas {
