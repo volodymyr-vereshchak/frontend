@@ -13,5 +13,13 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, '')
       }
     }
+  },
+  optimizeDeps: {
+    include: ['xlsx']
+  },
+  build: {
+    commonjsOptions: {
+      include: [/xlsx/, /node_modules/]
+    }
   }
 })

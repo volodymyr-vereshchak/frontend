@@ -38,6 +38,105 @@
   border-color: #0d6efd;
 }
 
+/* React DatePicker dark theme styles */
+.react-datepicker-wrapper {
+  width: 180px;
+}
+
+.react-datepicker__input-container input {
+  width: 180px;
+  height: 30px;
+  padding: 4px 8px;
+  font-size: 14px;
+  background-color: #181d1f;
+  color: white;
+  border: 1px solid #3E3E3E;
+  border-radius: 4px;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+
+.react-datepicker__input-container input:focus {
+  outline: none;
+  border-color: #B9E42B;
+  box-shadow: 0 0 0 2px rgba(185, 228, 43, 0.2);
+}
+
+.react-datepicker {
+  background-color: #2a2a2a;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  font-family: inherit;
+  color: white;
+}
+
+.react-datepicker__header {
+  background-color: #404040;
+  border-bottom: 1px solid #555;
+}
+
+.react-datepicker__current-month,
+.react-datepicker-time__header {
+  color: white;
+}
+
+.react-datepicker__day-name,
+.react-datepicker__day,
+.react-datepicker__time-name {
+  color: white;
+}
+
+.react-datepicker__day:hover {
+  background-color: #B9E42B;
+  color: black;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background-color: #B9E42B;
+  color: black;
+}
+
+.react-datepicker__time-container {
+  border-left: 1px solid #404040;
+  background-color: #2a2a2a;
+}
+
+.react-datepicker__time {
+  background-color: #2a2a2a;
+}
+
+.react-datepicker__time-box {
+  background-color: #2a2a2a;
+}
+
+.react-datepicker__time-list-item {
+  color: white;
+  background-color: #2a2a2a;
+}
+
+.react-datepicker__time-list-item:hover {
+  background-color: #B9E42B;
+  color: black;
+}
+
+.react-datepicker__time-list-item--selected {
+  background-color: #B9E42B;
+  color: black;
+}
+
+.react-datepicker__navigation {
+  border: none;
+}
+
+.react-datepicker__navigation--previous {
+  border-right-color: white;
+}
+
+.react-datepicker__navigation--next {
+  border-left-color: white;
+}
+
 .datetime-picker::-webkit-calendar-picker-indicator {
   filter: invert(1);
   cursor: pointer;

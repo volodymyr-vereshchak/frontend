@@ -1,35 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { ru } from 'date-fns/locale';
+import 'react-datepicker/dist/react-datepicker.css';
 import './DateTimePickers.css';
 
-const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType }) => {
-  // Format date for datetime-local input (without timezone conversion)
-  const formatLocalDateTime = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
+// Register Russian locale
+registerLocale('ru', ru);
 
+const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType }) => {
   // Set default start datetime to beginning of month at 07:00
   const getDefaultStartDateTime = () => {
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     startOfMonth.setHours(7, 0, 0, 0);
-    return formatLocalDateTime(startOfMonth);
+    return startOfMonth;
   };
 
   // Set default end datetime to current date at 06:00
   const getDefaultEndDateTime = () => {
     const today = new Date();
     today.setHours(6, 0, 0, 0);
-    return formatLocalDateTime(today);
+    return today;
   };
 
   const [startDateTime, setStartDateTime] = useState(getDefaultStartDateTime());
   const [endDateTime, setEndDateTime] = useState(getDefaultEndDateTime());
   const [isEnabled, setIsEnabled] = useState(false);
+  const startPickerRef = useRef(null);
+  const endPickerRef = useRef(null);
+  const [shouldAutoClose, setShouldAutoClose] = useState(false);
 
   // Trigger notifyChange when archiveType changes
   useEffect(() => {
@@ -99,25 +98,58 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
     }
   };
 
-  const handleStartDateTimeChange = (value) => {
-    setStartDateTime(value);
+  const handleStartDateTimeChange = (date) => {
+    setStartDateTime(date);
     // Use the new value directly instead of relying on state
-    setTimeout(() => notifyChange(value, endDateTime), 0);
-    // Auto-close date picker by removing focus
+    setTimeout(() => notifyChange(date, endDateTime), 0);
+  };
+
+  const handleEndDateTimeChange = (date) => {
+    setEndDateTime(date);
+    // Use the new value directly instead of relying on state
+    setTimeout(() => notifyChange(startDateTime, date), 0);
+  };
+
+  // Handle date selection (when user clicks on a date)
+  const handleStartDateSelect = (date) => {
+    setStartDateTime(date);
+    setTimeout(() => notifyChange(date, endDateTime), 0);
+    // Close picker after date selection
     setTimeout(() => {
-      document.activeElement?.blur();
+      if (startPickerRef.current) {
+        startPickerRef.current.setOpen(false);
+      }
     }, 100);
   };
 
-  const handleEndDateTimeChange = (value) => {
-    setEndDateTime(value);
-    // Use the new value directly instead of relying on state
-    setTimeout(() => notifyChange(startDateTime, value), 0);
-    // Auto-close date picker by removing focus
+  const handleEndDateSelect = (date) => {
+    setEndDateTime(date);
+    setTimeout(() => notifyChange(startDateTime, date), 0);
+    // Close picker after date selection
     setTimeout(() => {
-      document.activeElement?.blur();
+      if (endPickerRef.current) {
+        endPickerRef.current.setOpen(false);
+      }
     }, 100);
   };
+
+  // Handle input event (triggered only on actual user input/selection)
+  const handleStartInput = (e) => {
+    handleStartDateTimeChange(e.target.value);
+    // Auto-close on input event (real user selection)
+    setTimeout(() => {
+      e.target.blur();
+    }, 150);
+  };
+
+  const handleEndInput = (e) => {
+    handleEndDateTimeChange(e.target.value);
+    // Auto-close on input event (real user selection)
+    setTimeout(() => {
+      e.target.blur();
+    }, 150);
+  };
+
 
   const handleEnabledChange = (value) => {
     setIsEnabled(value);
@@ -131,21 +163,36 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
     <div className="datetime-pickers">
       <div className="picker-row">
         <label className="picker-label">Начало периода</label>
-        <input
-          type="datetime-local"
-          value={startDateTime}
-          onChange={(e) => handleStartDateTimeChange(e.target.value)}
+        <DatePicker
+          ref={startPickerRef}
+          selected={startDateTime}
+          onChange={handleStartDateTimeChange}
+          showTimeSelect
+          timeIntervals={60}
+          timeFormat="HH:mm"
+          dateFormat="dd.MM.yyyy HH:mm"
           className="datetime-picker"
-          step="3600" // 1 hour steps
+          locale="ru"
+          placeholderText="Выберите дату и время"
+          shouldCloseOnSelect={false}
+          onSelect={handleStartDateSelect}
         />
 
         <label className="picker-label">Конец периода</label>
-        <input
-          type="datetime-local"
-          value={endDateTime}
-          onChange={(e) => handleEndDateTimeChange(e.target.value)}
+        <DatePicker
+          ref={endPickerRef}
+          selected={endDateTime}
+          onChange={handleEndDateTimeChange}
+          showTimeSelect
+          timeIntervals={60}
+          timeFormat="HH:mm"
+          dateFormat="dd.MM.yyyy HH:mm"
           className="datetime-picker"
-          step="3600" // 1 hour steps
+          locale="ru"
+          placeholderText="Выберите дату и время"
+          minDate={startDateTime}
+          shouldCloseOnSelect={false}
+          onSelect={handleEndDateSelect}
         />
 
         <input
