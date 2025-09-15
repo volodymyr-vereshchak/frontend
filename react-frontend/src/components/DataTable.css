@@ -31,6 +31,36 @@
 .table-info {
   color: #9e9e9e;
   font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.excel-export-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #B9E42B, #A5D323);
+  border: 1px solid #B9E42B;
+  border-radius: 4px;
+  color: #000000;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.excel-export-btn:hover {
+  background: linear-gradient(135deg, #A5D323, #94C41F);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.excel-export-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .data-table {
