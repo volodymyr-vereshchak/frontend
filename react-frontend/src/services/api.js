@@ -146,7 +146,6 @@ export const archiveCountsApi = {
       from_date: fromDate,
       to_date: toDate
     };
-    console.log('🔍 Fetching edit counts (И) with params:', params);
     return await apiClient.get('/edit_counts/', params);
   },
 
@@ -156,7 +155,6 @@ export const archiveCountsApi = {
       from_date: fromDate,
       to_date: toDate
     };
-    console.log('🔍 Fetching sys counts (А) with params:', params);
     return await apiClient.get('/sys_counts/', params);
   }
 };
@@ -196,7 +194,6 @@ export const commercialDayUtils = {
   aggregateCountsToCommercialDays(countsData, lineIds = [], countField) {
     if (!countsData || countsData.length === 0) return [];
 
-    console.log(`Aggregating ${countField} to commercial days:`, countsData.slice(0, 3));
 
     const commercialDays = {};
 
@@ -211,13 +208,11 @@ export const commercialDayUtils = {
         } else if (periodField instanceof Date) {
           dateObj = periodField;
         } else {
-          console.warn(`Invalid period format at index ${index}:`, periodField);
           return; // Skip this record
         }
 
         // Validate date
         if (isNaN(dateObj.getTime())) {
-          console.warn(`Invalid date at index ${index}:`, periodField);
           return; // Skip this record
         }
 
@@ -256,13 +251,10 @@ export const commercialDayUtils = {
         commercialDays[key][countField] += countValue;
 
       } catch (error) {
-        console.error(`Error processing record at index ${index}:`, record, error);
       }
     });
 
-    const result = Object.values(commercialDays);
-    console.log(`Commercial days aggregated for ${countField}:`, result.slice(0, 3));
-    return result;
+    return Object.values(commercialDays);
   }
 };
 
@@ -270,7 +262,6 @@ export const commercialDayUtils = {
 export const dataApi = {
   async getLines() {
     try {
-      console.log('Fetching lines and gas volume data...');
 
       // Fetch both datasets
       const [linesData, gasVolumeData] = await Promise.all([
@@ -278,21 +269,16 @@ export const dataApi = {
         gasVolumeApi.getGasVolumesByLumg()
       ]);
 
-      console.log('Lines data:', linesData);
-      console.log('Gas volume data:', gasVolumeData);
 
       if (!linesData && !gasVolumeData) {
-        console.warn('No data received from both LineAPI and GasVolumeAPI');
         return [];
       }
 
       if (!linesData) {
-        console.warn('No line data available');
         return [];
       }
 
       if (!gasVolumeData) {
-        console.warn('No gas volume data available, returning line data only');
         return linesData;
       }
 
@@ -328,7 +314,6 @@ export const dataApi = {
         return (a.line || 0) - (b.line || 0); // ascending
       });
 
-      console.log('Successfully merged data:', mergedData);
       return mergedData;
 
     } catch (error) {

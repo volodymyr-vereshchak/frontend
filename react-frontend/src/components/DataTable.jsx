@@ -121,7 +121,6 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         }
 
         const endpoint = `/api/${archiveType}/?${params.toString()}`;
-        console.log('🚀 Starting fetch from:', endpoint, 'at', new Date().toLocaleTimeString());
 
         const response = await fetch(endpoint, {
           method: 'GET',
@@ -135,7 +134,6 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
         const data = await response.json();
         const totalTime = performance.now() - startTime;
-        console.log('✅ Server-filtered data received:', data.length, 'records in', Math.round(totalTime), 'ms');
 
         setRowData(data);
         if (onDataChange) {
