@@ -61,18 +61,49 @@
 
 .group-header:hover {
   background-color: #353535;
+  border-color: #4a4a4a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .expand-icon {
   margin-right: 8px;
-  font-size: 14px;
   width: 16px;
-  display: inline-block;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.expand-icon:hover {
+  transform: scale(1.1);
+}
+
+.expand-icon.expanded {
+  transform: rotate(0deg);
+}
+
+.expand-icon:not(.expanded) {
+  transform: rotate(-90deg);
+  transition: transform 0.2s ease;
+}
+
+.expand-icon.expanded {
+  transition: transform 0.2s ease;
 }
 
 .group-icon {
   margin-right: 8px;
-  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.group-icon:hover {
+  transform: scale(1.05);
 }
 
 .group-name {
@@ -84,6 +115,21 @@
 .group-children {
   margin-left: 20px;
   margin-top: 4px;
+  animation: slideDown 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
 }
 
 .tree-line {
@@ -101,13 +147,17 @@
 .tree-line:hover {
   background-color: #2a2a2a;
   border-color: #4a4a4a;
+  transform: translateX(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .tree-line.selected {
-  background-color: #4caf50;
+  background: linear-gradient(135deg, #4caf50, #66bb6a);
   border-color: #4caf50;
   color: #ffffff;
   font-weight: bold;
+  box-shadow: 0 3px 6px rgba(76, 175, 80, 0.3);
+  transform: translateX(3px);
 }
 
 .tree-line.selected .line-name {
@@ -116,7 +166,16 @@
 
 .line-icon {
   margin-right: 8px;
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.line-icon:hover {
+  transform: scale(1.1);
 }
 
 .line-name {
