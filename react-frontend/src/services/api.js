@@ -28,8 +28,6 @@ class ApiClient {
 
     const requestOptions = { ...defaultOptions, ...options };
 
-    // Temporary debug: log the actual request being made
-    console.log('🔍 API Request:', { url, method: requestOptions.method || 'GET' });
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
@@ -97,8 +95,6 @@ class ApiClient {
         if (queryString) {
           url += `?${queryString}`;
         }
-        // Temporary debug: log the params being sent
-        console.log('🔍 API Params for', endpoint, ':', params);
       }
 
       return await this._makeRequest(url, { method: 'GET' });

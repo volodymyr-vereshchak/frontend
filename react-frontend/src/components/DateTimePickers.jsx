@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './DateTimePickers.css';
 
 const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType }) => {
@@ -31,6 +31,11 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
   const [endDateTime, setEndDateTime] = useState(getDefaultEndDateTime());
   const [isEnabled, setIsEnabled] = useState(false);
 
+  // Trigger notifyChange when archiveType changes
+  useEffect(() => {
+    notifyChange(startDateTime, endDateTime);
+  }, [archiveType]);
+
   const parseDateTime = (datetimeStr) => {
     const date = new Date(datetimeStr);
     return {
@@ -43,6 +48,7 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
     if (onDateRangeChange) {
       const startParsed = parseDateTime(startVal);
       const endParsed = parseDateTime(endVal);
+
 
       // For daily archive, use only dates (ignore time completely)
       // For other archives, use full datetime
@@ -58,12 +64,13 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
           return `${year}-${month}-${day}`;
         };
 
-        onDateRangeChange({
+        const dailyDateRange = {
           fromDate: formatDateOnly(startDate),
           toDate: formatDateOnly(endDate),
           startHour: 0, // Always 0 for daily
           endHour: 23   // Always 23 for daily (full day)
-        });
+        };
+        onDateRangeChange(dailyDateRange);
       } else {
         // For non-daily archives, send datetime in local format
         const startDateTime = new Date(startVal);
@@ -81,12 +88,13 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
           return `${year}-${month}-${day} ${hours}:00:00`;
         };
 
-        onDateRangeChange({
+        const hourlyDateRange = {
           fromDate: formatLocalDateTimeForAPI(startDateTime),
           toDate: formatLocalDateTimeForAPI(endDateTime),
           startHour: startParsed.hour,
           endHour: endParsed.hour
-        });
+        };
+        onDateRangeChange(hourlyDateRange);
       }
     }
   };
