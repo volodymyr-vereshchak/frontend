@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DataTable.css';
 import { archiveCountsApi, archiveDataApi, commercialDayUtils } from '../services/api';
+import * as XLSX from 'xlsx';
 
 // Excel Export Icon
 const ExcelIcon = ({ color = "#B9E42B" }) => (
@@ -25,69 +26,82 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       return;
     }
 
-    const columns = getColumns();
+    try {
+      const columns = getColumns();
 
-    // Prepare CSV data
-    const headers = columns.map(col => col.label).join(',');
-    const csvData = rowData.map(row => {
-      return columns.map(col => {
-        let value = row[col.key];
+      // Prepare data for Excel
+      const excelData = rowData.map(row => {
+        const excelRow = {};
+        columns.forEach(col => {
+          let value = row[col.key];
 
-        // Format dates
-        if (col.key === 'period' && value) {
-          const date = new Date(value);
-          if (!isNaN(date.getTime())) {
-            value = archiveType === 'daily'
-              ? date.toLocaleDateString('ru-RU')
-              : date.toLocaleString('ru-RU');
+          // Format dates for Excel
+          if (col.key === 'period' && value) {
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              // Excel recognizes Date objects directly
+              value = date;
+            }
           }
-        }
 
-        // Format numbers
-        if (typeof value === 'number') {
-          value = value.toLocaleString('ru-RU', { maximumFractionDigits: 3 });
-        }
+          // Keep numbers as numbers for Excel
+          if (typeof value === 'number') {
+            // Excel will handle number formatting
+            excelRow[col.label] = value;
+          } else {
+            excelRow[col.label] = value || '';
+          }
+        });
+        return excelRow;
+      });
 
-        // Escape commas and quotes in CSV
-        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
-          value = `"${value.replace(/"/g, '""')}"`;
-        }
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-        return value || '';
-      }).join(',');
-    }).join('\n');
+      // Auto-size columns
+      const columnWidths = columns.map(col => {
+        const maxLength = Math.max(
+          col.label.length,
+          ...rowData.map(row => {
+            const value = row[col.key];
+            if (value === null || value === undefined) return 0;
+            return String(value).length;
+          })
+        );
+        return { wch: Math.min(Math.max(maxLength + 2, 10), 50) };
+      });
+      worksheet['!cols'] = columnWidths;
 
-    const csvContent = headers + '\n' + csvData;
-
-    // Add BOM for proper UTF-8 encoding in Excel
-    const BOM = '\uFEFF';
-    const csvContentWithBOM = BOM + csvContent;
-
-    // Create and download file
-    const blob = new Blob([csvContentWithBOM], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
+      // Add worksheet to workbook
+      const archiveTypeNames = {
+        'daily': 'Суточный архив',
+        'hourly': 'Часовой архив',
+        'sys': 'Архив аварий',
+        'edit': 'Архив изменений',
+        'param': 'Параметры'
+      };
+      const sheetName = archiveTypeNames[archiveType] || archiveType;
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 
       // Generate filename
       const now = new Date();
       const timestamp = now.toISOString().slice(0, 19).replace(/[T:]/g, '_');
-      const archiveTypeNames = {
+      const fileArchiveNames = {
         'daily': 'суточный_архив',
         'hourly': 'часовой_архив',
         'sys': 'архив_аварий',
         'edit': 'архив_изменений',
         'param': 'параметры'
       };
-      const filename = `${archiveTypeNames[archiveType] || archiveType}_${timestamp}.csv`;
+      const filename = `${fileArchiveNames[archiveType] || archiveType}_${timestamp}.xlsx`;
 
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Download file
+      XLSX.writeFile(workbook, filename);
+
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('Ошибка при экспорте в Excel');
     }
   };
 
