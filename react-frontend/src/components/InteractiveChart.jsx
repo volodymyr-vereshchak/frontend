@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -15,6 +15,126 @@ import './InteractiveChart.css';
 const InteractiveChart = ({ data, archiveType, selectedLines }) => {
   const [visibleLines, setVisibleLines] = useState({});
   const [yAxisDomain, setYAxisDomain] = useState(['dataMin', 'dataMax']);
+  const [isChartLoading, setIsChartLoading] = useState(false);
+  const [renderedChart, setRenderedChart] = useState(null);
+
+  const renderCancelRef = useRef(null);
+  const renderTimeoutRef = useRef(null);
+
+  // Async chart rendering with cancellation
+  const renderChartAsync = useCallback(async (chartData, archiveType, visibleLines) => {
+    // Cancel any existing render
+    if (renderCancelRef.current) {
+      renderCancelRef.current.cancelled = true;
+    }
+
+    // Clear any pending timeout
+    if (renderTimeoutRef.current) {
+      clearTimeout(renderTimeoutRef.current);
+    }
+
+    // Create new cancellation token
+    const cancelToken = { cancelled: false };
+    renderCancelRef.current = cancelToken;
+
+    setIsChartLoading(true);
+    setRenderedChart(null);
+
+    try {
+      // Defer rendering to next event loop to not block UI
+      await new Promise(resolve => {
+        renderTimeoutRef.current = setTimeout(resolve, 50);
+      });
+
+      // Check if cancelled during timeout
+      if (cancelToken.cancelled) {
+        console.log('Chart rendering cancelled during timeout');
+        return;
+      }
+
+      // Prepare chart components in chunks to avoid blocking
+      const columns = getChartColumns();
+      const chunks = [];
+
+      // Process data in chunks
+      const CHUNK_SIZE = 1000;
+      for (let i = 0; i < chartData.length; i += CHUNK_SIZE) {
+        if (cancelToken.cancelled) {
+          console.log('Chart rendering cancelled during data processing');
+          return;
+        }
+
+        const chunk = chartData.slice(i, i + CHUNK_SIZE);
+        chunks.push(chunk);
+
+        // Yield control periodically
+        if (i > 0 && i % (CHUNK_SIZE * 5) === 0) {
+          await new Promise(resolve => setTimeout(resolve, 1));
+        }
+      }
+
+      // Check if cancelled before final render
+      if (cancelToken.cancelled) {
+        console.log('Chart rendering cancelled before final render');
+        return;
+      }
+
+      // Create chart JSX
+      const chartJSX = (
+        <ResponsiveContainer width="100%" height={800}>
+          <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
+            <XAxis
+              dataKey="period"
+              tickFormatter={formatXAxisLabel}
+              stroke="#9e9e9e"
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            <YAxis stroke="#9e9e9e" />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+
+            {columns.map((col) => (
+              visibleLines[col.key] && (
+                <Line
+                  key={col.key}
+                  type="monotone"
+                  dataKey={col.key}
+                  stroke={col.color}
+                  strokeWidth={2}
+                  dot={{ fill: col.color, strokeWidth: 1, r: 2 }}
+                  activeDot={{ r: 4, stroke: col.color, strokeWidth: 1 }}
+                  name={col.label}
+                />
+              )
+            ))}
+
+            <Brush
+              dataKey="period"
+              height={30}
+              stroke="#8884d8"
+              tickFormatter={formatXAxisLabel}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      );
+
+      // Final check before setting rendered chart
+      if (!cancelToken.cancelled) {
+        setRenderedChart(chartJSX);
+        setIsChartLoading(false);
+        console.log('Chart rendered successfully');
+      }
+
+    } catch (error) {
+      if (!cancelToken.cancelled) {
+        console.error('Error rendering chart:', error);
+        setIsChartLoading(false);
+      }
+    }
+  }, []);
 
   // Initialize visible lines when data changes
   useEffect(() => {
@@ -27,6 +147,29 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
       setVisibleLines(initialVisible);
     }
   }, [data, archiveType]);
+
+  // Trigger async chart rendering when data or settings change
+  useEffect(() => {
+    if (data && data.length > 0 && Object.keys(visibleLines).length > 0) {
+      console.log('Starting async chart rendering...');
+      renderChartAsync(data, archiveType, visibleLines);
+    } else {
+      setRenderedChart(null);
+      setIsChartLoading(false);
+    }
+  }, [data, archiveType, visibleLines, renderChartAsync]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (renderCancelRef.current) {
+        renderCancelRef.current.cancelled = true;
+      }
+      if (renderTimeoutRef.current) {
+        clearTimeout(renderTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const getChartColumns = () => {
     switch (archiveType) {
@@ -89,6 +232,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
   };
 
   const toggleLine = (lineKey) => {
+    console.log('Toggling line:', lineKey);
     setVisibleLines(prev => ({
       ...prev,
       [lineKey]: !prev[lineKey]
@@ -125,52 +269,38 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
                 color: visibleLines[col.key] ? 'white' : col.color
               }}
               onClick={() => toggleLine(col.key)}
+              disabled={isChartLoading}
             >
               {col.label}
             </button>
           ))}
         </div>
+        {isChartLoading && (
+          <div className="chart-loading-indicator">
+            <span>🔄 Обновление графика...</span>
+          </div>
+        )}
       </div>
 
       <div className="chart-wrapper">
-        <ResponsiveContainer width="100%" height={800}>
-          <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-            <XAxis
-              dataKey="period"
-              tickFormatter={formatXAxisLabel}
-              stroke="#9e9e9e"
-              angle={-45}
-              textAnchor="end"
-              height={80}
-            />
-            <YAxis stroke="#9e9e9e" />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
+        {isChartLoading && !renderedChart && (
+          <div className="chart-loading-overlay">
+            <div className="loading-spinner"></div>
+            <p>Отрисовка графика...</p>
+          </div>
+        )}
 
-            {columns.map((col) => (
-              visibleLines[col.key] && (
-                <Line
-                  key={col.key}
-                  type="monotone"
-                  dataKey={col.key}
-                  stroke={col.color}
-                  strokeWidth={2}
-                  dot={{ fill: col.color, strokeWidth: 1, r: 2 }}
-                  activeDot={{ r: 4, stroke: col.color, strokeWidth: 1 }}
-                  name={col.label}
-                />
-              )
-            ))}
+        {renderedChart && (
+          <div className={`chart-content ${isChartLoading ? 'updating' : ''}`}>
+            {renderedChart}
+          </div>
+        )}
 
-            <Brush
-              dataKey="period"
-              height={30}
-              stroke="#8884d8"
-              tickFormatter={formatXAxisLabel}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {!renderedChart && !isChartLoading && (
+          <div className="chart-placeholder">
+            <p>График готовится к отображению...</p>
+          </div>
+        )}
       </div>
     </div>
   );
