@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './DataTable.css';
+import { archiveCountsApi, archiveDataApi, commercialDayUtils } from '../services/api';
 
 const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType, onDataChange }) => {
   const [rowData, setRowData] = useState([]);
@@ -27,7 +28,9 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
           { key: 'w_volume_dp', label: 'Раб. объем/перепад', sortable: true, isAveragable: true },
           { key: 'pressure', label: 'Давление', sortable: true, isAveragable: true },
           { key: 'temperature', label: 'Температура', sortable: true, isAveragable: true },
-          { key: 'density', label: 'Плотность', sortable: true, isAveragable: true }
+          { key: 'density', label: 'Плотность', sortable: true, isAveragable: true },
+          { key: 'edit_counts', label: 'И', sortable: true, isSummable: true, tooltip: 'Изменения' },
+          { key: 'sys_counts', label: 'А', sortable: true, isSummable: true, tooltip: 'Аварии' }
         ];
       case 'edit':
         return [
@@ -99,60 +102,156 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     const startTime = performance.now();
 
     try {
-      // Build query parameters for server-side filtering
-      const params = new URLSearchParams();
+      // Skip И and А columns for non-daily/hourly archives
+      if (archiveType !== 'daily' && archiveType !== 'hourly') {
+        // Use original fetch method for other archive types
+        const params = new URLSearchParams();
 
-      // Add line IDs filter - backend expects multiple line_id parameters
-      if (selectedLines && selectedLines.length > 0) {
-        selectedLines.forEach(lineId => {
-          params.append('line_id', lineId.toString());
+        if (selectedLines && selectedLines.length > 0) {
+          selectedLines.forEach(lineId => {
+            params.append('line_id', lineId.toString());
+          });
+        }
+
+        if (dateRange.fromDate) {
+          params.append('from_date', dateRange.fromDate);
+        }
+        if (dateRange.toDate) {
+          params.append('to_date', dateRange.toDate);
+        }
+
+        const endpoint = `/api/${archiveType}/?${params.toString()}`;
+        console.log('🚀 Starting fetch from:', endpoint, 'at', new Date().toLocaleTimeString());
+
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          signal: abortController?.signal
         });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const totalTime = performance.now() - startTime;
+        console.log('✅ Server-filtered data received:', data.length, 'records in', Math.round(totalTime), 'ms');
+
+        setRowData(data);
+        if (onDataChange) {
+          onDataChange(data);
+        }
+        return;
       }
 
-      // Add date range filters
-      if (dateRange.fromDate) {
-        // For daily archive, use date format, for others use ISO datetime
-        if (archiveType === 'daily') {
-          params.append('from_date', dateRange.fromDate);
-        } else {
-          // fromDate is already ISO string for non-daily archives
-          params.append('from_date', dateRange.fromDate);
+      // For daily and hourly archives, fetch main data and separate counts (И and А)
+      console.log('🚀 Starting parallel fetch for archive data, edit counts (И), and sys counts (А) at', new Date().toLocaleTimeString());
+
+      const promises = [];
+
+      // Fetch main archive data
+      if (archiveType === 'daily') {
+        promises.push(archiveDataApi.getDailyData(selectedLines, dateRange.fromDate, dateRange.toDate));
+      } else {
+        promises.push(archiveDataApi.getHourlyData(selectedLines, dateRange.fromDate, dateRange.toDate));
+      }
+
+      // Fetch edit counts (И) and sys counts (А) separately
+      promises.push(archiveCountsApi.getEditCounts(selectedLines, dateRange.fromDate, dateRange.toDate));
+      promises.push(archiveCountsApi.getSysCounts(selectedLines, dateRange.fromDate, dateRange.toDate));
+
+      const [archiveData, editCountsData, sysCountsData] = await Promise.all(promises);
+
+      if (abortController?.signal?.aborted) {
+        console.log('Request was cancelled during fetch');
+        return;
+      }
+
+      // Process edit counts (И) and sys counts (А) separately
+      let processedEditCounts = [];
+      let processedSysCounts = [];
+
+      if (archiveType === 'daily') {
+        // Aggregate hourly counts to commercial days
+        if (editCountsData) {
+          processedEditCounts = commercialDayUtils.aggregateEditCountsToCommercialDays(editCountsData, selectedLines);
+        }
+        if (sysCountsData) {
+          processedSysCounts = commercialDayUtils.aggregateSysCountsToCommercialDays(sysCountsData, selectedLines);
+        }
+      } else if (archiveType === 'hourly') {
+        // Transform hourly counts to expected format
+        if (editCountsData) {
+          processedEditCounts = editCountsData.map(record => {
+            const periodField = record.period || record.hour_group;
+            const lineId = record.line_id || (selectedLines.length > 0 ? selectedLines[0] : 1);
+            const countValue = record.record_count || 0;
+
+            return {
+              line_id: lineId,
+              period: periodField,
+              edit_counts: countValue
+            };
+          });
+        }
+
+        if (sysCountsData) {
+          processedSysCounts = sysCountsData.map(record => {
+            const periodField = record.period || record.hour_group;
+            const lineId = record.line_id || (selectedLines.length > 0 ? selectedLines[0] : 1);
+            const countValue = record.record_count || 0;
+
+            return {
+              line_id: lineId,
+              period: periodField,
+              sys_counts: countValue
+            };
+          });
         }
       }
 
-      if (dateRange.toDate) {
-        if (archiveType === 'daily') {
-          params.append('to_date', dateRange.toDate);
-        } else {
-          // toDate is already ISO string for non-daily archives
-          params.append('to_date', dateRange.toDate);
+      console.log('🔍 Debug data merging:');
+      console.log('Archive data sample:', archiveData?.slice(0, 2));
+      console.log('Edit counts sample:', editCountsData?.slice(0, 2));
+      console.log('Sys counts sample:', sysCountsData?.slice(0, 2));
+      console.log('Processed edit counts:', processedEditCounts?.slice(0, 2));
+      console.log('Processed sys counts:', processedSysCounts?.slice(0, 2));
+
+      // Merge archive data with both edit and sys counts
+      const mergedData = (archiveData || []).map((record, index) => {
+        // Find matching edit counts
+        const matchingEditCounts = processedEditCounts.find(count =>
+          count.line_id === record.line_id &&
+          count.period === record.period
+        );
+
+        // Find matching sys counts
+        const matchingSysCounts = processedSysCounts.find(count =>
+          count.line_id === record.line_id &&
+          count.period === record.period
+        );
+
+        if (index < 3) {
+          console.log(`🔍 Merging record ${index}:`, {
+            archiveRecord: { line_id: record.line_id, period: record.period },
+            matchingEditCounts: matchingEditCounts || 'NOT FOUND',
+            matchingSysCounts: matchingSysCounts || 'NOT FOUND'
+          });
         }
-      }
 
-      // Use the appropriate archive endpoint with query parameters
-      const endpoint = `/api/${archiveType}/?${params.toString()}`;
-      console.log('🚀 Starting fetch from:', endpoint, 'at', new Date().toLocaleTimeString());
-
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
-        },
-        signal: abortController?.signal
+        return {
+          ...record,
+          edit_counts: matchingEditCounts?.edit_counts || 0,
+          sys_counts: matchingSysCounts?.sys_counts || 0
+        };
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
       const totalTime = performance.now() - startTime;
-      console.log('✅ Server-filtered data received:', data.length, 'records in', Math.round(totalTime), 'ms');
-      setRowData(data);
+      console.log(`✅ Parallel fetch completed in ${Math.round(totalTime)}ms. Archive: ${archiveData?.length || 0}, Edit counts: ${processedEditCounts.length}, Sys counts: ${processedSysCounts.length}, Merged: ${mergedData.length}`);
 
-      // Notify parent component about data change for chart
+      setRowData(mergedData);
       if (onDataChange) {
-        onDataChange(data);
+        onDataChange(mergedData);
       }
 
     } catch (error) {
@@ -335,6 +434,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
                         key={column.key}
                         onClick={() => column.sortable && handleSort(column.key)}
                         className={column.sortable ? 'sortable' : ''}
+                        title={column.tooltip || column.label}
                       >
                         {column.label}
                         {sortConfig.key === column.key && (

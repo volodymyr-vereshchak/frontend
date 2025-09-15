@@ -9,7 +9,7 @@ class APIError extends Error {
 
 class ApiClient {
   constructor() {
-    this.baseUrl = 'http://localhost:8000';
+    this.baseUrl = '/api';
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 second
   }
@@ -135,6 +135,134 @@ export const lineApi = {
 export const gasVolumeApi = {
   async getGasVolumesByLumg(lumgId = 1) {
     return await apiClient.get('/gas-volume-calcs/', { lumg_id: lumgId });
+  }
+};
+
+// Archive counts API methods (И - changes, А - alarms)
+export const archiveCountsApi = {
+  async getEditCounts(lineIds, fromDate, toDate) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate
+    };
+    console.log('🔍 Fetching edit counts (И) with params:', params);
+    return await apiClient.get('/edit_counts/', params);
+  },
+
+  async getSysCounts(lineIds, fromDate, toDate) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate
+    };
+    console.log('🔍 Fetching sys counts (А) with params:', params);
+    return await apiClient.get('/sys_counts/', params);
+  }
+};
+
+// Archive data API methods
+export const archiveDataApi = {
+  async getDailyData(lineIds, fromDate, toDate) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate
+    };
+    return await apiClient.get('/daily/', params);
+  },
+
+  async getHourlyData(lineIds, fromDate, toDate) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate
+    };
+    return await apiClient.get('/hourly/', params);
+  }
+};
+
+// Commercial day aggregation utilities
+export const commercialDayUtils = {
+  // Aggregate hourly counts to commercial days (07:00 to 06:00)
+  aggregateEditCountsToCommercialDays(editCounts, lineIds = []) {
+    return this.aggregateCountsToCommercialDays(editCounts, lineIds, 'edit_counts');
+  },
+
+  aggregateSysCountsToCommercialDays(sysCounts, lineIds = []) {
+    return this.aggregateCountsToCommercialDays(sysCounts, lineIds, 'sys_counts');
+  },
+
+  aggregateCountsToCommercialDays(countsData, lineIds = [], countField) {
+    if (!countsData || countsData.length === 0) return [];
+
+    console.log(`Aggregating ${countField} to commercial days:`, countsData.slice(0, 3));
+
+    const commercialDays = {};
+
+    countsData.forEach((record, index) => {
+      try {
+        // Handle different date formats - API returns hour_group instead of period
+        let dateObj;
+        const periodField = record.period || record.hour_group;
+
+        if (typeof periodField === 'string') {
+          dateObj = new Date(periodField);
+        } else if (periodField instanceof Date) {
+          dateObj = periodField;
+        } else {
+          console.warn(`Invalid period format at index ${index}:`, periodField);
+          return; // Skip this record
+        }
+
+        // Validate date
+        if (isNaN(dateObj.getTime())) {
+          console.warn(`Invalid date at index ${index}:`, periodField);
+          return; // Skip this record
+        }
+
+        const hour = dateObj.getHours();
+
+        // Determine commercial day date (as in Python: hour < 7 goes to previous day)
+        let commercialDate;
+        if (hour >= 7) {
+          // After 07:00 - belongs to current day
+          commercialDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+        } else {
+          // Before 07:00 - belongs to previous day
+          commercialDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate() - 1);
+        }
+
+        // Format as YYYY-MM-DD
+        const year = commercialDate.getFullYear();
+        const month = String(commercialDate.getMonth() + 1).padStart(2, '0');
+        const day = String(commercialDate.getDate()).padStart(2, '0');
+        const commercialDateStr = `${year}-${month}-${day}`;
+
+        // line_id нет в API ответе, используем переданные lineIds
+        const lineId = record.line_id || (lineIds.length > 0 ? lineIds[0] : 1);
+        const key = `${lineId}_${commercialDateStr}`;
+
+        if (!commercialDays[key]) {
+          commercialDays[key] = {
+            line_id: lineId,
+            period: commercialDateStr,
+            [countField]: 0
+          };
+        }
+
+        // API возвращает record_count, переименовываем как в Python
+        const countValue = record.record_count || 0;
+        commercialDays[key][countField] += countValue;
+
+      } catch (error) {
+        console.error(`Error processing record at index ${index}:`, record, error);
+      }
+    });
+
+    const result = Object.values(commercialDays);
+    console.log(`Commercial days aggregated for ${countField}:`, result.slice(0, 3));
+    return result;
   }
 };
 
