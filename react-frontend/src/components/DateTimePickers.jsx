@@ -103,12 +103,20 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
     setStartDateTime(value);
     // Use the new value directly instead of relying on state
     setTimeout(() => notifyChange(value, endDateTime), 0);
+    // Auto-close date picker by removing focus
+    setTimeout(() => {
+      document.activeElement?.blur();
+    }, 100);
   };
 
   const handleEndDateTimeChange = (value) => {
     setEndDateTime(value);
     // Use the new value directly instead of relying on state
     setTimeout(() => notifyChange(startDateTime, value), 0);
+    // Auto-close date picker by removing focus
+    setTimeout(() => {
+      document.activeElement?.blur();
+    }, 100);
   };
 
   const handleEnabledChange = (value) => {
