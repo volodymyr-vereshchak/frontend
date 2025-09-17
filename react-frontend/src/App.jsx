@@ -5,6 +5,7 @@ import DateTimePickers from './components/DateTimePickers'
 import TreeView from './components/TreeView'
 import DataTable from './components/DataTable'
 import InteractiveChart from './components/InteractiveChart'
+import GRSReport from './components/GRSReport'
 
 function App() {
   const [selectedLines, setSelectedLines] = useState([]);
@@ -31,6 +32,7 @@ function App() {
   const [isDateFilterEnabled, setIsDateFilterEnabled] = useState(false);
   const [archiveType, setArchiveType] = useState('daily');
   const [chartData, setChartData] = useState([]);
+  const [isGRSReportOpen, setIsGRSReportOpen] = useState(false);
 
   const handleLinesSelected = useCallback((lineIds) => {
     setSelectedLines(lineIds);
@@ -58,12 +60,21 @@ function App() {
     setChartData(data || []);
   }, []);
 
+  const handleGRSReportOpen = useCallback(() => {
+    setIsGRSReportOpen(true);
+  }, []);
+
+  const handleGRSReportClose = useCallback(() => {
+    setIsGRSReportOpen(false);
+  }, []);
+
   return (
     <div className="App">
       <div className="app-container">
         <TopMenu
           onArchiveTypeChange={handleArchiveTypeChange}
           archiveType={archiveType}
+          onGRSReportClick={handleGRSReportOpen}
         />
         <hr className="separator" />
         <DateTimePickers
@@ -98,6 +109,12 @@ function App() {
           />
         )}
       </div>
+
+      {/* GRS Report Modal */}
+      <GRSReport
+        isOpen={isGRSReportOpen}
+        onClose={handleGRSReportClose}
+      />
     </div>
   )
 }

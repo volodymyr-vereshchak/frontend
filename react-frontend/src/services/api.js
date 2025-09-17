@@ -259,6 +259,13 @@ export const commercialDayUtils = {
   }
 };
 
+// GRS Report API methods
+export const reportsApi = {
+  async getGRSReport() {
+    return await apiClient.get('/get_report/');
+  }
+};
+
 // Combined data processing (replicating Python logic)
 export const dataApi = {
   async getLines() {

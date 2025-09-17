@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './TopMenu.css';
 
 // Archive Icons from Python project
@@ -37,13 +37,41 @@ const ParamsIcon = ({ color = "#B9E42B" }) => (
   </svg>
 );
 
-const TopMenu = ({ onArchiveTypeChange, archiveType }) => {
+const ReportsIcon = ({ color = "#B9E42B" }) => (
+  <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M31.6667 5H8.33333C7.44928 5 6.60143 5.35119 5.97631 5.97631C5.35119 6.60143 5 7.44928 5 8.33333V31.6667C5 32.5507 5.35119 33.3986 5.97631 34.0237C6.60143 34.6488 7.44928 35 8.33333 35H31.6667C32.5507 35 33.3986 34.6488 34.0237 34.0237C34.6488 33.3986 35 32.5507 35 31.6667V8.33333C35 7.44928 34.6488 6.60143 34.0237 5.97631C33.3986 5.35119 32.5507 5 31.6667 5Z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M15 13.3333H25M15 20H25M15 26.6667H21.6667" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const ChevronDownIcon = ({ color = "#B9E42B" }) => (
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 4.5L6 7.5L9 4.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
   const [activeButton, setActiveButton] = useState(archiveType ?
     (archiveType === 'daily' ? 'days' :
      archiveType === 'hourly' ? 'hours' :
      archiveType === 'sys' ? 'sys' :
      archiveType === 'edit' ? 'edits' :
      archiveType === 'param' ? 'param' : 'days') : 'days');
+  const [isReportsDropdownOpen, setIsReportsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsReportsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const getButtonIcon = (buttonId, isActive) => {
     const iconColor = isActive ? '#000000' : '#B9E42B';
@@ -59,6 +87,8 @@ const TopMenu = ({ onArchiveTypeChange, archiveType }) => {
         return <EditIcon color={iconColor} />;
       case 'param':
         return <ParamsIcon color={iconColor} />;
+      case 'reports':
+        return <ReportsIcon color={iconColor} />;
       default:
         return null;
     }
@@ -73,7 +103,13 @@ const TopMenu = ({ onArchiveTypeChange, archiveType }) => {
   ];
 
   const handleButtonClick = (buttonId) => {
+    if (buttonId === 'reports') {
+      setIsReportsDropdownOpen(!isReportsDropdownOpen);
+      return;
+    }
+
     setActiveButton(buttonId);
+    setIsReportsDropdownOpen(false);
 
     // Map button IDs to archive types
     const archiveTypeMap = {
@@ -86,6 +122,13 @@ const TopMenu = ({ onArchiveTypeChange, archiveType }) => {
 
     if (onArchiveTypeChange && archiveTypeMap[buttonId]) {
       onArchiveTypeChange(archiveTypeMap[buttonId]);
+    }
+  };
+
+  const handleGRSReportClick = () => {
+    setIsReportsDropdownOpen(false);
+    if (onGRSReportClick) {
+      onGRSReportClick();
     }
   };
 
@@ -104,6 +147,36 @@ const TopMenu = ({ onArchiveTypeChange, archiveType }) => {
             <span className="button-icon">{getButtonIcon(button.id, activeButton === button.id)}</span>
           </button>
         ))}
+
+        {/* Reports Dropdown */}
+        <div className="dropdown" ref={dropdownRef}>
+          <button
+            className={`menu-button dropdown-toggle ${
+              isReportsDropdownOpen ? 'active' : ''
+            }`}
+            onClick={() => handleButtonClick('reports')}
+            title="Отчеты"
+          >
+            <span className="button-icon">{getButtonIcon('reports', isReportsDropdownOpen)}</span>
+            <span className="button-text">Отчеты</span>
+            <span className={`chevron-icon ${isReportsDropdownOpen ? 'rotated' : ''}`}>
+              <ChevronDownIcon color={isReportsDropdownOpen ? '#000000' : '#B9E42B'} />
+            </span>
+          </button>
+
+          {isReportsDropdownOpen && (
+            <div className="dropdown-menu">
+              <button
+                className="dropdown-item"
+                onClick={handleGRSReportClick}
+                title="Получить отчет по объемам газа за последние 24 часа"
+              >
+                <span className="dropdown-item-icon">📊</span>
+                <span className="dropdown-item-text">Отчет ГРС за 24 часа</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       <h1 className="app-title">HostLib Viewer</h1>
     </div>
