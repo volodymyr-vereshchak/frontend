@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './DataTable.css';
-import { archiveCountsApi, archiveDataApi, commercialDayUtils } from '../services/api';
+import { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils } from '../services/api';
 import * as XLSX from 'xlsx';
 
 // Excel Export Icon
@@ -197,7 +197,23 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     const startTime = performance.now();
 
     try {
-      // Skip И and А columns for non-daily/hourly archives
+      // Special handling for edit archive with value conversion
+      if (archiveType === 'edit') {
+        console.log('🚀 Fetching edit archive data with value conversion at', new Date().toLocaleTimeString());
+
+        const data = await editArchiveApi.getEditData(selectedLines, dateRange.fromDate, dateRange.toDate);
+        const totalTime = performance.now() - startTime;
+
+        console.log(`📊 Edit archive data fetched in ${totalTime.toFixed(2)}ms, ${data?.length || 0} records with converted values`);
+
+        setRowData(data || []);
+        if (onDataChange) {
+          onDataChange(data || []);
+        }
+        return;
+      }
+
+      // Skip И and А columns for other non-daily/hourly archives
       if (archiveType !== 'daily' && archiveType !== 'hourly') {
         // Use original fetch method for other archive types
         const params = new URLSearchParams();
@@ -405,11 +421,20 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     return rowData ? rowData.length : 0;
   };
 
-  const formatNumber = (value) => {
+  const formatNumber = (value, key) => {
     if (typeof value !== 'number' || isNaN(value)) return value;
 
-    // Format with 2 decimal places and add spaces between thousands
-    return value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    // Special formatting for edit archive values (4 decimal places)
+    if (archiveType === 'edit' && (key === 'old_value' || key === 'new_value')) {
+      const formatted = value.toFixed(4);
+      const [integerPart, decimalPart] = formatted.split('.');
+      return integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '.' + decimalPart;
+    }
+
+    // Default formatting with 2 decimal places and add spaces between thousands
+    const formatted = value.toFixed(2);
+    const [integerPart, decimalPart] = formatted.split('.');
+    return integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '.' + decimalPart;
   };
 
   const formatValue = (value, key) => {
@@ -423,7 +448,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       }
     }
     if (typeof value === 'number') {
-      return formatNumber(value);
+      return formatNumber(value, key);
     }
     return value;
   };

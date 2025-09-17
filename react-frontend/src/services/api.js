@@ -160,6 +160,48 @@ export const archiveCountsApi = {
   }
 };
 
+// Edit Archive API methods (detailed intervention data)
+export const editArchiveApi = {
+  async getEditData(lineIds, fromDate, toDate) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate
+    };
+    const data = await apiClient.get('/edit/', params);
+
+    // Apply value conversion for old_value and new_value (int -> hex -> float)
+    if (data && Array.isArray(data)) {
+      return data.map(record => ({
+        ...record,
+        old_value: Number(convertIntToHexToFloat(record.old_value).toFixed(4)),
+        new_value: Number(convertIntToHexToFloat(record.new_value).toFixed(4))
+      }));
+    }
+
+    return data;
+  }
+};
+
+// Value conversion function (replicate Python struct.unpack logic)
+function convertIntToHexToFloat(intValue) {
+  if (intValue === null || intValue === undefined) {
+    return 0;
+  }
+
+  // Convert integer to 32-bit signed integer (equivalent to struct.pack("!i", value))
+  const buffer = new ArrayBuffer(4);
+  const view = new DataView(buffer);
+
+  // Write as big-endian signed 32-bit integer
+  view.setInt32(0, intValue, false); // false = big-endian
+
+  // Read as big-endian 32-bit float (equivalent to struct.unpack("!f", ...))
+  const floatValue = view.getFloat32(0, false); // false = big-endian
+
+  return floatValue;
+}
+
 // Archive data API methods
 export const archiveDataApi = {
   async getDailyData(lineIds, fromDate, toDate) {
