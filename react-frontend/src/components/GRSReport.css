@@ -233,6 +233,19 @@
   flex: 1;
 }
 
+.volume-info {
+  color: #87CEEB;
+}
+
+.pressure-info {
+  color: #FFB6C1;
+}
+
+.separator {
+  color: #999;
+  margin: 0 8px;
+}
+
 .data-line {
   margin: 4px 0;
   color: #ffffff;

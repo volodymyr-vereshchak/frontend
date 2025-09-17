@@ -64,7 +64,7 @@ const GRSReport = ({ isOpen, onClose }) => {
             {cleanLine}
           </h5>
         );
-      } else if (line.includes('<b>') && line.includes('</b>') && (line.includes('м³') || line.includes('кг/см²'))) {
+      } else if (line.includes('<b>') && line.includes('</b>') && (line.includes('м³') || line.includes('кг/см²') || line.includes('Pвых'))) {
         const cleanLine = line.replace(/<b>/g, '').replace(/<\/b>/g, '');
         const hasWarning = line.includes('🔴');
 
@@ -73,11 +73,31 @@ const GRSReport = ({ isOpen, onClose }) => {
           const lineName = parts[0].trim();
           const lineData = parts[1]?.trim() || '';
 
+          // Parse volume and pressure from line data
+          let volume = '', pressure = '';
+
+          // Extract volume (м³)
+          const volumeMatch = lineData.match(/([\d\s.,]+)\s*м³/);
+          if (volumeMatch) {
+            volume = volumeMatch[1].replace(/\s+/g, ' ').trim();
+          }
+
+          // Extract pressure after Pвых
+          const pressureMatch = lineData.match(/Pвых\s*([\d\s.,]+)/);
+          if (pressureMatch) {
+            pressure = pressureMatch[1].replace(/\s+/g, ' ').trim();
+          }
+
           formattedLines.push(
             <div key={index} className={`line-data ${hasWarning ? 'warning' : 'normal'}`}>
               {hasWarning && <span className="warning-icon">⚠️</span>}
               <span className="line-name">{lineName}:</span>
-              <span className="line-value">{lineData}</span>
+              <span className="line-value">
+                {volume && <span className="volume-info">Объем: <strong>{volume} м³</strong></span>}
+                {volume && pressure && <span className="separator"> | </span>}
+                {pressure && <span className="pressure-info">Pвых: <strong>{pressure} кг/см²</strong></span>}
+                {!volume && !pressure && lineData}
+              </span>
             </div>
           );
         } else {
@@ -87,10 +107,12 @@ const GRSReport = ({ isOpen, onClose }) => {
             </p>
           );
         }
-      } else if (line.trim() && (line.includes('м³') || line.includes('кг/см²'))) {
+      } else if (line.trim() && (line.includes('м³') || line.includes('кг/см²') || line.includes('Pвых'))) {
+        // Handle lines that contain data but may not have bold tags
+        const cleanLine = line.replace(/<\/?b>/g, '').trim();
         formattedLines.push(
           <p key={index} className="data-line monospace">
-            {line}
+            {cleanLine}
           </p>
         );
       } else if (line.trim()) {
