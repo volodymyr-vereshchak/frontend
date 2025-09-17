@@ -1,4 +1,4 @@
 // Конфигурация для production
 window.APP_CONFIG = {
-  API_URL: 'http://localhost/api'
+  API_URL: 'http://localhost:8000'
 };
