@@ -9,7 +9,8 @@ class APIError extends Error {
 
 class ApiClient {
   constructor() {
-    this.baseUrl = '/api';
+    // В production используем переменную окружения, в dev - proxy
+    this.baseUrl = import.meta.env.VITE_API_URL || '/api';
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 second
   }
