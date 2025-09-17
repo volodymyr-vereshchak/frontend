@@ -178,6 +178,67 @@ export const archiveDataApi = {
       to_date: toDate
     };
     return await apiClient.get('/hourly/', params);
+  },
+
+  async getHourlyDataLast24h() {
+    try {
+      // Get hourly data for last 24 hours (replicate Python logic)
+      // Python: end = get_last_period(), start = end - timedelta(hours=23)
+
+      const now = new Date();
+
+      // Get broader range to ensure we have data - last 5 days to be safe
+      // Use tomorrow as end date to include all of today's data
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const endDate = tomorrow.toISOString().split('T')[0]; // Tomorrow (2025-09-18)
+      const startDate = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 5 days ago
+
+      // Get data for all configured GRS lines
+      const grsConfig = {
+        LINES_IDS: [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11]
+      };
+
+      const result = await this.getHourlyData(grsConfig.LINES_IDS, startDate, endDate);
+
+      if (!result || result.length === 0) {
+        return [];
+      }
+
+      // Find the last (most recent) period in the data that has actual data
+      // Sort by period descending to get the latest first
+      const sortedData = result.sort((a, b) => new Date(b.period) - new Date(a.period));
+
+      // Look for the latest period that is not at 00:00 (midnight) as it might be incomplete
+      let lastPeriod = null;
+      for (let i = 0; i < Math.min(50, sortedData.length); i++) {
+        const periodDate = new Date(sortedData[i].period);
+
+        // Skip midnight hours (00:00) as they might be incomplete data
+        if (periodDate.getHours() !== 0) {
+          lastPeriod = periodDate;
+          break;
+        }
+      }
+
+      // If no non-midnight period found, use the actual last period
+      if (!lastPeriod) {
+        lastPeriod = new Date(sortedData[0].period);
+      }
+
+      // Calculate start period (23 hours before last period)
+      const startPeriod = new Date(lastPeriod.getTime() - 23 * 60 * 60 * 1000);
+
+      // Filter data to get exactly 24 hours (from startPeriod to lastPeriod inclusive)
+      const filteredData = result.filter(record => {
+        const recordDate = new Date(record.period);
+        return recordDate >= startPeriod && recordDate <= lastPeriod;
+      });
+
+      return filteredData;
+    } catch (error) {
+      console.error('Error in getHourlyDataLast24h:', error);
+      return null;
+    }
   }
 };
 
@@ -263,6 +324,25 @@ export const commercialDayUtils = {
 export const reportsApi = {
   async getGRSReport() {
     return await apiClient.get('/get_report/');
+  },
+
+  async getGRSReportData() {
+    // Get structured data for GRS report calculation
+    try {
+      const [linesData, hourlyData] = await Promise.all([
+        lineApi.getLinesByLumg(1),
+        archiveDataApi.getHourlyDataLast24h()
+      ]);
+
+      return {
+        lines: linesData || [],
+        hourlyData: hourlyData || [],
+        success: true
+      };
+    } catch (error) {
+      console.error('Error fetching GRS report data:', error);
+      return { success: false, error: error.message };
+    }
   }
 };
 

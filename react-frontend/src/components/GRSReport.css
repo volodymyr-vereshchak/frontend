@@ -156,6 +156,10 @@
   line-height: 1.6;
 }
 
+.report-content-structured {
+  line-height: 1.6;
+}
+
 .no-data {
   color: #999;
   text-align: center;

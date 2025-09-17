@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { reportsApi } from '../services/api';
+import { GRSCalculator } from '../utils/grsCalculator';
 import './GRSReport.css';
 
 const GRSReport = ({ isOpen, onClose }) => {
@@ -12,12 +13,30 @@ const GRSReport = ({ isOpen, onClose }) => {
     setError(null);
 
     try {
-      const response = await reportsApi.getGRSReport();
+      // Try to get structured data and calculate report
+      const structuredResponse = await reportsApi.getGRSReportData();
 
-      if (response && response.success) {
-        setReportData(response.message);
+      if (structuredResponse && structuredResponse.success) {
+        // Calculate report using our frontend logic
+        const calculatedReport = GRSCalculator.calculateGRSReport(
+          structuredResponse.lines,
+          structuredResponse.hourlyData
+        );
+
+        if (calculatedReport.success) {
+          setReportData(calculatedReport.data);
+        } else {
+          setError(calculatedReport.error || 'Ошибка при расчете отчета');
+        }
       } else {
-        setError(response?.message || 'Неизвестная ошибка при получении отчета');
+        // Fallback to old text-based report
+        const textResponse = await reportsApi.getGRSReport();
+        if (textResponse && textResponse.success) {
+          // Parse the old text format (keep existing parsing logic as fallback)
+          setReportData({ fallback: true, message: textResponse.message });
+        } else {
+          setError(textResponse?.message || 'Неизвестная ошибка при получении отчета');
+        }
       }
     } catch (err) {
       setError('Ошибка подключения к серверу');
@@ -29,6 +48,52 @@ const GRSReport = ({ isOpen, onClose }) => {
 
   const handleRefresh = () => {
     fetchReport();
+  };
+
+  const formatReportData = (data) => {
+    if (!data) {
+      return <div className="no-data">Нет данных для отображения</div>;
+    }
+
+    // Handle fallback text format
+    if (data.fallback && data.message) {
+      return formatReportMessage(data.message);
+    }
+
+    // Handle new structured format
+    if (data.lineReports) {
+      return (
+        <div className="report-content-structured">
+          <h4 className="report-title">Объем по ГРС за последние 24 часа</h4>
+
+          {data.startDate && data.endDate && (
+            <p className="date-range">
+              {data.startDate.toLocaleString('ru')} - {data.endDate.toLocaleString('ru')}
+            </p>
+          )}
+
+          <h5 className="total-volume">
+            ГРС всего: {data.totalVolume?.toLocaleString('ru')} м³
+          </h5>
+
+          {data.lineReports.map((report, index) => (
+            <div key={report.lineId} className={`line-data ${report.hasIncompleteData ? 'warning' : 'normal'}`}>
+              {report.hasIncompleteData && <span className="warning-icon">⚠️</span>}
+              <span className="line-name">{report.lineName}:</span>
+              <span className="line-value">
+                <span className="volume-info">Объем: <strong>{report.volume.toLocaleString('ru')} м³</strong></span>
+                <span className="separator"> | </span>
+                <span className="pressure-info">
+                  {report.isHighPressureLine ? 'Pвх' : 'Pвых'}: <strong>{report.pressure.toLocaleString('ru')} кг/см²</strong>
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return <div className="no-data">Неизвестный формат данных</div>;
   };
 
   const formatReportMessage = (message) => {
@@ -82,8 +147,8 @@ const GRSReport = ({ isOpen, onClose }) => {
             volume = volumeMatch[1].replace(/\s+/g, ' ').trim();
           }
 
-          // Extract pressure after Pвых
-          const pressureMatch = lineData.match(/Pвых\s*([\d\s.,]+)/);
+          // Extract pressure after Pвых (currently missing from API response)
+          const pressureMatch = lineData.match(/Pвых\s+([\d\s.,]+)(?:\s*кг\/см²)?/);
           if (pressureMatch) {
             pressure = pressureMatch[1].replace(/\s+/g, ' ').trim();
           }
@@ -94,9 +159,10 @@ const GRSReport = ({ isOpen, onClose }) => {
               <span className="line-name">{lineName}:</span>
               <span className="line-value">
                 {volume && <span className="volume-info">Объем: <strong>{volume} м³</strong></span>}
-                {volume && pressure && <span className="separator"> | </span>}
+                {volume && lineData.includes('Pвых') && <span className="separator"> | </span>}
+                {volume && lineData.includes('Pвых') && !pressure && <span className="pressure-info">Pвых: <em>нет данных</em></span>}
                 {pressure && <span className="pressure-info">Pвых: <strong>{pressure} кг/см²</strong></span>}
-                {!volume && !pressure && lineData}
+                {!volume && !pressure && <span className="raw-data">{lineData}</span>}
               </span>
             </div>
           );
@@ -162,7 +228,7 @@ const GRSReport = ({ isOpen, onClose }) => {
 
           {!isLoading && !error && reportData && (
             <div className="report-container">
-              {formatReportMessage(reportData)}
+              {formatReportData(reportData)}
             </div>
           )}
         </div>
