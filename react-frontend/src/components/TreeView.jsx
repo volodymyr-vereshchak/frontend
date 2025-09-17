@@ -101,32 +101,10 @@ const TreeView = ({ onLinesSelected }) => {
       try {
 
         // First, get gas volume groups (metering nodes)
-        const gasResponse = await fetch('/api/gas-volume-calcs/', {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!gasResponse.ok) {
-          throw new Error(`Gas volume API failed: ${gasResponse.status} ${gasResponse.statusText}`);
-        }
-
-        const gasVolumeGroups = await gasResponse.json();
+        const gasVolumeGroups = await dataApi.getGasVolumeCalcs();
 
         // Then, get all lines
-        const linesResponse = await fetch('/api/lines/', {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!linesResponse.ok) {
-          throw new Error(`Lines API failed: ${linesResponse.status} ${linesResponse.statusText}`);
-        }
-
-        const allLines = await linesResponse.json();
+        const allLines = await dataApi.getLines();
 
         // Build tree structure correctly
         const treeStructure = gasVolumeGroups.map(group => {
