@@ -7,6 +7,8 @@ class APIError extends Error {
   }
 }
 
+const DEFAULT_API_URL = 'http://localhost:8000';
+
 class ApiClient {
   constructor() {
     this.maxRetries = 3;
@@ -15,7 +17,7 @@ class ApiClient {
 
   get baseUrl() {
     // Динамически получаем URL при каждом запросе
-    return (window.APP_CONFIG && window.APP_CONFIG.API_URL) || import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    return (window.APP_CONFIG && window.APP_CONFIG.API_URL) || import.meta.env.VITE_API_URL || DEFAULT_API_URL;
   }
 
   async _makeRequest(endpoint, options = {}) {
