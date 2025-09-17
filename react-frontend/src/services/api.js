@@ -9,10 +9,13 @@ class APIError extends Error {
 
 class ApiClient {
   constructor() {
-    // В production используем window.APP_CONFIG, в dev - proxy
-    this.baseUrl = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || import.meta.env.VITE_API_URL || '/api';
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 second
+  }
+
+  get baseUrl() {
+    // Динамически получаем URL при каждом запросе
+    return (window.APP_CONFIG && window.APP_CONFIG.API_URL) || import.meta.env.VITE_API_URL || '/api';
   }
 
   async _makeRequest(endpoint, options = {}) {
