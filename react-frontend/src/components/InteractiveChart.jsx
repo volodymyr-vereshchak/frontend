@@ -11,8 +11,10 @@ import {
   Brush
 } from 'recharts';
 import './InteractiveChart.css';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const InteractiveChart = ({ data, archiveType, selectedLines }) => {
+  const { getLocale } = useLanguage();
   const [visibleLines, setVisibleLines] = useState({});
   const [yAxisDomain, setYAxisDomain] = useState(['dataMin', 'dataMax']);
   const [isChartLoading, setIsChartLoading] = useState(false);
@@ -208,10 +210,11 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
 
   const formatXAxisLabel = (value) => {
     const date = new Date(value);
+    const locale = getLocale();
     if (archiveType === 'daily') {
-      return date.toLocaleDateString('ru-RU');
+      return date.toLocaleDateString(locale);
     } else {
-      return date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU');
+      return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
     }
   };
 

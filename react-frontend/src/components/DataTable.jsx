@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './DataTable.css';
 import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils } from '../services/api';
 import * as XLSX from 'xlsx';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Excel Export Icon
 const ExcelIcon = ({ color = "#B9E42B" }) => (
@@ -12,6 +13,7 @@ const ExcelIcon = ({ color = "#B9E42B" }) => (
 );
 
 const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType, onDataChange }) => {
+  const { t, getLocale } = useLanguage();
   const [rowData, setRowData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -22,7 +24,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   // Excel export function
   const exportToExcel = () => {
     if (!rowData || rowData.length === 0) {
-      alert('Нет данных для экспорта');
+      alert(t('noDataExport'));
       return;
     }
 
@@ -75,11 +77,11 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
       // Add worksheet to workbook
       const archiveTypeNames = {
-        'daily': 'Суточный архив',
-        'hourly': 'Часовой архив',
-        'sys': 'Архив аварий',
-        'edit': 'Архив изменений',
-        'param': 'Параметры'
+        'daily': t('dailyArchive'),
+        'hourly': t('hourlyArchive'),
+        'sys': t('systemArchive'),
+        'edit': t('editArchive'),
+        'param': t('parameters')
       };
       const sheetName = archiveTypeNames[archiveType] || archiveType;
       XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
@@ -88,11 +90,11 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       const now = new Date();
       const timestamp = now.toISOString().slice(0, 19).replace(/[T:]/g, '_');
       const fileArchiveNames = {
-        'daily': 'суточный_архив',
-        'hourly': 'часовой_архив',
-        'sys': 'архив_аварий',
-        'edit': 'архив_изменений',
-        'param': 'параметры'
+        'daily': t('dailyArchiveFile'),
+        'hourly': t('hourlyArchiveFile'),
+        'sys': t('systemArchiveFile'),
+        'edit': t('editArchiveFile'),
+        'param': t('parametersFile')
       };
       const filename = `${fileArchiveNames[archiveType] || archiveType}_${timestamp}.xlsx`;
 
@@ -101,7 +103,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
     } catch (error) {
       console.error('Error exporting to Excel:', error);
-      alert('Ошибка при экспорте в Excel');
+      alert(t('exportError'));
     }
   };
 
@@ -118,32 +120,32 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       case 'daily':
       case 'hourly':
         return [
-          { key: 'period', label: 'Период', sortable: true },
-          { key: 'volume', label: 'Объем', sortable: true, isSummable: true },
-          { key: 'w_volume_dp', label: 'Раб. объем/перепад', sortable: true, isAveragable: true },
-          { key: 'pressure', label: 'Давление', sortable: true, isAveragable: true },
-          { key: 'temperature', label: 'Температура', sortable: true, isAveragable: true },
-          { key: 'density', label: 'Плотность', sortable: true, isAveragable: true },
-          { key: 'edit_counts', label: 'И', sortable: true, isSummable: true, tooltip: 'Изменения' },
-          { key: 'sys_counts', label: 'А', sortable: true, isSummable: true, tooltip: 'Аварии' }
+          { key: 'period', label: t('period'), sortable: true },
+          { key: 'volume', label: t('volume'), sortable: true, isSummable: true },
+          { key: 'w_volume_dp', label: t('workingVolumePressure'), sortable: true, isAveragable: true },
+          { key: 'pressure', label: t('pressure'), sortable: true, isAveragable: true },
+          { key: 'temperature', label: t('temperature'), sortable: true, isAveragable: true },
+          { key: 'density', label: t('density'), sortable: true, isAveragable: true },
+          { key: 'edit_counts', label: t('editCounts'), sortable: true, isSummable: true, tooltip: t('changesCount') },
+          { key: 'sys_counts', label: t('sysCounts'), sortable: true, isSummable: true, tooltip: t('alarmsCount') }
         ];
       case 'edit':
         return [
-          { key: 'period', label: 'Период', sortable: true },
-          { key: 'edit_name', label: 'Тип изменения', sortable: true },
-          { key: 'old_value', label: 'Старое значение', sortable: true },
-          { key: 'new_value', label: 'Новое значение', sortable: true }
+          { key: 'period', label: t('period'), sortable: true },
+          { key: 'edit_name', label: t('editType'), sortable: true },
+          { key: 'old_value', label: t('oldValue'), sortable: true },
+          { key: 'new_value', label: t('newValue'), sortable: true }
         ];
       case 'sys':
         return [
-          { key: 'period', label: 'Период', sortable: true },
-          { key: 'sys_name', label: 'Тип операции', sortable: true },
-          { key: 'volume', label: 'Объем', sortable: true, isSummable: true }
+          { key: 'period', label: t('period'), sortable: true },
+          { key: 'sys_name', label: t('operationType'), sortable: true },
+          { key: 'volume', label: t('volume'), sortable: true, isSummable: true }
         ];
       case 'param':
         return [
-          { key: 'period', label: 'Период', sortable: true },
-          { key: 'density', label: 'Плотность', sortable: true, isAveragable: true },
+          { key: 'period', label: t('period'), sortable: true },
+          { key: 'density', label: t('density'), sortable: true, isAveragable: true },
           { key: 'co2', label: 'CO2 (%)', sortable: true, isAveragable: true },
           { key: 'n2', label: 'N2 (%)', sortable: true, isAveragable: true },
           { key: 'D20', label: 'D20', sortable: true, isAveragable: true },
@@ -418,11 +420,12 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const formatValue = (value, key) => {
     if (key === 'period') {
       const date = new Date(value);
+      const locale = getLocale();
       if (archiveType === 'daily') {
-        return date.toLocaleDateString('ru-RU');
+        return date.toLocaleDateString(locale);
       } else {
         // Format without comma: "01.01.2024 14:30:00"
-        return date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU');
+        return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
       }
     }
     if (typeof value === 'number') {
@@ -440,7 +443,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
     columns.forEach(column => {
       if (column.key === 'period') {
-        summary[column.key] = 'Итого:';
+        summary[column.key] = t('total');
       } else if (column.isSummable) {
         // Calculate sum for volume
         summary[column.key] = sortedData.reduce((sum, row) => {
@@ -470,26 +473,26 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     <div className="data-table-container">
       <div className="table-header">
         <h6>
-          {archiveType === 'daily' && 'Суточный архив'}
-          {archiveType === 'hourly' && 'Часовой архив'}
-          {archiveType === 'edit' && 'Архив изменений'}
-          {archiveType === 'sys' && 'Системный архив'}
-          {archiveType === 'param' && 'Параметры'}
+          {archiveType === 'daily' && t('dailyArchive')}
+          {archiveType === 'hourly' && t('hourlyArchive')}
+          {archiveType === 'edit' && t('editArchive')}
+          {archiveType === 'sys' && t('systemArchive')}
+          {archiveType === 'param' && t('parameters')}
         </h6>
         <div className="table-info">
           {loading ? (
-            <span style={{color: '#ffa500'}}>Загрузка...</span>
+            <span style={{color: '#ffa500'}}>{t('loading')}</span>
           ) : (
             <>
-              <span style={{marginRight: '15px'}}>Записей: {getRecordCount()}</span>
+              <span style={{marginRight: '15px'}}>{t('records')}: {getRecordCount()}</span>
               {rowData && rowData.length > 0 && (
                 <button
                   className="excel-export-btn"
                   onClick={exportToExcel}
-                  title="Экспорт в Excel"
+                  title={t('export')}
                 >
                   <ExcelIcon color="#000000" />
-                  <span>Excel</span>
+                  <span>{t('excel')}</span>
                 </button>
               )}
             </>
@@ -499,17 +502,17 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
       {error && (
         <div className="error-message">
-          Ошибка загрузки данных: {error}
+          {t('errorLoading')}: {error}
         </div>
       )}
 
       {!selectedLines || selectedLines.length === 0 ? (
         <div className="placeholder-content">
-          <p>Выберите линии для отображения данных</p>
+          <p>{t('selectLines')}</p>
         </div>
       ) : !isDateFilterEnabled ? (
         <div className="placeholder-content">
-          <p>Активируйте фильтр по датам для загрузки данных</p>
+          <p>{t('activateDate')}</p>
         </div>
       ) : (
         <div className="data-table">
@@ -546,13 +549,13 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
                   {loading ? (
                     <tr>
                       <td colSpan={columns.length} className="loading-cell">
-                        Загрузка данных...
+                        {t('loadingData')}
                       </td>
                     </tr>
                   ) : sortedData.length === 0 ? (
                     <tr>
                       <td colSpan={columns.length} className="no-data-cell">
-                        Нет данных для отображения
+                        {t('noData')}
                       </td>
                     </tr>
                   ) : (

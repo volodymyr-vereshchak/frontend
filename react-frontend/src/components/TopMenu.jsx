@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './TopMenu.css';
+import { useLanguage } from '../contexts/LanguageContext';
+import { languages } from '../locales';
 
 // Archive Icons from Python project
 const CalendarIcon = ({ color = "#B9E42B" }) => (
@@ -51,6 +53,7 @@ const ChevronDownIcon = ({ color = "#B9E42B" }) => (
 );
 
 const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
+  const { currentLanguage, changeLanguage, t } = useLanguage();
   const [activeButton, setActiveButton] = useState(archiveType ?
     (archiveType === 'daily' ? 'days' :
      archiveType === 'hourly' ? 'hours' :
@@ -58,12 +61,17 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
      archiveType === 'edit' ? 'edits' :
      archiveType === 'param' ? 'param' : 'days') : 'days');
   const [isReportsDropdownOpen, setIsReportsDropdownOpen] = useState(false);
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const languageDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsReportsDropdownOpen(false);
+      }
+      if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target)) {
+        setIsLanguageDropdownOpen(false);
       }
     };
 
@@ -95,11 +103,11 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
   };
 
   const buttons = [
-    { id: 'days', label: 'Суточный архив' },
-    { id: 'hours', label: 'Часовой архив' },
-    { id: 'sys', label: 'Архив аварий' },
-    { id: 'edits', label: 'Архив вмешательств' },
-    { id: 'param', label: 'Параметры' }
+    { id: 'days', label: t('dailyArchive') },
+    { id: 'hours', label: t('hourlyArchive') },
+    { id: 'sys', label: t('systemArchive') },
+    { id: 'edits', label: t('editArchive') },
+    { id: 'param', label: t('parameters') }
   ];
 
   const handleButtonClick = (buttonId) => {
@@ -132,6 +140,15 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
     }
   };
 
+  const handleLanguageChange = (languageCode) => {
+    changeLanguage(languageCode);
+    setIsLanguageDropdownOpen(false);
+  };
+
+  const getCurrentLanguage = () => {
+    return languages.find(lang => lang.code === currentLanguage) || languages[0];
+  };
+
   return (
     <div className="top-menu">
       <div className="menu-buttons">
@@ -155,10 +172,10 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
               isReportsDropdownOpen ? 'active' : ''
             }`}
             onClick={() => handleButtonClick('reports')}
-            title="Отчеты"
+            title={t('grsReport')}
           >
             <span className="button-icon">{getButtonIcon('reports', isReportsDropdownOpen)}</span>
-            <span className="button-text">Отчеты</span>
+            <span className="button-text">{t('grsReport')}</span>
             <span className={`chevron-icon ${isReportsDropdownOpen ? 'rotated' : ''}`}>
               <ChevronDownIcon color={isReportsDropdownOpen ? '#000000' : '#B9E42B'} />
             </span>
@@ -169,16 +186,46 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
               <button
                 className="dropdown-item"
                 onClick={handleGRSReportClick}
-                title="Получить отчет по объемам газа за последние 24 часа"
+                title={t('grsReportCalculations')}
               >
                 <span className="dropdown-item-icon">📊</span>
-                <span className="dropdown-item-text">Отчет ГРС за 24 часа</span>
+                <span className="dropdown-item-text">{t('grsReportCalculations')}</span>
               </button>
             </div>
           )}
         </div>
       </div>
-      <h1 className="app-title">HostLib Viewer</h1>
+
+      <div className="right-section">
+        {/* Language Switcher */}
+        <div className="language-switcher" ref={languageDropdownRef}>
+          <button
+            className="language-button"
+            onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+            title={getCurrentLanguage().name}
+          >
+            <span className="flag-icon">{getCurrentLanguage().flag}</span>
+          </button>
+
+          {isLanguageDropdownOpen && (
+            <div className="language-dropdown">
+              {languages.map(language => (
+                <button
+                  key={language.code}
+                  className={`language-option ${language.code === currentLanguage ? 'active' : ''}`}
+                  onClick={() => handleLanguageChange(language.code)}
+                  title={language.name}
+                >
+                  <span className="flag-icon">{language.flag}</span>
+                  <span className="language-name">{language.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <h1 className="app-title">{t('appTitle')}</h1>
+      </div>
     </div>
   );
 };

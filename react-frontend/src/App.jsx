@@ -6,6 +6,7 @@ import TreeView from './components/TreeView'
 import DataTable from './components/DataTable'
 import InteractiveChart from './components/InteractiveChart'
 import GRSReport from './components/GRSReport'
+import { LanguageProvider } from './contexts/LanguageContext'
 
 function App() {
   const [selectedLines, setSelectedLines] = useState([]);
@@ -69,7 +70,8 @@ function App() {
   }, []);
 
   return (
-    <div className="App">
+    <LanguageProvider>
+      <div className="App">
       <div className="app-container">
         <TopMenu
           onArchiveTypeChange={handleArchiveTypeChange}
@@ -115,7 +117,8 @@ function App() {
         isOpen={isGRSReportOpen}
         onClose={handleGRSReportClose}
       />
-    </div>
+      </div>
+    </LanguageProvider>
   )
 }
 

@@ -12,12 +12,88 @@
   flex-wrap: wrap;
 }
 
+.right-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
 .app-title {
   color: white;
   font-size: 24px;
   font-weight: bold;
   margin: 0;
   white-space: nowrap;
+}
+
+/* Language Switcher Styles */
+.language-switcher {
+  position: relative;
+}
+
+.language-button {
+  padding: 8px 12px;
+  border: 1px solid #3E3E3E;
+  background-color: #373a3c;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 45px;
+}
+
+.language-button:hover {
+  background-color: #495057;
+  border-color: #6c757d;
+}
+
+.flag-icon {
+  font-size: 18px;
+  display: inline-block;
+}
+
+.language-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #373a3c;
+  border: 1px solid #3E3E3E;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 150px;
+  margin-top: 2px;
+}
+
+.language-option {
+  width: 100%;
+  padding: 10px 15px;
+  border: none;
+  background-color: transparent;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.language-option:hover {
+  background-color: #495057;
+}
+
+.language-option.active {
+  background-color: #B9E42B;
+  color: #000000;
+}
+
+.language-name {
+  font-size: 14px;
 }
 
 .menu-button {
