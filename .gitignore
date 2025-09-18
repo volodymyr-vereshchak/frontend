@@ -18,10 +18,6 @@ logs/
 react-frontend/node_modules/
 react-frontend/package-lock.json
 
-# Build outputs (keep only dist/)
-react-frontend/dist/assets/index-*.js
-!react-frontend/dist/assets/index-B6swtxnC.js
-
 # Removed directories (cleanup)
 api/
 pages/
