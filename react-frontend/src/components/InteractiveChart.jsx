@@ -209,9 +209,9 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
   const formatXAxisLabel = (value) => {
     const date = new Date(value);
     if (archiveType === 'daily') {
-      return date.toLocaleDateString();
+      return date.toLocaleDateString('ru-RU');
     } else {
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+      return date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU');
     }
   };
 

@@ -419,10 +419,10 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     if (key === 'period') {
       const date = new Date(value);
       if (archiveType === 'daily') {
-        return date.toLocaleDateString();
+        return date.toLocaleDateString('ru-RU');
       } else {
         // Format without comma: "01.01.2024 14:30:00"
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        return date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU');
       }
     }
     if (typeof value === 'number') {
