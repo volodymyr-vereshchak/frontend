@@ -22,10 +22,8 @@ react-frontend/package-lock.json
 api/
 pages/
 utils/
-assets/
 backup/
 deployment/
-dist/
 front_repo/
 packages/
 
