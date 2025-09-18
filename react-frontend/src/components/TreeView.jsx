@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './TreeView.css';
-import { dataApi } from '../services/api';
+import { dataApi, lineApi } from '../services/api';
 
 // SVG Icon Components
 const FolderClosedIcon = () => (
@@ -103,14 +103,13 @@ const TreeView = ({ onLinesSelected }) => {
         // First, get gas volume groups (metering nodes)
         const gasVolumeGroups = await dataApi.getGasVolumeCalcs();
 
-        // Then, get all lines
-        const allLines = await dataApi.getLines();
+        // Then, get all lines directly from API
+        const allLines = await lineApi.getLinesByLumg();
 
         // Build tree structure correctly
         const treeStructure = gasVolumeGroups.map(group => {
           // Find lines that belong to this gas volume group
           const groupLines = allLines.filter(line => line.gas_volume_calc_id === group.id);
-
 
           return {
             id: group.id,

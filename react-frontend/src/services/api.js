@@ -7,7 +7,7 @@ class APIError extends Error {
   }
 }
 
-const DEFAULT_API_URL = 'http://localhost:8000';
+const DEFAULT_API_URL = import.meta.env.DEV ? '' : 'http://localhost:8000';
 
 class ApiClient {
   constructor() {
@@ -37,8 +37,6 @@ class ApiClient {
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        console.log(`Making ${requestOptions.method || 'GET'} request to ${url} (attempt ${attempt})`);
-
         const response = await fetch(url, requestOptions);
 
         if (!response.ok) {
@@ -50,7 +48,6 @@ class ApiClient {
         }
 
         const data = await response.json();
-        console.log(`Successful request to ${url}`, data);
         return data;
 
       } catch (error) {
@@ -454,6 +451,15 @@ export const dataApi = {
 
     } catch (error) {
       console.error('Error in getLines:', error);
+      return [];
+    }
+  },
+
+  async getGasVolumeCalcs() {
+    try {
+      return await apiClient.get('/gas-volume-calcs/');
+    } catch (error) {
+      console.error('Error in getGasVolumeCalcs:', error);
       return [];
     }
   }

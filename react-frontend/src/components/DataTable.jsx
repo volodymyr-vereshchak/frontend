@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './DataTable.css';
-import { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils } from '../services/api';
+import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils } from '../services/api';
 import * as XLSX from 'xlsx';
 
 // Excel Export Icon
@@ -199,12 +199,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     try {
       // Special handling for edit archive with value conversion
       if (archiveType === 'edit') {
-        console.log('🚀 Fetching edit archive data with value conversion at', new Date().toLocaleTimeString());
-
         const data = await editArchiveApi.getEditData(selectedLines, dateRange.fromDate, dateRange.toDate);
-        const totalTime = performance.now() - startTime;
-
-        console.log(`📊 Edit archive data fetched in ${totalTime.toFixed(2)}ms, ${data?.length || 0} records with converted values`);
 
         setRowData(data || []);
         if (onDataChange) {
@@ -215,46 +210,30 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
       // Skip И and А columns for other non-daily/hourly archives
       if (archiveType !== 'daily' && archiveType !== 'hourly') {
-        // Use original fetch method for other archive types
-        const params = new URLSearchParams();
+        // Use apiClient for correct proxy handling
+        const params = {};
 
         if (selectedLines && selectedLines.length > 0) {
-          selectedLines.forEach(lineId => {
-            params.append('line_id', lineId.toString());
-          });
+          params.line_id = selectedLines;
         }
 
         if (dateRange.fromDate) {
-          params.append('from_date', dateRange.fromDate);
+          params.from_date = dateRange.fromDate;
         }
         if (dateRange.toDate) {
-          params.append('to_date', dateRange.toDate);
+          params.to_date = dateRange.toDate;
         }
 
-        const endpoint = `/api/${archiveType}/?${params.toString()}`;
+        const data = await apiClient.get(`/${archiveType}/`, params);
 
-        const response = await fetch(endpoint, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-          signal: abortController?.signal
-        });
-
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const totalTime = performance.now() - startTime;
-
-        setRowData(data);
+        setRowData(data || []);
         if (onDataChange) {
-          onDataChange(data);
+          onDataChange(data || []);
         }
         return;
       }
 
       // For daily and hourly archives, fetch main data and separate counts (И and А)
-      console.log('🚀 Starting parallel fetch for archive data, edit counts (И), and sys counts (А) at', new Date().toLocaleTimeString());
 
       const promises = [];
 
@@ -349,7 +328,6 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.log('Request was cancelled');
         return;
       }
       console.error('Error fetching data:', error);
@@ -487,8 +465,6 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   };
 
   const summary = calculateSummary();
-
-  console.log('DataTable rendering with rowData:', rowData);
 
   return (
     <div className="data-table-container">
