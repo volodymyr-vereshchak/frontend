@@ -5,6 +5,7 @@ For use with waitress-serve on Windows server
 
 import os
 import mimetypes
+import re
 from urllib.parse import unquote
 from config import settings
 
@@ -15,6 +16,28 @@ class ReactApp:
         self.static_dir = os.path.join(
             os.path.dirname(__file__), "react-frontend", "dist"
         )
+
+    def _inject_config_into_html(self, html_content):
+        """Inject API configuration into HTML"""
+        # Build API URL from settings
+        api_url = f"http://{settings.get('BASE_API_URL', 'localhost')}:{settings.get('API_PORT', '8000')}"
+
+        # Create config script
+        config_script = f"""<script>
+    window.APP_CONFIG = {{
+        API_URL: '{api_url}'
+    }};
+</script>"""
+
+        # Inject before closing head tag
+        html_content = re.sub(
+            r'</head>',
+            f'{config_script}\n</head>',
+            html_content,
+            flags=re.IGNORECASE
+        )
+
+        return html_content
 
     def __call__(self, environ, start_response):
         path = environ["PATH_INFO"]
@@ -52,9 +75,20 @@ class ReactApp:
             if content_type is None:
                 content_type = "application/octet-stream"
 
-            # Read file
-            with open(file_path, "rb") as f:
-                content = f.read()
+            # Special handling for HTML files to inject configuration
+            if file_path.endswith(".html"):
+                # Read as text for HTML processing
+                with open(file_path, "r", encoding="utf-8") as f:
+                    html_content = f.read()
+
+                # Inject configuration
+                html_content = self._inject_config_into_html(html_content)
+                content = html_content.encode("utf-8")
+                content_type = "text/html; charset=utf-8"
+            else:
+                # Read as binary for other files
+                with open(file_path, "rb") as f:
+                    content = f.read()
 
             # Set headers
             headers = [
