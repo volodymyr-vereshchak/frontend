@@ -20,10 +20,14 @@
 
 .app-title {
   color: white;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: bold;
   margin: 0;
   white-space: nowrap;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  height: 36px;
 }
 
 /* Language Switcher Styles */
@@ -38,12 +42,13 @@
   color: white;
   cursor: pointer;
   border-radius: 4px;
-  font-size: 16px;
+  font-size: 14px;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 45px;
+  height: auto;
 }
 
 .language-button:hover {
@@ -52,8 +57,9 @@
 }
 
 .flag-icon {
-  font-size: 18px;
+  font-size: 16px;
   display: inline-block;
+  line-height: 1;
 }
 
 .language-dropdown {
@@ -93,6 +99,10 @@
 }
 
 .language-name {
+  font-size: 14px;
+}
+
+.language-option .flag-icon {
   font-size: 14px;
 }
 
