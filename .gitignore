@@ -1,8 +1,46 @@
-.idea
-/front_repo/
-.venv
-.env
-logs/
+# IDE
+.idea/
+
+# Python
+.venv/
+venv/
 __pycache__/
 *.pyc
+*.pyo
+
+# Environment
+.env
+
+# Logs
+logs/
+
+# Node.js
+react-frontend/node_modules/
+react-frontend/package-lock.json
+
+# Build outputs (keep only dist/)
+react-frontend/dist/assets/index-*.js
+!react-frontend/dist/assets/index-B6swtxnC.js
+
+# Removed directories (cleanup)
+api/
+pages/
+utils/
+assets/
+backup/
+deployment/
+dist/
+front_repo/
 packages/
+
+# Removed files (cleanup)
+CURRENT_STATUS.md
+DEPLOYMENT_READY.md
+PROJECT_CONTEXT.md
+Dockerfile
+docker-compose.yml
+dash_main.py
+simple-server.js
+start-server.bat
+*.tar.gz
+*.zip
