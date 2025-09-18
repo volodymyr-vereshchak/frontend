@@ -1,143 +1,85 @@
-import dash
-from dash import Dash, html, dcc, callback, Input, Output
-import dash_bootstrap_components as dbc
-import logging
+"""
+Static file server for React frontend deployment
+For use with waitress-serve on Windows server
+"""
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+import os
+import mimetypes
+from urllib.parse import unquote
 
-from api.root_client import RootClient
-from api.report_client import ReportClient
-from pages.page_elements.main_button_elemets import BUTTON_SECTION
-from pages.page_elements.main_date_time_picker_elements import get_date_picker_section
-from pages.page_elements.report_elements import create_report_modal
+class ReactApp:
+    def __init__(self):
+        # Path to React build files
+        self.static_dir = os.path.join(os.path.dirname(__file__), 'react-frontend', 'dist')
 
-# Import all callbacks to register them
-import pages.callbacks
+    def __call__(self, environ, start_response):
+        path = environ['PATH_INFO']
 
-# External stylesheets
-EXTERNAL_STYLESHEETS = [
-    dbc.themes.DARKLY,
-]
+        # Remove leading slash and decode URL
+        if path.startswith('/'):
+            path = path[1:]
+        path = unquote(path)
 
-# Create the Dash app
-app = Dash(
-    __name__,
-    use_pages=True,
-    external_stylesheets=EXTERNAL_STYLESHEETS,
-    suppress_callback_exceptions=True,
-)
-server = app.server
+        # Default to index.html for root and SPA routing
+        if not path or path.endswith('/'):
+            path = 'index.html'
 
+        # Get full file path
+        full_path = os.path.join(self.static_dir, path)
 
-def layout():
-    return dbc.Container(
-        [
-            dcc.Loading(
-                [
-                    BUTTON_SECTION,
-                    html.Hr(),
-                    get_date_picker_section(),
-                    html.Hr(),
-                    dcc.Store(id="update_state", data={"status": "init"}),
-                    dcc.Store(id="selected_dates"),
-                    create_report_modal(),
-                    dash.page_container,
-                ],
-                overlay_style={"visibility": "visible", "filter": "blur(1px)"},
-                type="dot",
-            ),
-        ],
-        fluid=True,
-        style={"backgroundColor": "#141414"},
-    )
+        # Security check - prevent directory traversal
+        if not os.path.abspath(full_path).startswith(os.path.abspath(self.static_dir)):
+            return self._not_found(start_response)
 
+        # For SPA routing - serve index.html if file doesn't exist and has no extension
+        if not os.path.exists(full_path) and '.' not in os.path.basename(path):
+            full_path = os.path.join(self.static_dir, 'index.html')
 
-# Layout
-app.layout = layout
-
-
-@callback(
-    Output("selected_dates", "data"),
-    Input("date_checkbox", "value"),
-    Input("from_date", "date"),
-    Input("start_hour", "value"),
-    Input("to_date", "date"),
-    Input("end_hour", "value"),
-)
-def set_store_with_dates(
-    date_check=False,
-    from_date=None,
-    start_hour=None,
-    to_date=None,
-    end_hour=None,
-):
-    ctx = dash.callback_context
-    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    change = False
-    if button_id in ["from_date", "start_hour", "to_date", "end_hour"]:
-        change = True
-    return (
-        {
-            "date_check": date_check,
-            "change": change,
-            "from_date": from_date,
-            "start_hour": start_hour,
-            "end_hour": end_hour,
-            "to_date": to_date,
-        }
-        if date_check
-        else {"date_check": False, "change": change}
-    )
-
-
-@callback(
-    Output("update_state", "data"),
-    Output("update_in_progress", "displayed"),
-    Input("update", "n_clicks"),
-    prevent_initial_call=True,
-)
-def update_db_from_archives(n_clicks: int):
-    """Update database from archives with improved error handling"""
-    try:
-        result = RootClient().api_post()
-        if result:
-            status = "updated"
-            update_flag = False
+        # Serve file if it exists
+        if os.path.exists(full_path) and os.path.isfile(full_path):
+            return self._serve_file(full_path, start_response)
         else:
-            status = "failed"
-            update_flag = True
-    except Exception as e:
-        # Log the error for debugging
-        import logging
-        logging.error(f"Error updating database: {e}")
-        status = f"error: {str(e)}"
-        update_flag = True
-    
-    return {"status": status}, update_flag
+            return self._not_found(start_response)
 
+    def _serve_file(self, file_path, start_response):
+        try:
+            # Get MIME type
+            content_type, _ = mimetypes.guess_type(file_path)
+            if content_type is None:
+                content_type = 'application/octet-stream'
 
-# Active button callback is now in pages.callbacks.utility_callbacks
+            # Read file
+            with open(file_path, 'rb') as f:
+                content = f.read()
 
+            # Set headers
+            headers = [
+                ('Content-Type', content_type),
+                ('Content-Length', str(len(content))),
+                ('Cache-Control', 'no-cache' if file_path.endswith('.html') else 'public, max-age=86400')
+            ]
 
-@app.callback(
-    [
-        Output("days", "active"),
-        Output("hours", "active"),
-        Output("sys", "active"),
-        Output("edits", "active"),
-        Output("param", "active"),
-    ],
-    [Input("active-button", "data")],
-    prevent_initial_call=True,
-)
-def set_button_active(active_button):
-    buttons = ["days", "hours", "sys", "edits", "param"]
-    return [True if button == active_button else False for button in buttons]
+            start_response('200 OK', headers)
+            return [content]
 
+        except Exception as e:
+            return self._server_error(start_response, str(e))
 
-if __name__ == "__main__":
-    app.run_server(host="127.0.0.1", debug=True)
+    def _not_found(self, start_response):
+        start_response('404 Not Found', [('Content-Type', 'text/plain')])
+        return [b'File not found']
+
+    def _server_error(self, start_response, error_msg):
+        start_response('500 Internal Server Error', [('Content-Type', 'text/plain')])
+        return [f'Server error: {error_msg}'.encode('utf-8')]
+
+# Create WSGI application instance
+server = ReactApp()
+
+if __name__ == '__main__':
+    # For local testing
+    from wsgiref.simple_server import make_server
+    with make_server('localhost', 8050, server) as httpd:
+        print(f"Serving React app on http://localhost:8050")
+        print(f"Static files from: {os.path.join(os.path.dirname(__file__), 'react-frontend', 'dist')}")
+        httpd.serve_forever()
