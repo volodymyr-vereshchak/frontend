@@ -1,0 +1,26 @@
+{
+  "build_time": "2025-09-18T06:35:00.000Z",
+  "build_environment": "server-proxy",
+  "node_version": "v20.x.x",
+  "npm_version": "10.x.x",
+  "git_info": {
+    "branch": "master",
+    "commit_hash": "7dd1cd8",
+    "commit_message": "Fix sys and param archive endpoints and remove debug logs"
+  },
+  "build_stats": {
+    "total_files": 3,
+    "total_size_kb": 1068,
+    "bundle_size_kb": 1027,
+    "css_size_kb": 40,
+    "html_size_kb": 1,
+    "compression": "gzip"
+  },
+  "deployment_notes": [
+    "Fixed sys and param archive endpoints",
+    "Removed debug console logs",
+    "Added proxy functionality to main_waitress.py",
+    "Built with empty API_URL for proxy mode",
+    "Ready for Windows server deployment with CORS bypass"
+  ]
+}

@@ -3,9 +3,10 @@
 Полная совместимость с существующим bat файлом
 """
 
-from flask import Flask, send_from_directory, send_file, jsonify
+from flask import Flask, send_from_directory, send_file, jsonify, request
 import os
 import sys
+import requests
 from pathlib import Path
 
 # Создаем Flask приложение
@@ -35,15 +36,74 @@ if not react_dist_path.exists():
 
 print(f"📁 Используем React файлы из: {react_dist_path}")
 
-# API заглушки (если нужно)
-@app.route('/api/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
-def api_fallback(path):
-    """Заглушка для API запросов"""
-    return jsonify({
-        "error": "API endpoint not available",
-        "message": f"Backend API не настроен. Запрос: /api/{path}",
-        "suggestion": "Настройте backend API сервер или измените конфигурацию"
-    }), 404
+# Конфигурация backend API
+BACKEND_API_URL = 'http://localhost:8000'
+
+# API Proxy routes
+API_ENDPOINTS = [
+    'lines', 'gas-volume-calcs', 'edit_counts', 'sys_counts',
+    'edit', 'daily', 'hourly', 'sys', 'param', 'get_report'
+]
+
+def proxy_to_backend(endpoint):
+    """Проксирует запрос к backend API"""
+    try:
+        # Строим URL к backend
+        backend_url = f"{BACKEND_API_URL}/{endpoint}"
+
+        # Добавляем query параметры если есть
+        if request.query_string:
+            backend_url += f"?{request.query_string.decode()}"
+
+        print(f"🔗 Proxy: {request.method} {request.url} -> {backend_url}")
+
+        # Проксируем запрос
+        if request.method == 'GET':
+            response = requests.get(backend_url, timeout=30)
+        elif request.method == 'POST':
+            response = requests.post(
+                backend_url,
+                json=request.get_json(),
+                timeout=30
+            )
+        else:
+            return jsonify({"error": "Method not allowed"}), 405
+
+        # Возвращаем ответ от backend
+        return response.json(), response.status_code
+
+    except requests.exceptions.ConnectionError:
+        return jsonify({
+            "error": "Backend connection failed",
+            "message": f"Не удается подключиться к backend API: {BACKEND_API_URL}",
+            "suggestion": "Убедитесь, что backend сервер запущен на порту 8000"
+        }), 503
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "error": "Backend timeout",
+            "message": "Backend API не отвечает"
+        }), 504
+    except Exception as e:
+        return jsonify({
+            "error": "Proxy error",
+            "message": str(e)
+        }), 500
+
+# Регистрируем API endpoints
+for endpoint in API_ENDPOINTS:
+    app.add_url_rule(
+        f'/{endpoint}/',
+        f'api_{endpoint}',
+        lambda endpoint=endpoint: proxy_to_backend(endpoint),
+        methods=['GET', 'POST']
+    )
+    # Также поддерживаем без trailing slash
+    app.add_url_rule(
+        f'/{endpoint}',
+        f'api_{endpoint}_no_slash',
+        lambda endpoint=endpoint: proxy_to_backend(endpoint),
+        methods=['GET', 'POST']
+    )
 
 # Обслуживание статических файлов React
 @app.route('/assets/<path:filename>')

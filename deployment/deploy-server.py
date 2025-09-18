@@ -17,7 +17,7 @@ class ServerDeployer:
         Инициализация развертывания на сервере
 
         Args:
-            target_dir: Целевая папка для развертывания (например, D:\Metr\frontend)
+            target_dir: Целевая папка для развертывания (например, D:\\Metr\\frontend)
         """
         self.git_repo_dir = Path(__file__).parent.parent  # Корень Git репозитория
         self.deployment_source = self.git_repo_dir / "deployment"

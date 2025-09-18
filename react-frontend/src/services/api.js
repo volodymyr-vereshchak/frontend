@@ -7,7 +7,7 @@ class APIError extends Error {
   }
 }
 
-const DEFAULT_API_URL = import.meta.env.DEV ? '' : 'http://localhost:8000';
+const DEFAULT_API_URL = '';
 
 class ApiClient {
   constructor() {
