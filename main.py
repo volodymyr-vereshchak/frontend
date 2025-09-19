@@ -22,10 +22,18 @@ class ReactApp:
         # Build API URL from settings
         api_url = f"http://{settings.get('BASE_API_URL', 'localhost')}:{settings.get('API_PORT', '8000')}"
 
+        # Build GRS configuration
+        grs_config = {
+            "LINES_IDS": settings.get('GRS_LINES_IDS', []),
+            "HIGH_P_LINES_IDS": settings.get('GRS_HIGH_P_LINES_IDS', []),
+            "PRESSURE_DIVISOR": settings.get('GRS_PRESSURE_DIVISOR', 10000)
+        }
+
         # Create config script
         config_script = f"""<script>
     window.APP_CONFIG = {{
-        API_URL: '{api_url}'
+        API_URL: '{api_url}',
+        GRS_CONFIG: {grs_config}
     }};
 </script>"""
 
