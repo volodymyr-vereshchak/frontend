@@ -1,3 +1,5 @@
+import { grsConfig } from '../config/grsConfig.js';
+
 class APIError extends Error {
   constructor(message, status = null, url = null) {
     super(message);
@@ -239,10 +241,6 @@ export const archiveDataApi = {
       const startDate = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 5 days ago
 
       // Get data for all configured GRS lines
-      const grsConfig = {
-        LINES_IDS: [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11]
-      };
-
       const result = await this.getHourlyData(grsConfig.LINES_IDS, startDate, endDate);
 
       if (!result || result.length === 0) {
