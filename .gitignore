@@ -18,6 +18,9 @@ logs/
 react-frontend/node_modules/
 react-frontend/package-lock.json
 
+# Configuration (environment-specific)
+react-frontend/src/config/grsConfig.js
+
 # Removed directories (cleanup)
 api/
 pages/
