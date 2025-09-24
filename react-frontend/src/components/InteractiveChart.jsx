@@ -95,7 +95,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
               height={80}
             />
             <YAxis stroke="#9e9e9e" />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip archiveType={archiveType} />} />
             <Legend />
 
             {columns.map((col) => (
@@ -218,11 +218,23 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
     }
   };
 
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload, label, archiveType: tooltipArchiveType }) => {
     if (active && payload && payload.length) {
+      // Use the passed archiveType or fallback to component's archiveType
+      const currentArchiveType = tooltipArchiveType || archiveType;
+      const date = new Date(label);
+      const locale = getLocale();
+
+      let formattedLabel;
+      if (currentArchiveType === 'daily') {
+        formattedLabel = date.toLocaleDateString(locale);
+      } else {
+        formattedLabel = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
+      }
+
       return (
         <div className="custom-tooltip">
-          <p className="tooltip-label">{formatXAxisLabel(label)}</p>
+          <p className="tooltip-label">{formattedLabel}</p>
           {payload.map((entry, index) => (
             <p key={index} className="tooltip-value" style={{ color: entry.color }}>
               {`${entry.name}: ${typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}`}
