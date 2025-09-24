@@ -17,7 +17,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const [rowData, setRowData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: 'period', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
 
@@ -378,10 +378,24 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     let sortableData = [...rowData];
     if (sortConfig.key) {
       sortableData.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
+        let aVal = a[sortConfig.key];
+        let bVal = b[sortConfig.key];
+
+        // Special handling for period column (dates)
+        if (sortConfig.key === 'period') {
+          aVal = new Date(aVal);
+          bVal = new Date(bVal);
+        }
+
+        // Handle null/undefined values
+        if (aVal == null && bVal == null) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+
+        if (aVal < bVal) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
+        if (aVal > bVal) {
           return sortConfig.direction === 'asc' ? 1 : -1;
         }
         return 0;
