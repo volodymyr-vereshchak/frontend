@@ -41,8 +41,19 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
           if (col.key === 'period' && value) {
             const date = new Date(value);
             if (!isNaN(date.getTime())) {
-              // Excel recognizes Date objects directly
-              value = date;
+              // For edit and sys archives, format with seconds for better readability in Excel
+              if (archiveType === 'edit' || archiveType === 'sys') {
+                const locale = getLocale();
+                value = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: false
+                });
+              } else {
+                // Excel recognizes Date objects directly for other archives
+                value = date;
+              }
             }
           }
 
@@ -438,8 +449,18 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       if (archiveType === 'daily') {
         return date.toLocaleDateString(locale);
       } else {
-        // Format without comma: "01.01.2024 14:30:00"
-        return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
+        // For edit and sys archives, show full time with seconds
+        if (archiveType === 'edit' || archiveType === 'sys') {
+          return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          });
+        } else {
+          // For other archives (hourly, param), use default time format
+          return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
+        }
       }
     }
     if (typeof value === 'number') {
