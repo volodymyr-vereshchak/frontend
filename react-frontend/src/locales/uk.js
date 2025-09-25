@@ -64,7 +64,7 @@ export const uk = {
 
   // GRS Report
   grsReport: "Звіт ГРС",
-  grsReportCalculations: "Розрахунки звіту ГРС",
+  grsReportCalculations: "Звіт за 24 години",
 
   // Date/Time
   from: "З",
@@ -76,5 +76,51 @@ export const uk = {
   editType: "Тип зміни",
   oldValue: "Старе значення",
   newValue: "Нове значення",
-  operationType: "Тип операції"
+  operationType: "Тип операції",
+
+  // Chart labels
+  chartTitle: "Графік даних",
+  noChartData: "Немає даних для відображення графіка",
+  updatingChart: "Оновлення графіка...",
+  renderingChart: "Відображення графіка...",
+  chartPreparation: "Графік готується до відображення...",
+
+  // Chart series labels
+  volumeLabel: "Об'єм",
+  workingVolumeDpLabel: "Роб. об'єм/перепад",
+  pressureLabel: "Тиск",
+  temperatureLabel: "Температура",
+  densityLabel: "Щільність",
+  co2Label: "CO2 (%)",
+  n2Label: "N2 (%)",
+  maxPressureLabel: "Макс. тиск",
+  minPressureLabel: "Мін. тиск",
+  maxTemperatureLabel: "Макс. температура",
+  minTemperatureLabel: "Мін. температура",
+  oldValueLabel: "Старе значення",
+  newValueLabel: "Нове значення",
+
+  // TreeView
+  nodeListTitle: "Список вузлів обліку",
+  selectedLine: "Обрана лінія:",
+  loadingError: "Помилка завантаження даних",
+  noDataToDisplay: "Немає даних для відображення",
+
+  // Date pickers
+  periodStart: "Початок періоду",
+  periodEnd: "Кінець періоду",
+  selectDateTime: "Оберіть дату та час",
+
+  // GRS Report errors and messages
+  calculationError: "Помилка при розрахунку звіту",
+  unknownReportError: "Невідома помилка при отриманні звіту",
+  serverConnectionError: "Помилка підключення до сервера",
+  grsVolumeTitle: "Об'єм по ГРС за останні 24 години",
+  grsTotalVolume: "ГРС всього",
+  unknownDataFormat: "Невідомий формат даних",
+  volumeUnit: "м³",
+  pressureUnit: "кг/см²",
+  volume: "Об'єм",
+  pressureIn: "Pвх",
+  pressureOut: "Pвих"
 };

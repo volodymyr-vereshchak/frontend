@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './TreeView.css';
 import { dataApi, lineApi } from '../services/api';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // SVG Icon Components
 const FolderClosedIcon = () => (
@@ -37,6 +38,7 @@ const LineIcon = ({ selected = false }) => (
 );
 
 const TreeView = ({ onLinesSelected }) => {
+  const { t } = useLanguage();
   const [treeData, setTreeData] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
@@ -128,7 +130,7 @@ const TreeView = ({ onLinesSelected }) => {
 
 
         if (!treeStructure || treeStructure.length === 0) {
-          setError('Нет данных для отображения');
+          setError(t('noDataToDisplay'));
           setTreeData([]);
           return;
         }
@@ -139,7 +141,7 @@ const TreeView = ({ onLinesSelected }) => {
         setExpandedGroups(new Set());
 
       } catch (error) {
-        setError(`Ошибка загрузки данных: ${error.message}`);
+        setError(`${t('loadingError')}: ${error.message}`);
         setTreeData([]);
       } finally {
         setLoading(false);
@@ -182,9 +184,9 @@ const TreeView = ({ onLinesSelected }) => {
     return (
       <div className="tree-view">
         <div className="tree-header">
-          <h6>Список узлов учета</h6>
+          <h6>{t('nodeListTitle')}</h6>
         </div>
-        <div className="loading">Загрузка...</div>
+        <div className="loading">{t('loading')}</div>
       </div>
     );
   }
@@ -193,9 +195,9 @@ const TreeView = ({ onLinesSelected }) => {
     return (
       <div className="tree-view">
         <div className="tree-header">
-          <h6>Список узлов учета</h6>
+          <h6>{t('nodeListTitle')}</h6>
         </div>
-        <div className="error">Ошибка загрузки данных</div>
+        <div className="error">{error}</div>
       </div>
     );
   }
@@ -203,7 +205,7 @@ const TreeView = ({ onLinesSelected }) => {
   return (
     <div className="tree-view">
       <div className="tree-header">
-        <h6>Список узлов учета</h6>
+        <h6>{t('nodeListTitle')}</h6>
       </div>
       <div className="tree-content">
         {treeData.map((group, groupIndex) => (
@@ -239,7 +241,7 @@ const TreeView = ({ onLinesSelected }) => {
 
       {selectedItem && (
         <div className="selection-info">
-          Выбрана линия: ID {selectedItem}
+          {t('selectedLine')} ID {selectedItem}
         </div>
       )}
     </div>

@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DatePicker, { registerLocale } from 'react-datepicker';
-import { ru } from 'date-fns/locale';
+import { ru, uk } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import './DateTimePickers.css';
+import { useLanguage } from '../contexts/LanguageContext';
 
-// Register Russian locale
+// Register locales
 registerLocale('ru', ru);
+registerLocale('uk', uk);
 
 const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType }) => {
+  const { language, t } = useLanguage();
+
   // Set default start datetime to beginning of month at 07:00
   const getDefaultStartDateTime = () => {
     const today = new Date();
@@ -159,10 +163,12 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
   };
 
 
+  const currentLocale = language === 'uk' ? 'uk' : 'ru';
+
   return (
     <div className="datetime-pickers">
       <div className="picker-row">
-        <label className="picker-label">Начало периода</label>
+        <label className="picker-label">{t('periodStart')}</label>
         <DatePicker
           ref={startPickerRef}
           selected={startDateTime}
@@ -172,13 +178,13 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
           timeFormat="HH:mm"
           dateFormat="dd.MM.yyyy HH:mm"
           className="datetime-picker"
-          locale="ru"
-          placeholderText="Выберите дату и время"
+          locale={currentLocale}
+          placeholderText={t('selectDateTime')}
           shouldCloseOnSelect={false}
           onSelect={handleStartDateSelect}
         />
 
-        <label className="picker-label">Конец периода</label>
+        <label className="picker-label">{t('periodEnd')}</label>
         <DatePicker
           ref={endPickerRef}
           selected={endDateTime}
@@ -188,8 +194,8 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
           timeFormat="HH:mm"
           dateFormat="dd.MM.yyyy HH:mm"
           className="datetime-picker"
-          locale="ru"
-          placeholderText="Выберите дату и время"
+          locale={currentLocale}
+          placeholderText={t('selectDateTime')}
           minDate={startDateTime}
           shouldCloseOnSelect={false}
           onSelect={handleEndDateSelect}

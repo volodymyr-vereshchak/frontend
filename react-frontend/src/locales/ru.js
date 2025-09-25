@@ -64,7 +64,7 @@ export const ru = {
 
   // GRS Report
   grsReport: "Отчет ГРС",
-  grsReportCalculations: "Расчеты отчета ГРС",
+  grsReportCalculations: "Отчет за 24 часа",
 
   // Date/Time
   from: "С",
@@ -76,5 +76,51 @@ export const ru = {
   editType: "Тип изменения",
   oldValue: "Старое значение",
   newValue: "Новое значение",
-  operationType: "Тип операции"
+  operationType: "Тип операции",
+
+  // Chart labels
+  chartTitle: "График данных",
+  noChartData: "Нет данных для отображения графика",
+  updatingChart: "Обновление графика...",
+  renderingChart: "Отрисовка графика...",
+  chartPreparation: "График готовится к отображению...",
+
+  // Chart series labels
+  volumeLabel: "Объем",
+  workingVolumeDpLabel: "Раб. объем/перепад",
+  pressureLabel: "Давление",
+  temperatureLabel: "Температура",
+  densityLabel: "Плотность",
+  co2Label: "CO2 (%)",
+  n2Label: "N2 (%)",
+  maxPressureLabel: "Макс. давление",
+  minPressureLabel: "Мин. давление",
+  maxTemperatureLabel: "Макс. температура",
+  minTemperatureLabel: "Мин. температура",
+  oldValueLabel: "Старое значение",
+  newValueLabel: "Новое значение",
+
+  // TreeView
+  nodeListTitle: "Список узлов учета",
+  selectedLine: "Выбрана линия:",
+  loadingError: "Ошибка загрузки данных",
+  noDataToDisplay: "Нет данных для отображения",
+
+  // Date pickers
+  periodStart: "Начало периода",
+  periodEnd: "Конец периода",
+  selectDateTime: "Выберите дату и время",
+
+  // GRS Report errors and messages
+  calculationError: "Ошибка при расчете отчета",
+  unknownReportError: "Неизвестная ошибка при получении отчета",
+  serverConnectionError: "Ошибка подключения к серверу",
+  grsVolumeTitle: "Объем по ГРС за последние 24 часа",
+  grsTotalVolume: "ГРС всего",
+  unknownDataFormat: "Неизвестный формат данных",
+  volumeUnit: "м³",
+  pressureUnit: "кг/см²",
+  volume: "Объем",
+  pressureIn: "Pвх",
+  pressureOut: "Pвых"
 };

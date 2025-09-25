@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { reportsApi } from '../services/api';
 import { GRSCalculator } from '../utils/grsCalculator';
+import { useLanguage } from '../contexts/LanguageContext';
 import './GRSReport.css';
 
 const GRSReport = ({ isOpen, onClose }) => {
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
@@ -26,7 +28,7 @@ const GRSReport = ({ isOpen, onClose }) => {
         if (calculatedReport.success) {
           setReportData(calculatedReport.data);
         } else {
-          setError(calculatedReport.error || 'Ошибка при расчете отчета');
+          setError(calculatedReport.error || t('calculationError'));
         }
       } else {
         // Fallback to old text-based report
@@ -35,11 +37,11 @@ const GRSReport = ({ isOpen, onClose }) => {
           // Parse the old text format (keep existing parsing logic as fallback)
           setReportData({ fallback: true, message: textResponse.message });
         } else {
-          setError(textResponse?.message || 'Неизвестная ошибка при получении отчета');
+          setError(textResponse?.message || t('unknownReportError'));
         }
       }
     } catch (err) {
-      setError('Ошибка подключения к серверу');
+      setError(t('serverConnectionError'));
       console.error('Error fetching GRS report:', err);
     } finally {
       setIsLoading(false);
@@ -52,7 +54,7 @@ const GRSReport = ({ isOpen, onClose }) => {
 
   const formatReportData = (data) => {
     if (!data) {
-      return <div className="no-data">Нет данных для отображения</div>;
+      return <div className="no-data">{t('noData')}</div>;
     }
 
     // Handle fallback text format
@@ -64,7 +66,7 @@ const GRSReport = ({ isOpen, onClose }) => {
     if (data.lineReports) {
       return (
         <div className="report-content-structured">
-          <h4 className="report-title">Объем по ГРС за последние 24 часа</h4>
+          <h4 className="report-title">{t('grsVolumeTitle')}</h4>
 
           {data.startDate && data.endDate && (
             <p className="date-range">
@@ -73,7 +75,7 @@ const GRSReport = ({ isOpen, onClose }) => {
           )}
 
           <h5 className="total-volume">
-            ГРС всего: {data.totalVolume?.toLocaleString('ru')} м³
+            {t('grsTotalVolume')}: {data.totalVolume?.toLocaleString('ru')} {t('volumeUnit')}
           </h5>
 
           {data.lineReports.map((report, index) => (
@@ -81,10 +83,10 @@ const GRSReport = ({ isOpen, onClose }) => {
               {report.hasIncompleteData && <span className="warning-icon">⚠️</span>}
               <span className="line-name">{report.lineName}:</span>
               <span className="line-value">
-                <span className="volume-info">Объем: <strong>{report.volume.toLocaleString('ru')} м³</strong></span>
+                <span className="volume-info">{t('volume')}: <strong>{report.volume.toLocaleString('ru')} {t('volumeUnit')}</strong></span>
                 <span className="separator"> | </span>
                 <span className="pressure-info">
-                  {report.isHighPressureLine ? 'Pвх' : 'Pвых'}: <strong>{report.pressure.toLocaleString('ru')} кг/см²</strong>
+                  {report.isHighPressureLine ? t('pressureIn') : t('pressureOut')}: <strong>{report.pressure.toLocaleString('ru')} {t('pressureUnit')}</strong>
                 </span>
               </span>
             </div>
@@ -93,12 +95,12 @@ const GRSReport = ({ isOpen, onClose }) => {
       );
     }
 
-    return <div className="no-data">Неизвестный формат данных</div>;
+    return <div className="no-data">{t('unknownDataFormat')}</div>;
   };
 
   const formatReportMessage = (message) => {
     if (!message) {
-      return <div className="no-data">Нет данных для отображения</div>;
+      return <div className="no-data">{t('noData')}</div>;
     }
 
     const lines = message.split('\n');

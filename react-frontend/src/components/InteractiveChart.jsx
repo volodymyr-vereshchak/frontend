@@ -14,7 +14,7 @@ import './InteractiveChart.css';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const InteractiveChart = ({ data, archiveType, selectedLines }) => {
-  const { getLocale } = useLanguage();
+  const { t, getLocale } = useLanguage();
   const [visibleLines, setVisibleLines] = useState({});
   const [yAxisDomain, setYAxisDomain] = useState(['dataMin', 'dataMax']);
   const [isChartLoading, setIsChartLoading] = useState(false);
@@ -178,30 +178,30 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
       case 'daily':
       case 'hourly':
         return [
-          { key: 'volume', label: 'Объем', color: '#8884d8' },
-          { key: 'w_volume_dp', label: 'Раб. объем/перепад', color: '#82ca9d' },
-          { key: 'pressure', label: 'Давление', color: '#ffc658' },
-          { key: 'temperature', label: 'Температура', color: '#ff7300' },
-          { key: 'density', label: 'Плотность', color: '#00ff00' }
+          { key: 'volume', label: t('volumeLabel'), color: '#8884d8' },
+          { key: 'w_volume_dp', label: t('workingVolumeDpLabel'), color: '#82ca9d' },
+          { key: 'pressure', label: t('pressureLabel'), color: '#ffc658' },
+          { key: 'temperature', label: t('temperatureLabel'), color: '#ff7300' },
+          { key: 'density', label: t('densityLabel'), color: '#00ff00' }
         ];
       case 'param':
         return [
-          { key: 'density', label: 'Плотность', color: '#8884d8' },
-          { key: 'co2', label: 'CO2 (%)', color: '#82ca9d' },
-          { key: 'n2', label: 'N2 (%)', color: '#ffc658' },
-          { key: 'max_p', label: 'Макс. давление', color: '#ff7300' },
-          { key: 'min_p', label: 'Мин. давление', color: '#00ff00' },
-          { key: 'max_t', label: 'Макс. температура', color: '#ff0000' },
-          { key: 'min_t', label: 'Мин. температура', color: '#0000ff' }
+          { key: 'density', label: t('densityLabel'), color: '#8884d8' },
+          { key: 'co2', label: t('co2Label'), color: '#82ca9d' },
+          { key: 'n2', label: t('n2Label'), color: '#ffc658' },
+          { key: 'max_p', label: t('maxPressureLabel'), color: '#ff7300' },
+          { key: 'min_p', label: t('minPressureLabel'), color: '#00ff00' },
+          { key: 'max_t', label: t('maxTemperatureLabel'), color: '#ff0000' },
+          { key: 'min_t', label: t('minTemperatureLabel'), color: '#0000ff' }
         ];
       case 'sys':
         return [
-          { key: 'volume', label: 'Объем', color: '#8884d8' }
+          { key: 'volume', label: t('volumeLabel'), color: '#8884d8' }
         ];
       case 'edit':
         return [
-          { key: 'old_value', label: 'Старое значение', color: '#8884d8' },
-          { key: 'new_value', label: 'Новое значение', color: '#82ca9d' }
+          { key: 'old_value', label: t('oldValueLabel'), color: '#8884d8' },
+          { key: 'new_value', label: t('newValueLabel'), color: '#82ca9d' }
         ];
       default:
         return [];
@@ -260,10 +260,10 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
     return (
       <div className="chart-container">
         <div className="chart-header">
-          <h3>График данных</h3>
+          <h3>{t('chartTitle')}</h3>
         </div>
         <div className="chart-placeholder">
-          <p>Нет данных для отображения графика</p>
+          <p>{t('noChartData')}</p>
         </div>
       </div>
     );
@@ -272,7 +272,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
   return (
     <div className="chart-container">
       <div className="chart-header">
-        <h3>График данных</h3>
+        <h3>{t('chartTitle')}</h3>
         <div className="chart-controls">
           {columns.map((col) => (
             <button
@@ -292,7 +292,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
         </div>
         {isChartLoading && (
           <div className="chart-loading-indicator">
-            <span>🔄 Обновление графика...</span>
+            <span>🔄 {t('updatingChart')}</span>
           </div>
         )}
       </div>
@@ -301,7 +301,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
         {isChartLoading && !renderedChart && (
           <div className="chart-loading-overlay">
             <div className="loading-spinner"></div>
-            <p>Отрисовка графика...</p>
+            <p>{t('renderingChart')}</p>
           </div>
         )}
 
@@ -313,7 +313,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
 
         {!renderedChart && !isChartLoading && (
           <div className="chart-placeholder">
-            <p>График готовится к отображению...</p>
+            <p>{t('chartPreparation')}</p>
           </div>
         )}
       </div>
