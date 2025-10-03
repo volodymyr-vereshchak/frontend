@@ -9,11 +9,16 @@ import { useLanguage } from '../contexts/LanguageContext';
 registerLocale('ru', ru);
 registerLocale('uk', uk);
 
-const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType }) => {
+const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, initialDateRange }) => {
   const { language, t } = useLanguage();
 
   // Set default start datetime to beginning of month at 07:00
   const getDefaultStartDateTime = () => {
+    if (initialDateRange?.fromDate) {
+      const date = new Date(initialDateRange.fromDate);
+      date.setHours(initialDateRange.startHour || 7, 0, 0, 0);
+      return date;
+    }
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     startOfMonth.setHours(7, 0, 0, 0);
@@ -22,6 +27,11 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType })
 
   // Set default end datetime to current date at 06:00
   const getDefaultEndDateTime = () => {
+    if (initialDateRange?.toDate) {
+      const date = new Date(initialDateRange.toDate);
+      date.setHours(initialDateRange.endHour || 6, 0, 0, 0);
+      return date;
+    }
     const today = new Date();
     today.setHours(6, 0, 0, 0);
     return today;

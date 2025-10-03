@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { archiveDataApi } from '../services/api';
-import { grsConfig } from '../config/grsConfig';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
 import InteractiveChart from './InteractiveChart';
@@ -11,8 +10,9 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [chartData, setChartData] = useState([]);
-  const [dateRange, setDateRange] = useState(() => {
-    // Initialize with current month range
+
+  // Get initial date range (start of current month to today)
+  const getInitialDateRange = () => {
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const startDate = startOfMonth.toISOString().split('T')[0];
@@ -24,10 +24,18 @@ const GRSTrends = ({ isOpen, onClose }) => {
       startHour: 7,
       endHour: 6
     };
-  });
+  };
 
-  // Get GRS lines from environment config
-  const grsLines = grsConfig.LINES_IDS || [];
+  const [dateRange, setDateRange] = useState(getInitialDateRange);
+
+  // Get GRS trends lines from runtime config (injected by Python server)
+  const grsLines = useMemo(() => {
+    if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.TRENDS_IDS) {
+      return window.APP_CONFIG.GRS_CONFIG.TRENDS_IDS;
+    }
+    // Fallback to default
+    return [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11];
+  }, []);
 
   const calculateTrends = async () => {
     if (grsLines.length === 0) {
