@@ -65,6 +65,7 @@ export const uk = {
   // GRS Report
   grsReport: "Звіт ГРС",
   grsReportCalculations: "Звіт за 24 години",
+  grsTrends: "Тренди ГРС",
 
   // Date/Time
   from: "З",

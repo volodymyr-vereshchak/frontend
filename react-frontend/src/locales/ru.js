@@ -65,6 +65,7 @@ export const ru = {
   // GRS Report
   grsReport: "Отчет ГРС",
   grsReportCalculations: "Отчет за 24 часа",
+  grsTrends: "Тренды ГРС",
 
   // Date/Time
   from: "С",

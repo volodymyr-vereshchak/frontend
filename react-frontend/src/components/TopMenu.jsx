@@ -140,6 +140,12 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
     }
   };
 
+  const handleGRSTrendsClick = () => {
+    setIsReportsDropdownOpen(false);
+    // Open GRS Trends in new tab
+    window.open('/grs-trends.html', '_blank');
+  };
+
   const handleLanguageChange = (languageCode) => {
     changeLanguage(languageCode);
     setIsLanguageDropdownOpen(false);
@@ -190,6 +196,14 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
               >
                 <span className="dropdown-item-icon">📊</span>
                 <span className="dropdown-item-text">{t('grsReportCalculations')}</span>
+              </button>
+              <button
+                className="dropdown-item"
+                onClick={handleGRSTrendsClick}
+                title={t('grsTrends')}
+              >
+                <span className="dropdown-item-icon">📈</span>
+                <span className="dropdown-item-text">{t('grsTrends')}</span>
               </button>
             </div>
           )}

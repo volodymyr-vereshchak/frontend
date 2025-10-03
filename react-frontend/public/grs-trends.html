@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренды ГРС</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #B9E42B;
+            margin-bottom: 10px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #9e9e9e;
+            font-size: 14px;
+        }
+
+        .controls {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            margin-bottom: 20px;
+        }
+
+        .date-controls {
+            display: flex;
+            gap: 20px;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+
+        .date-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+
+        .date-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #B9E42B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .date-group input {
+            padding: 12px 16px;
+            border: 1px solid #404040;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            transition: border-color 0.2s ease;
+            color-scheme: dark;
+        }
+
+        /* Hide default calendar icon and create custom one */
+        .date-group input::-webkit-calendar-picker-indicator {
+            opacity: 0;
+            position: absolute;
+            right: 12px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        /* Custom calendar icon */
+        .date-group::after {
+            content: '📅';
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            font-size: 16px;
+            pointer-events: none;
+            color: #B9E42B;
+        }
+
+        /* Firefox fallback */
+        .date-group input[type="date"] {
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+
+        .date-group input[type="date"]::-moz-focus-inner {
+            border: 0;
+        }
+
+        .date-group input:focus {
+            outline: none;
+            border-color: #B9E42B;
+            box-shadow: 0 0 0 2px rgba(185, 228, 43, 0.2);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #B9E42B;
+            color: #1a1a1a;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #a0c926;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .chart-container {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            min-height: 600px;
+        }
+
+        .chart-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #404040;
+        }
+
+        .chart-header h3 {
+            color: #B9E42B;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .chart-description {
+            color: #9e9e9e;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            gap: 15px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #404040;
+            border-top: 4px solid #B9E42B;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            color: #9e9e9e;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .error {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9e9e9e;
+        }
+
+        .no-data p {
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .legend-controls {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #1a1a1a;
+            border: 1px solid #404040;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+        }
+
+        .legend-item:hover {
+            border-color: #B9E42B;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+        }
+
+        .legend-item.hidden {
+            opacity: 0.5;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 500px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Тренды ГРС</h1>
+            <p>Анализ процентного потребления газа по ГРС за выбранный период</p>
+        </div>
+
+        <div class="controls">
+            <div class="date-controls">
+                <div class="date-group">
+                    <label for="fromDate">Дата с:</label>
+                    <input type="date" id="fromDate">
+                </div>
+                <div class="date-group">
+                    <label for="toDate">Дата по:</label>
+                    <input type="date" id="toDate">
+                </div>
+                <button class="btn btn-primary" id="loadBtn" onclick="loadTrends()">
+                    Загрузить данные
+                </button>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3>График трендов потребления ГРС</h3>
+                <div class="chart-description">
+                    График показывает процентное распределение потребления газа по каждой ГРС относительно общего объема за период
+                </div>
+            </div>
+
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p id="loadingText">Загрузка данных...</p>
+            </div>
+
+            <div id="error" class="error" style="display: none;"></div>
+
+            <div id="noData" class="no-data" style="display: none;">
+                <p id="noDataText">Нет данных для отображения</p>
+            </div>
+
+            <div id="chartContainer" style="display: none;">
+                <div class="chart-wrapper">
+                    <canvas id="chartCanvas"></canvas>
+                </div>
+                <div id="legendControls" class="legend-controls"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Translations
+        const translations = {
+            ru: {
+                title: 'Тренды ГРС',
+                description: 'Анализ процентного потребления газа по ГРС за выбранный период',
+                dateFrom: 'Дата с:',
+                dateTo: 'Дата по:',
+                loadData: 'Загрузить данные',
+                chartTitle: 'График трендов потребления ГРС',
+                chartDescription: 'График показывает процентное распределение потребления газа по каждой ГРС относительно общего объема за период',
+                loading: 'Загрузка данных...',
+                noData: 'Нет данных для отображения',
+                error: 'Ошибка загрузки данных:',
+                selectDates: 'Пожалуйста, выберите даты'
+            },
+            uk: {
+                title: 'Тренди ГРС',
+                description: 'Аналіз процентного споживання газу по ГРС за обраний період',
+                dateFrom: 'Дата з:',
+                dateTo: 'Дата по:',
+                loadData: 'Завантажити дані',
+                chartTitle: 'Графік трендів споживання ГРС',
+                chartDescription: 'Графік показує процентний розподіл споживання газу по кожній ГРС відносно загального обсягу за період',
+                loading: 'Завантаження даних...',
+                noData: 'Немає даних для відображення',
+                error: 'Помилка завантаження даних:',
+                selectDates: 'Будь ласка, оберіть дати'
+            }
+        };
+
+        // Get current language from localStorage or default to Russian
+        let currentLanguage = localStorage.getItem('hlviewer-language') || 'ru';
+
+        // Translation function
+        function t(key) {
+            return translations[currentLanguage]?.[key] || translations.ru[key] || key;
+        }
+
+        // Update UI with current language
+        function updateUI() {
+            document.title = t('title');
+            document.querySelector('.header h1').textContent = t('title');
+            document.querySelector('.header p').textContent = t('description');
+            document.querySelector('label[for="fromDate"]').textContent = t('dateFrom');
+            document.querySelector('label[for="toDate"]').textContent = t('dateTo');
+            document.querySelector('#loadBtn').textContent = t('loadData');
+            document.querySelector('.chart-header h3').textContent = t('chartTitle');
+            document.querySelector('.chart-description').textContent = t('chartDescription');
+            document.querySelector('#loadingText').textContent = t('loading');
+            document.querySelector('#noDataText').textContent = t('noData');
+        }
+
+        // Configuration
+        const API_BASE_URL = window.APP_CONFIG?.API_URL || 'http://localhost:8000';
+        const GRS_LINES = window.APP_CONFIG?.GRS_CONFIG?.GRS_TRENDS_IDS || window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS || [6,9,10,26,25,24,23,21,11,13,20,22,17,15,16];
+
+        let chart = null;
+        let chartData = [];
+        let lineNames = {};
+
+        // Color palette for GRS lines
+        const colors = [
+            '#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00ff00',
+            '#ff0000', '#0000ff', '#ff69b4', '#00ffff', '#ffa500',
+            '#800080', '#008000', '#ffd700', '#dc143c', '#4169e1'
+        ];
+
+        // Fetch line names from API
+        async function fetchLineNames() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/lines/?lumg_id=1`);
+                if (response.ok) {
+                    const lines = await response.json();
+                    lines.forEach(line => {
+                        lineNames[line.id] = line.name || `${line.id}`;
+                    });
+                }
+            } catch (error) {
+                console.warn('Could not fetch line names:', error);
+                // Fallback to default names
+                GRS_LINES.forEach(lineId => {
+                    lineNames[lineId] = `${lineId}`;
+                });
+            }
+        }
+
+        // Get line name by ID
+        function getLineName(lineId) {
+            return lineNames[lineId] || `${lineId}`;
+        }
+
+        // Initialize dates
+        function initializeDates() {
+            const today = new Date();
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            document.getElementById('fromDate').value = startOfMonth.toISOString().split('T')[0];
+            document.getElementById('toDate').value = today.toISOString().split('T')[0];
+        }
+
+        // Load trends data
+        async function loadTrends() {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            if (!fromDate || !toDate) {
+                showError(t('selectDates'));
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+            hideChart();
+
+            try {
+                const data = await fetchDailyData(fromDate, toDate);
+                if (data && data.length > 0) {
+                    const trendsData = calculateTrends(data);
+                    if (trendsData.length > 0) {
+                        renderChart(trendsData);
+                    } else {
+                        showNoData();
+                    }
+                } else {
+                    showNoData();
+                }
+            } catch (error) {
+                console.error('Error loading trends:', error);
+                showError(t('error') + ' ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Fetch daily data from API
+        async function fetchDailyData(fromDate, toDate) {
+            const params = new URLSearchParams();
+            GRS_LINES.forEach(lineId => params.append('line_id', lineId));
+            params.append('from_date', fromDate);
+            params.append('to_date', toDate);
+
+            const response = await fetch(`${API_BASE_URL}/daily/?${params}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return await response.json();
+        }
+
+        // Calculate percentage trends
+        function calculateTrends(dailyData) {
+            // Group data by line_id
+            const lineDataMap = {};
+            dailyData.forEach(record => {
+                const lineId = record.line_id;
+                if (!lineDataMap[lineId]) {
+                    lineDataMap[lineId] = [];
+                }
+                lineDataMap[lineId].push(record);
+            });
+
+            // Calculate total volume per line
+            const lineTotals = {};
+            Object.keys(lineDataMap).forEach(lineId => {
+                const totalVolume = lineDataMap[lineId].reduce((sum, record) => {
+                    return sum + (record.volume || 0);
+                }, 0);
+                lineTotals[lineId] = totalVolume;
+            });
+
+            // Create chart data with percentages
+            const chartDataMap = {};
+            Object.keys(lineDataMap).forEach(lineId => {
+                const lineData = lineDataMap[lineId];
+                const totalVolume = lineTotals[lineId];
+
+                if (totalVolume > 0) {
+                    lineData.forEach(record => {
+                        const date = record.period.split('T')[0];
+                        const volume = record.volume || 0;
+                        const percentage = (volume / totalVolume) * 100;
+
+                        if (!chartDataMap[date]) {
+                            chartDataMap[date] = { date: date };
+                        }
+
+                        chartDataMap[date][`grs_${lineId}`] = percentage;
+                    });
+                }
+            });
+
+            // Convert to array and sort by date
+            return Object.values(chartDataMap).sort((a, b) =>
+                new Date(a.date) - new Date(b.date)
+            );
+        }
+
+        // Render chart using Chart.js
+        function renderChart(data) {
+            chartData = data;
+
+            if (!data || data.length === 0) {
+                showNoData();
+                return;
+            }
+
+            // Destroy existing chart
+            if (chart) {
+                chart.destroy();
+            }
+
+            // Prepare datasets
+            const datasets = [];
+            const grsLines = GRS_LINES.filter(lineId => {
+                return data.some(item => item[`grs_${lineId}`] !== undefined);
+            });
+
+            grsLines.forEach((lineId, index) => {
+                const dataKey = `grs_${lineId}`;
+                datasets.push({
+                    label: getLineName(lineId),
+                    data: data.map(item => item[dataKey] || 0),
+                    borderColor: colors[index % colors.length],
+                    backgroundColor: colors[index % colors.length] + '20',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                });
+            });
+
+            const ctx = document.getElementById('chartCanvas').getContext('2d');
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item.date),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#2a2a2a',
+                            titleColor: '#B9E42B',
+                            bodyColor: '#e0e0e0',
+                            borderColor: '#404040',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'category',
+                            grid: {
+                                color: '#404040'
+                            },
+                            ticks: {
+                                color: '#9e9e9e',
+                                callback: function(value, index) {
+                                    const date = new Date(this.getLabelForValue(value));
+                                    return date.toLocaleDateString('ru-RU', {
+                                        day: '2-digit',
+                                        month: '2-digit'
+                                    });
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#404040'
+                            },
+                            ticks: {
+                                color: '#9e9e9e',
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            });
+
+            // Create legend controls
+            createLegendControls(datasets);
+            showChart();
+        }
+
+        // Create interactive legend
+        function createLegendControls(datasets) {
+            const legendContainer = document.getElementById('legendControls');
+            legendContainer.innerHTML = '';
+
+            datasets.forEach((dataset, index) => {
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.onclick = () => toggleDataset(index);
+
+                const colorBox = document.createElement('div');
+                colorBox.className = 'legend-color';
+                colorBox.style.backgroundColor = dataset.borderColor;
+
+                const label = document.createElement('span');
+                label.textContent = dataset.label;
+
+                legendItem.appendChild(colorBox);
+                legendItem.appendChild(label);
+                legendContainer.appendChild(legendItem);
+            });
+        }
+
+        // Toggle dataset visibility
+        function toggleDataset(index) {
+            const meta = chart.getDatasetMeta(index);
+            meta.hidden = !meta.hidden;
+            chart.update();
+
+            const legendItems = document.querySelectorAll('.legend-item');
+            legendItems[index].classList.toggle('hidden', meta.hidden);
+        }
+
+        // UI helper functions
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'flex' : 'none';
+            document.getElementById('loadBtn').disabled = show;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function showChart() {
+            document.getElementById('chartContainer').style.display = 'block';
+            document.getElementById('noData').style.display = 'none';
+        }
+
+        function hideChart() {
+            document.getElementById('chartContainer').style.display = 'none';
+        }
+
+        function showNoData() {
+            document.getElementById('noData').style.display = 'block';
+            hideChart();
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            initializeDates();
+            await fetchLineNames();
+            updateUI();
+        });
+    </script>
+</body>
+</html>
