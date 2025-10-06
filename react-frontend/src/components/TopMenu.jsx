@@ -146,6 +146,12 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
     window.open('/grs-trends.html', '_blank');
   };
 
+  const handleNightConsumptionClick = () => {
+    setIsReportsDropdownOpen(false);
+    // Open Night Consumption in new tab
+    window.open('/night-consumption.html', '_blank');
+  };
+
   const handleLanguageChange = (languageCode) => {
     changeLanguage(languageCode);
     setIsLanguageDropdownOpen(false);
@@ -204,6 +210,14 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
               >
                 <span className="dropdown-item-icon">📈</span>
                 <span className="dropdown-item-text">{t('grsTrends')}</span>
+              </button>
+              <button
+                className="dropdown-item"
+                onClick={handleNightConsumptionClick}
+                title={t('nightConsumption')}
+              >
+                <span className="dropdown-item-icon">🌙</span>
+                <span className="dropdown-item-text">{t('nightConsumption')}</span>
               </button>
             </div>
           )}

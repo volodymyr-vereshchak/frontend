@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ночные расходы</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #B9E42B;
+            margin-bottom: 10px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #9e9e9e;
+            font-size: 14px;
+        }
+
+        .controls {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            margin-bottom: 20px;
+        }
+
+        .date-controls {
+            display: flex;
+            gap: 20px;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+
+        .date-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+
+        .date-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #B9E42B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .date-group input {
+            padding: 12px 16px;
+            border: 1px solid #404040;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            transition: border-color 0.2s ease;
+            color-scheme: dark;
+        }
+
+        .date-group input::-webkit-calendar-picker-indicator {
+            opacity: 0;
+            position: absolute;
+            right: 12px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .date-group::after {
+            content: '📅';
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            font-size: 16px;
+            pointer-events: none;
+            color: #B9E42B;
+        }
+
+        .date-group input:focus {
+            outline: none;
+            border-color: #B9E42B;
+            box-shadow: 0 0 0 2px rgba(185, 228, 43, 0.2);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #B9E42B;
+            color: #1a1a1a;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #a0c926;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .table-container {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #404040;
+        }
+
+        .table-header h3 {
+            color: #B9E42B;
+            font-size: 18px;
+            margin: 0;
+        }
+
+        .excel-export-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #B9E42B, #A5D323);
+            border: 1px solid #B9E42B;
+            border-radius: 4px;
+            color: #000000;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .excel-export-btn:hover {
+            background: linear-gradient(135deg, #A5D323, #94C41F);
+            transform: translateY(-1px);
+        }
+
+        .table-wrapper {
+            overflow: auto;
+            max-height: 600px;
+            border: 1px solid #3a3a3a;
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #1a1a1a;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #2a2a2a;
+        }
+
+        th {
+            padding: 10px 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 12px;
+            color: #B9E42B;
+            border-bottom: 2px solid #B9E42B;
+            border-right: 1px solid #3a3a3a;
+            white-space: nowrap;
+            background-color: #2a2a2a;
+        }
+
+        th:first-child {
+            min-width: 100px;
+        }
+
+        th:last-child {
+            border-right: none;
+        }
+
+        tbody tr {
+            transition: background-color 0.15s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #2a2a2a;
+        }
+
+        td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #3a3a3a;
+            border-right: 1px solid #3a3a3a;
+            color: #e0e0e0;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        td:last-child {
+            border-right: none;
+        }
+
+        td:first-child {
+            font-weight: 500;
+            color: #B9E42B;
+            white-space: nowrap;
+            font-size: 12px;
+        }
+
+        td:not(:first-child) {
+            font-family: 'Courier New', monospace;
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            gap: 15px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #404040;
+            border-top: 4px solid #B9E42B;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            color: #9e9e9e;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .error {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9e9e9e;
+        }
+
+        .no-data p {
+            font-size: 16px;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Ночные расходы</h1>
+            <p>Минимальный расход газа с 00:00 до 05:00 по каждой ГРС</p>
+        </div>
+
+        <div class="controls">
+            <div class="date-controls">
+                <div class="date-group">
+                    <label for="fromDate">Дата с:</label>
+                    <input type="date" id="fromDate">
+                </div>
+                <div class="date-group">
+                    <label for="toDate">Дата по:</label>
+                    <input type="date" id="toDate">
+                </div>
+                <button class="btn btn-primary" id="loadBtn" onclick="loadData()">
+                    Загрузить данные
+                </button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <h3>Таблица минимальных расходов</h3>
+                <button class="excel-export-btn" id="exportBtn" onclick="exportToExcel()" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18.53 9L13 3.47C12.8595 3.32931 12.6688 3.25018 12.47 3.25H8C7.27065 3.25 6.57118 3.53973 6.05546 4.05546C5.53973 4.57118 5.25 5.27065 5.25 6V18C5.25 18.7293 5.53973 19.4288 6.05546 19.9445C6.57118 20.4603 7.27065 20.75 8 20.75H16C16.7293 20.75 17.4288 20.4603 17.9445 19.9445C18.4603 19.4288 18.75 18.7293 18.75 18V9.5C18.7421 9.3116 18.6636 9.13309 18.53 9Z" fill="currentColor"/>
+                    </svg>
+                    <span>Excel</span>
+                </button>
+            </div>
+
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p id="loadingText">Загрузка данных...</p>
+            </div>
+
+            <div id="error" class="error" style="display: none;"></div>
+
+            <div id="noData" class="no-data" style="display: none;">
+                <p id="noDataText">Нет данных для отображения</p>
+            </div>
+
+            <div id="tableWrapper" class="table-wrapper" style="display: none;">
+                <table id="dataTable">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Translations
+        const translations = {
+            ru: {
+                title: 'Ночные расходы',
+                description: 'Минимальный расход газа с 00:00 до 05:00 по каждой ГРС',
+                dateFrom: 'Дата с:',
+                dateTo: 'Дата по:',
+                loadData: 'Загрузить данные',
+                tableTitle: 'Таблица минимальных расходов',
+                loading: 'Загрузка данных...',
+                noData: 'Нет данных для отображения',
+                error: 'Ошибка загрузки данных:',
+                selectDates: 'Пожалуйста, выберите даты',
+                date: 'Дата'
+            },
+            uk: {
+                title: 'Нічні витрати',
+                description: 'Мінімальна витрата газу з 00:00 до 05:00 по кожній ГРС',
+                dateFrom: 'Дата з:',
+                dateTo: 'Дата по:',
+                loadData: 'Завантажити дані',
+                tableTitle: 'Таблиця мінімальних витрат',
+                loading: 'Завантаження даних...',
+                noData: 'Немає даних для відображення',
+                error: 'Помилка завантаження даних:',
+                selectDates: 'Будь ласка, оберіть дати',
+                date: 'Дата'
+            }
+        };
+
+        let currentLanguage = localStorage.getItem('hlviewer-language') || 'ru';
+
+        function t(key) {
+            return translations[currentLanguage]?.[key] || translations.ru[key] || key;
+        }
+
+        function updateUI() {
+            document.title = t('title');
+            document.querySelector('.header h1').textContent = t('title');
+            document.querySelector('.header p').textContent = t('description');
+            document.querySelector('label[for="fromDate"]').textContent = t('dateFrom');
+            document.querySelector('label[for="toDate"]').textContent = t('dateTo');
+            document.querySelector('#loadBtn').textContent = t('loadData');
+            document.querySelector('.table-header h3').textContent = t('tableTitle');
+            document.querySelector('#loadingText').textContent = t('loading');
+            document.querySelector('#noDataText').textContent = t('noData');
+        }
+
+        const API_BASE_URL = window.APP_CONFIG?.API_URL || 'http://localhost:8000';
+        const GRS_LINES = window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS || [6,9,10,26,25,24,23,21,11,13,20,22,17,15,16];
+
+        let tableData = [];
+        let lineNames = {};
+
+        async function fetchLineNames() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/lines/?lumg_id=1`);
+                if (response.ok) {
+                    const lines = await response.json();
+                    lines.forEach(line => {
+                        lineNames[line.id] = line.name || `Line ${line.id}`;
+                    });
+                }
+            } catch (error) {
+                console.warn('Could not fetch line names:', error);
+                GRS_LINES.forEach(lineId => {
+                    lineNames[lineId] = `Line ${lineId}`;
+                });
+            }
+        }
+
+        function getLineName(lineId) {
+            return lineNames[lineId] || `Line ${lineId}`;
+        }
+
+        function initializeDates() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+
+            document.getElementById('fromDate').value = `${year}-${month}-01`;
+            document.getElementById('toDate').value = `${year}-${month}-${day}`;
+        }
+
+        async function loadData() {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            if (!fromDate || !toDate) {
+                showError(t('selectDates'));
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+            hideTable();
+
+            try {
+                const hourlyData = await fetchHourlyData(fromDate, toDate);
+                if (hourlyData && hourlyData.length > 0) {
+                    const nightData = calculateNightConsumption(hourlyData);
+                    if (nightData.length > 0) {
+                        tableData = nightData;
+                        renderTable(nightData);
+                        document.getElementById('exportBtn').style.display = 'flex';
+                    } else {
+                        showNoData();
+                    }
+                } else {
+                    showNoData();
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError(t('error') + ' ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function fetchHourlyData(fromDate, toDate) {
+            const params = new URLSearchParams();
+            GRS_LINES.forEach(lineId => params.append('line_id', lineId));
+            params.append('from_date', fromDate);
+            params.append('to_date', toDate);
+
+            const response = await fetch(`${API_BASE_URL}/hourly/?${params}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return await response.json();
+        }
+
+        function calculateNightConsumption(hourlyData) {
+            const dataByDateAndLine = {};
+
+            hourlyData.forEach(record => {
+                const recordDate = new Date(record.period);
+                const hour = recordDate.getHours();
+
+                if (hour >= 0 && hour <= 5) {
+                    const date = recordDate.toISOString().split('T')[0];
+                    const lineId = record.line_id;
+
+                    if (!dataByDateAndLine[date]) {
+                        dataByDateAndLine[date] = {};
+                    }
+
+                    if (!dataByDateAndLine[date][lineId]) {
+                        dataByDateAndLine[date][lineId] = [];
+                    }
+
+                    // Use volume for night consumption
+                    const flowValue = record.volume || 0;
+                    dataByDateAndLine[date][lineId].push(flowValue);
+                }
+            });
+
+            const result = [];
+
+            Object.keys(dataByDateAndLine).sort().forEach(date => {
+                const row = { date };
+
+                GRS_LINES.forEach(lineId => {
+                    const flows = dataByDateAndLine[date][lineId];
+                    if (flows && flows.length > 0) {
+                        row[`line_${lineId}`] = Math.min(...flows);
+                    } else {
+                        row[`line_${lineId}`] = null;
+                    }
+                });
+
+                result.push(row);
+            });
+
+            return result;
+        }
+
+        function renderTable(data) {
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            const headerRow = document.createElement('tr');
+            const dateHeader = document.createElement('th');
+            dateHeader.textContent = t('date');
+            headerRow.appendChild(dateHeader);
+
+            GRS_LINES.forEach(lineId => {
+                const th = document.createElement('th');
+                th.textContent = getLineName(lineId);
+                headerRow.appendChild(th);
+            });
+
+            thead.appendChild(headerRow);
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+
+                const dateTd = document.createElement('td');
+                dateTd.textContent = row.date;
+                tr.appendChild(dateTd);
+
+                GRS_LINES.forEach(lineId => {
+                    const td = document.createElement('td');
+                    const value = row[`line_${lineId}`];
+                    td.textContent = value !== null ? value.toFixed(2) : '-';
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+
+            showTable();
+        }
+
+        function exportToExcel() {
+            if (!tableData || tableData.length === 0) {
+                alert(t('noData'));
+                return;
+            }
+
+            const excelData = tableData.map(row => {
+                const excelRow = { [t('date')]: row.date };
+
+                GRS_LINES.forEach(lineId => {
+                    const columnName = getLineName(lineId);
+                    const value = row[`line_${lineId}`];
+                    excelRow[columnName] = value !== null ? value : '';
+                });
+
+                return excelRow;
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, t('title'));
+
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            const filename = `${t('title')}_${fromDate}_${toDate}.xlsx`;
+
+            XLSX.writeFile(workbook, filename);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'flex' : 'none';
+            document.getElementById('loadBtn').disabled = show;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function showTable() {
+            document.getElementById('tableWrapper').style.display = 'block';
+            document.getElementById('noData').style.display = 'none';
+        }
+
+        function hideTable() {
+            document.getElementById('tableWrapper').style.display = 'none';
+            document.getElementById('exportBtn').style.display = 'none';
+        }
+
+        function showNoData() {
+            document.getElementById('noData').style.display = 'block';
+            hideTable();
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            initializeDates();
+            await fetchLineNames();
+            updateUI();
+        });
+    </script>
+</body>
+</html>

@@ -66,6 +66,8 @@ export const uk = {
   grsReport: "Звіт ГРС",
   grsReportCalculations: "Звіт за 24 години",
   grsTrends: "Тренди ГРС",
+  nightConsumption: "Нічні витрати",
+  nightConsumptionDescription: "Мінімальна витрата газу з 00:00 до 05:00 по кожній ГРС",
 
   // Date/Time
   from: "З",
@@ -123,5 +125,18 @@ export const uk = {
   pressureUnit: "кг/см²",
   volume: "Об'єм",
   pressureIn: "Pвх",
-  pressureOut: "Pвих"
+  pressureOut: "Pвих",
+  noGrsLinesConfigured: "Не налаштовані лінії ГРС",
+  noDataAvailable: "Немає доступних даних",
+  errorLoadingData: "Помилка завантаження даних",
+  noDataForPeriod: "Немає даних за обраний період",
+  refresh: "Оновити",
+  close: "Закрити",
+  exportToExcel: "Експорт в Excel",
+  errorExportingData: "Помилка при експорті даних",
+  error: "Помилка",
+  selectPeriod: "Оберіть період",
+  calculatingTrends: "Розрахунок трендів...",
+  grsConsumptionTrends: "Тренди споживання ГРС",
+  grsTracksDescription: "Графік показує процентний розподіл споживання газу по кожній ГРС відносно загального обсягу за період"
 };
