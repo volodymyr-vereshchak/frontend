@@ -13,13 +13,15 @@ function App() {
   // Initialize dateRange with commercial day logic
   const getInitialDateRange = () => {
     const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
 
-    // Start of month at 07:00
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const startDate = startOfMonth.toISOString().split('T')[0];
+    // First day of current month
+    const startDate = `${year}-${month}-01`;
 
-    // Current date at 06:00
-    const endDate = today.toISOString().split('T')[0];
+    // Current date
+    const endDate = `${year}-${month}-${day}`;
 
     return {
       fromDate: startDate,

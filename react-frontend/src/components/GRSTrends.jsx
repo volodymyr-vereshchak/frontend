@@ -11,12 +11,18 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [error, setError] = useState(null);
   const [chartData, setChartData] = useState([]);
 
-  // Get initial date range (start of current month to today)
+  // Get initial date range (first day of current month to today)
   const getInitialDateRange = () => {
     const today = new Date();
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const startDate = startOfMonth.toISOString().split('T')[0];
-    const endDate = today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+
+    // First day of current month
+    const startDate = `${year}-${month}-01`;
+
+    // Current date
+    const endDate = `${year}-${month}-${day}`;
 
     return {
       fromDate: startDate,
