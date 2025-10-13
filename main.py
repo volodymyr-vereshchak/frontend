@@ -105,12 +105,10 @@ class ReactApp:
                 ("Content-Length", str(len(content))),
                 (
                     "Cache-Control",
-                    (
-                        "no-cache"
-                        if file_path.endswith(".html")
-                        else "public, max-age=86400"
-                    ),
+                    "no-cache, no-store, must-revalidate"
                 ),
+                ("Pragma", "no-cache"),
+                ("Expires", "0"),
             ]
 
             start_response("200 OK", headers)

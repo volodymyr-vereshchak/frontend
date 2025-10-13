@@ -496,11 +496,37 @@
             const dataByDateAndLine = {};
 
             hourlyData.forEach(record => {
-                const recordDate = new Date(record.period);
-                const hour = recordDate.getHours();
+                // CRITICAL: Parse datetime WITHOUT timezone conversion
+                // Server sends "2025-10-01T00:00:00" which means LOCAL time
+                // We must NOT let browser convert it to its timezone
+
+                let date, hour;
+                const periodStr = String(record.period);
+
+                // Extract date and hour using REGEX to avoid ANY Date object creation
+                // This prevents timezone issues completely
+                const isoMatch = periodStr.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+
+                if (isoMatch) {
+                    const [, year, month, day, hours] = isoMatch;
+                    date = `${year}-${month}-${day}`;
+                    hour = parseInt(hours, 10);
+                } else {
+                    // Fallback: try simple split
+                    if (periodStr.includes('T')) {
+                        const [datePart, timePart] = periodStr.split('T');
+                        date = datePart;
+                        hour = parseInt(timePart.substring(0, 2), 10);
+                    } else if (periodStr.includes(' ')) {
+                        const [datePart, timePart] = periodStr.split(' ');
+                        date = datePart;
+                        hour = parseInt(timePart.substring(0, 2), 10);
+                    } else {
+                        return; // Skip invalid format
+                    }
+                }
 
                 if (hour >= 0 && hour <= 5) {
-                    const date = recordDate.toISOString().split('T')[0];
                     const lineId = record.line_id;
 
                     if (!dataByDateAndLine[date]) {

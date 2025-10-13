@@ -105,13 +105,40 @@ const NightConsumption = ({ isOpen, onClose }) => {
     // Group data by date and line_id
     const dataByDateAndLine = {};
 
-    hourlyData.forEach(record => {
-      const recordDate = new Date(record.period);
-      const hour = recordDate.getHours();
+    hourlyData.forEach((record) => {
+      // CRITICAL: Parse datetime WITHOUT timezone conversion
+      // Server sends "2025-10-01T00:00:00" which means LOCAL time 2025-10-01 00:00
+      // We must NOT let browser convert it to its timezone
 
-      // Only consider hours 00:00 to 05:00
+      let date, hour;
+      const periodStr = String(record.period);
+
+      // Extract date and hour using REGEX to avoid ANY Date object creation
+      // This prevents timezone issues completely
+      const isoMatch = periodStr.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+
+      if (isoMatch) {
+        // Format: "2025-10-01T00:00:00" or "2025-10-01 00:00:00"
+        const [, year, month, day, hours] = isoMatch;
+        date = `${year}-${month}-${day}`;
+        hour = parseInt(hours, 10);
+      } else {
+        // Fallback: try simple split (shouldn't happen with correct API)
+        if (periodStr.includes('T')) {
+          const [datePart, timePart] = periodStr.split('T');
+          date = datePart;
+          hour = parseInt(timePart.substring(0, 2), 10);
+        } else if (periodStr.includes(' ')) {
+          const [datePart, timePart] = periodStr.split(' ');
+          date = datePart;
+          hour = parseInt(timePart.substring(0, 2), 10);
+        } else {
+          return; // Skip invalid format
+        }
+      }
+
+      // Only consider hours 00:00 to 05:00 (inclusive)
       if (hour >= 0 && hour <= 5) {
-        const date = recordDate.toISOString().split('T')[0];
         const lineId = record.line_id;
 
         if (!dataByDateAndLine[date]) {
@@ -122,7 +149,9 @@ const NightConsumption = ({ isOpen, onClose }) => {
           dataByDateAndLine[date][lineId] = [];
         }
 
-        dataByDateAndLine[date][lineId].push(record.flow || 0);
+        // Use volume instead of flow
+        const value = record.volume !== undefined ? record.volume : (record.flow || 0);
+        dataByDateAndLine[date][lineId].push(value);
       }
     });
 
