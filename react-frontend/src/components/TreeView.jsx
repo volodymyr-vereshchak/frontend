@@ -37,13 +37,14 @@ const LineIcon = ({ selected = false }) => (
   </svg>
 );
 
-const TreeView = ({ onLinesSelected }) => {
+const TreeView = ({ onLinesSelected, initialLineId }) => {
   const { t } = useLanguage();
   const [treeData, setTreeData] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Transform flat data into hierarchical structure
   const buildTreeStructure = (flatData) => {
@@ -176,6 +177,32 @@ const TreeView = ({ onLinesSelected }) => {
       onLinesSelected(selectedItem ? [selectedItem] : []);
     }
   }, [selectedItem, onLinesSelected]);
+
+  // Auto-select line from URL parameter after data loads
+  useEffect(() => {
+    if (initialLineId && treeData.length > 0 && !hasInitialized && !loading) {
+      // Find the line in tree data
+      let lineFound = false;
+      for (const group of treeData) {
+        const line = group.children?.find(child => child.id === initialLineId);
+        if (line) {
+          // Expand the group containing this line
+          setExpandedGroups(prev => {
+            const newExpanded = new Set(prev);
+            newExpanded.add(group.id);
+            return newExpanded;
+          });
+
+          // Select the line
+          setSelectedItem(initialLineId);
+          lineFound = true;
+          break;
+        }
+      }
+
+      setHasInitialized(true);
+    }
+  }, [initialLineId, treeData, hasInitialized, loading]);
 
   const isGroupExpanded = (groupId) => expandedGroups.has(groupId);
   const isLineSelected = (lineId) => selectedItem === lineId;

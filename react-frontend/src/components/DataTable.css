@@ -279,3 +279,17 @@
 .table-body-wrapper::-webkit-scrollbar-corner {
   background: #1a1a1a;
 }
+
+/* Clickable volume cell in daily archive */
+.volume-cell-clickable {
+  color: #B9E42B !important;
+  text-decoration: underline;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.volume-cell-clickable:hover {
+  color: #D4FF5E !important;
+  background-color: #2a3a1a !important;
+  text-decoration: underline;
+}

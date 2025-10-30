@@ -9,7 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 registerLocale('ru', ru);
 registerLocale('uk', uk);
 
-const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, initialDateRange }) => {
+const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, initialDateRange, initialEnabled }) => {
   const { language, t } = useLanguage();
 
   // Set default start datetime to beginning of month at 07:00
@@ -39,7 +39,7 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, i
 
   const [startDateTime, setStartDateTime] = useState(getDefaultStartDateTime());
   const [endDateTime, setEndDateTime] = useState(getDefaultEndDateTime());
-  const [isEnabled, setIsEnabled] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(initialEnabled || false);
   const startPickerRef = useRef(null);
   const endPickerRef = useRef(null);
   const [shouldAutoClose, setShouldAutoClose] = useState(false);
@@ -48,6 +48,13 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, i
   useEffect(() => {
     notifyChange(startDateTime, endDateTime);
   }, [archiveType]);
+
+  // Notify parent about initial enabled state
+  useEffect(() => {
+    if (initialEnabled && onDateFilterToggle) {
+      onDateFilterToggle(initialEnabled);
+    }
+  }, []); // Run only once on mount
 
   const parseDateTime = (datetimeStr) => {
     const date = new Date(datetimeStr);

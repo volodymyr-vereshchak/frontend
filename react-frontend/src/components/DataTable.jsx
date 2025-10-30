@@ -469,6 +469,46 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     return value;
   };
 
+  // Handler for clicking on volume cell in daily archive
+  const handleVolumeClick = (row) => {
+    if (archiveType !== 'daily') return;
+
+    // Get the date from the row (this is the commercial day start date)
+    const startDate = new Date(row.period);
+
+    // Commercial day: from current day 07:00 to next day 06:00
+    // So end date should be next day
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 1);
+
+    // Format dates as YYYY-MM-DD for URL
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const formattedStartDate = formatDate(startDate);
+    const formattedEndDate = formatDate(endDate);
+
+    // Get line_id from the row
+    const lineId = row.line_id;
+
+    // Build URL with parameters
+    const params = new URLSearchParams({
+      archiveType: 'hourly',
+      fromDate: formattedStartDate,
+      toDate: formattedEndDate,
+      lineId: lineId,
+      dateFilterEnabled: 'true'
+    });
+
+    // Open in new tab
+    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    window.open(url, '_blank');
+  };
+
   const calculateSummary = () => {
     if (sortedData.length === 0) {
       return {};
@@ -597,7 +637,12 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
                     sortedData.map((row, index) => (
                       <tr key={index}>
                         {columns.map((column) => (
-                          <td key={column.key}>
+                          <td
+                            key={column.key}
+                            className={archiveType === 'daily' && column.key === 'volume' ? 'volume-cell-clickable' : ''}
+                            onClick={() => archiveType === 'daily' && column.key === 'volume' && handleVolumeClick(row)}
+                            style={archiveType === 'daily' && column.key === 'volume' ? { cursor: 'pointer' } : {}}
+                          >
                             {formatValue(row[column.key], column.key)}
                           </td>
                         ))}
