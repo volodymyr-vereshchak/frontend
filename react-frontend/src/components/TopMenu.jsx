@@ -152,6 +152,12 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
     window.open('/night-consumption.html', '_blank');
   };
 
+  const handleAccidentsClick = () => {
+    setIsReportsDropdownOpen(false);
+    // Open Accidents report in new tab
+    window.open('/accidents.html', '_blank');
+  };
+
   const handleLanguageChange = (languageCode) => {
     changeLanguage(languageCode);
     setIsLanguageDropdownOpen(false);
@@ -218,6 +224,14 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
               >
                 <span className="dropdown-item-icon">🌙</span>
                 <span className="dropdown-item-text">{t('nightConsumption')}</span>
+              </button>
+              <button
+                className="dropdown-item"
+                onClick={handleAccidentsClick}
+                title={t('accidents')}
+              >
+                <span className="dropdown-item-icon">⚠️</span>
+                <span className="dropdown-item-text">{t('accidents')}</span>
               </button>
             </div>
           )}

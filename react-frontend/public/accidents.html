@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчет по авариям</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #B9E42B;
+            margin-bottom: 10px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #9e9e9e;
+            font-size: 14px;
+        }
+
+        .controls {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            margin-bottom: 20px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 20px;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+        }
+
+        .control-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #B9E42B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .control-group input,
+        .control-group select {
+            padding: 12px 16px;
+            border: 1px solid #404040;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            transition: border-color 0.2s ease;
+            min-width: 200px;
+        }
+
+        .control-group input[type="date"] {
+            color-scheme: dark;
+        }
+
+        .control-group::after {
+            content: '📅';
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            font-size: 16px;
+            pointer-events: none;
+            color: #B9E42B;
+        }
+
+        .control-group.select-group::after {
+            content: '▼';
+            font-size: 12px;
+        }
+
+        .control-group input:focus,
+        .control-group select:focus {
+            outline: none;
+            border-color: #B9E42B;
+            box-shadow: 0 0 0 2px rgba(185, 228, 43, 0.2);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #B9E42B;
+            color: #1a1a1a;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #a0c926;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #404040;
+            color: #e0e0e0;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #505050;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .table-container {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            overflow-x: auto;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #404040;
+        }
+
+        .table-header h3 {
+            color: #B9E42B;
+            font-size: 18px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead {
+            background: #1a1a1a;
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #B9E42B;
+            border-bottom: 2px solid #404040;
+            white-space: nowrap;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #333;
+            transition: background-color 0.15s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #252525;
+        }
+
+        tbody tr.group-row {
+            background-color: #303030;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        tbody tr.group-row:hover {
+            background-color: #353535;
+        }
+
+        tbody tr.detail-row {
+            background-color: #222;
+        }
+
+        tbody tr.detail-row:hover {
+            background-color: #282828;
+        }
+
+        tbody tr.detail-row td {
+            padding-left: 40px;
+            font-size: 13px;
+            color: #b0b0b0;
+        }
+
+        td {
+            padding: 12px 16px;
+        }
+
+        .expand-icon {
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+            margin-right: 8px;
+            transition: transform 0.2s ease;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(90deg);
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 400px;
+            gap: 15px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #404040;
+            border-top: 4px solid #B9E42B;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            color: #9e9e9e;
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .error {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9e9e9e;
+        }
+
+        .no-data p {
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-full {
+            background: rgba(46, 204, 113, 0.2);
+            color: #2ecc71;
+        }
+
+        .badge-start {
+            background: rgba(241, 196, 15, 0.2);
+            color: #f1c40f;
+        }
+
+        .badge-end {
+            background: rgba(52, 152, 219, 0.2);
+            color: #3498db;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #9e9e9e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #B9E42B;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Отчет по авариям</h1>
+            <p>Анализ аварийных событий по линиям за выбранный период</p>
+        </div>
+
+        <div class="controls">
+            <div class="controls-row">
+                <div class="control-group select-group">
+                    <label for="calcSelect">Вычислитель</label>
+                    <select id="calcSelect" onchange="handleCalcChange()">
+                        <option value="">Загрузка...</option>
+                    </select>
+                </div>
+
+                <div class="control-group select-group">
+                    <label for="lineSelect">Линия</label>
+                    <select id="lineSelect">
+                        <option value="">Загрузка...</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="fromDate">От</label>
+                    <input type="date" id="fromDate" />
+                </div>
+
+                <div class="control-group">
+                    <label for="toDate">До</label>
+                    <input type="date" id="toDate" />
+                </div>
+
+                <button class="btn btn-primary" id="loadDataBtn" onclick="loadAccidentsData()">
+                    Загрузить данные
+                </button>
+
+                <button class="btn btn-secondary" id="exportBtn" onclick="exportToExcel()" disabled>
+                    📊 Экспорт в Excel
+                </button>
+            </div>
+        </div>
+
+        <div class="stats" id="statsContainer" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-label">Всего аварий</div>
+                <div class="stat-value" id="totalAccidents">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Типов аварий</div>
+                <div class="stat-value" id="accidentTypes">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Общая длительность</div>
+                <div class="stat-value" id="totalDuration">00:00:00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Общий объем</div>
+                <div class="stat-value" id="totalVolume">0</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <h3>Данные по авариям</h3>
+            </div>
+
+            <div id="loadingContainer" class="loading">
+                <div class="spinner"></div>
+                <p>Загрузка данных...</p>
+            </div>
+
+            <div id="errorContainer" style="display: none;"></div>
+
+            <div id="tableContainer" style="display: none;">
+                <table id="accidentsTable">
+                    <thead>
+                        <tr>
+                            <th>Тип аварии</th>
+                            <th>Количество случаев</th>
+                            <th>Общая длительность</th>
+                            <th>Общий объем (м³)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="noDataContainer" class="no-data" style="display: none;">
+                <p>Нет данных для отображения</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const API_URL = window.APP_CONFIG?.API_URL || 'http://localhost:8000';
+        let currentData = null;
+        let expandedRows = new Set();
+        let allLines = [];
+        let allCalcs = [];
+        let groupedAccidents = [];
+
+        // Утилиты для обработки аварий (импортированы из accidentsCalculator.js)
+        function isAccidentStart(sys_type_id) {
+            return (sys_type_id % 256) >= 128;
+        }
+
+        function getAccidentEndCode(startCode) {
+            return startCode - 128;
+        }
+
+        function getAccidentStartCode(endCode) {
+            return endCode + 128;
+        }
+
+        function calculateDuration(startTime, endTime) {
+            const start = parseLocalDateTime(startTime);
+            const end = parseLocalDateTime(endTime);
+            const diffMs = end - start;
+
+            if (diffMs < 0) return "00:00:00";
+
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function pairAccidents(sysData, dateRange) {
+            if (!sysData || sysData.length === 0) {
+                return [];
+            }
+
+            const sortedData = [...sysData].sort((a, b) =>
+                parseLocalDateTime(a.period) - parseLocalDateTime(b.period)
+            );
+
+            const accidents = [];
+            const openAccidents = new Map();
+
+            const periodStart = parseLocalDateTime(dateRange.fromDate + ' 00:00:00');
+            const periodEnd = parseLocalDateTime(dateRange.toDate + ' 23:59:59');
+
+            sortedData.forEach(record => {
+                const sys_type_id = record.sys_type_id;
+                const isStart = isAccidentStart(sys_type_id);
+
+                if (isStart) {
+                    const endCode = getAccidentEndCode(sys_type_id);
+
+                    if (!openAccidents.has(endCode)) {
+                        openAccidents.set(endCode, []);
+                    }
+                    openAccidents.get(endCode).push({
+                        sys_type_id: sys_type_id,
+                        sys_name: record.sys_name,
+                        startTime: record.period,
+                        startVolume: record.volume,
+                        line_id: record.line_id
+                    });
+                } else {
+                    const endCode = sys_type_id;
+                    const openList = openAccidents.get(endCode);
+
+                    if (openList && openList.length > 0) {
+                        const openAccident = openList.shift();
+
+                        accidents.push({
+                            sys_type_id: openAccident.sys_type_id,
+                            sys_name: openAccident.sys_name,
+                            startTime: openAccident.startTime,
+                            endTime: record.period,
+                            startVolume: openAccident.startVolume,
+                            endVolume: record.volume,
+                            line_id: record.line_id,
+                            type: 'full'
+                        });
+
+                        if (openList.length === 0) {
+                            openAccidents.delete(endCode);
+                        }
+                    } else {
+                        const startCode = getAccidentStartCode(endCode);
+
+                        // Ищем название аварии по стартовому коду
+                        const startRecord = sysData.find(r => r.sys_type_id === startCode);
+                        const accidentName = startRecord ? startRecord.sys_name : record.sys_name;
+
+                        accidents.push({
+                            sys_type_id: startCode,
+                            sys_name: accidentName,
+                            startTime: formatToLocalISO(periodStart),
+                            endTime: record.period,
+                            startVolume: 0,
+                            endVolume: record.volume,
+                            line_id: record.line_id,
+                            type: 'end_only'
+                        });
+                    }
+                }
+            });
+
+            openAccidents.forEach(openList => {
+                openList.forEach(openAccident => {
+                    accidents.push({
+                        sys_type_id: openAccident.sys_type_id,
+                        sys_name: openAccident.sys_name,
+                        startTime: openAccident.startTime,
+                        endTime: formatToLocalISO(periodEnd),
+                        startVolume: openAccident.startVolume,
+                        endVolume: null,
+                        line_id: openAccident.line_id,
+                        type: 'start_only'
+                    });
+                });
+            });
+
+            return accidents;
+        }
+
+        function calculateAccidentVolume(accident) {
+            let volume = 0;
+
+            if (accident.type === 'full') {
+                volume = accident.startVolume || 0;
+            } else if (accident.type === 'end_only') {
+                volume = accident.endVolume || 0;
+            } else if (accident.type === 'start_only') {
+                // Для незакрытых аварий возвращаем объем при начале
+                // В полной версии нужно получать данные из суточного архива
+                volume = accident.startVolume || 0;
+            }
+
+            // Преобразуем в число и возвращаем 0 если NaN
+            const numVolume = Number(volume);
+            return isNaN(numVolume) ? 0 : numVolume;
+        }
+
+        function groupAccidentsByType(accidents) {
+            const grouped = {};
+
+            accidents.forEach(accident => {
+                const key = accident.sys_type_id;
+
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        sys_type_id: accident.sys_type_id,
+                        sys_name: accident.sys_name,
+                        occurrences: [],
+                        totalCount: 0,
+                        totalDuration: 0,
+                        totalVolume: 0
+                    };
+                }
+
+                const duration = calculateDuration(accident.startTime, accident.endTime);
+                const durationMs = parseLocalDateTime(accident.endTime) - parseLocalDateTime(accident.startTime);
+                const volume = calculateAccidentVolume(accident);
+
+                grouped[key].occurrences.push({
+                    startTime: accident.startTime,
+                    endTime: accident.endTime,
+                    duration: duration,
+                    volume: volume,
+                    type: accident.type,
+                    line_id: accident.line_id
+                });
+
+                grouped[key].totalCount++;
+                grouped[key].totalDuration += durationMs;
+                grouped[key].totalVolume += volume;
+            });
+
+            Object.values(grouped).forEach(group => {
+                const hours = Math.floor(group.totalDuration / (1000 * 60 * 60));
+                const minutes = Math.floor((group.totalDuration % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((group.totalDuration % (1000 * 60)) / 1000);
+
+                group.totalDurationFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            });
+
+            return Object.values(grouped);
+        }
+
+        // Инициализация страницы
+        async function initializePage() {
+            // Устанавливаем даты по умолчанию
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+            document.getElementById('fromDate').valueAsDate = firstDayOfMonth;
+            document.getElementById('toDate').valueAsDate = today;
+
+            // Загружаем вычислители и линии
+            await loadCalcsAndLines();
+
+            // Скрываем индикатор загрузки
+            document.getElementById('loadingContainer').style.display = 'none';
+            document.getElementById('noDataContainer').style.display = 'block';
+        }
+
+        // Загрузка списка вычислителей и линий
+        async function loadCalcsAndLines() {
+            try {
+                // Загружаем вычислители
+                const calcsResponse = await fetch(`${API_URL}/gas-volume-calcs/`);
+                allCalcs = await calcsResponse.json();
+
+                const calcSelect = document.getElementById('calcSelect');
+                calcSelect.innerHTML = '<option value="">Все вычислители</option>';
+
+                allCalcs.forEach(calc => {
+                    const option = document.createElement('option');
+                    option.value = calc.id;
+                    option.textContent = calc.name || `Вычислитель ${calc.id}`;
+                    calcSelect.appendChild(option);
+                });
+
+                // Загружаем линии
+                const linesResponse = await fetch(`${API_URL}/lines/`);
+                allLines = await linesResponse.json();
+
+                updateLineSelect();
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                showError('Ошибка загрузки списка вычислителей и линий');
+            }
+        }
+
+        // Обновление списка линий при изменении вычислителя
+        function handleCalcChange() {
+            updateLineSelect();
+        }
+
+        function updateLineSelect() {
+            const calcId = document.getElementById('calcSelect').value;
+            const lineSelect = document.getElementById('lineSelect');
+
+            lineSelect.innerHTML = '<option value="">Все линии</option>';
+
+            let filteredLines = allLines;
+
+            // Если выбран конкретный вычислитель, фильтруем линии
+            if (calcId) {
+                filteredLines = allLines.filter(line => line.gas_volume_calc_id == calcId);
+            }
+
+            filteredLines.forEach(line => {
+                const option = document.createElement('option');
+                option.value = line.id;
+                option.textContent = line.name || `Линия ${line.id}`;
+                lineSelect.appendChild(option);
+            });
+        }
+
+        // Загрузка данных об авариях
+        async function loadAccidentsData() {
+            const calcId = document.getElementById('calcSelect').value;
+            const lineId = document.getElementById('lineSelect').value;
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            if (!fromDate || !toDate) {
+                showError('Пожалуйста, выберите даты');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                // Определяем какие линии загружать
+                let lineIds = [];
+
+                if (lineId) {
+                    // Выбрана конкретная линия
+                    lineIds = [lineId];
+                } else if (calcId) {
+                    // Выбран вычислитель - берем все его линии
+                    lineIds = allLines
+                        .filter(line => line.gas_volume_calc_id == calcId)
+                        .map(line => line.id);
+                } else {
+                    // Ничего не выбрано - берем все линии
+                    lineIds = allLines.map(line => line.id);
+                }
+
+                // Формируем параметры запроса
+                const params = new URLSearchParams({
+                    from_date: fromDate,
+                    to_date: toDate
+                });
+
+                // Добавляем line_id для каждой линии
+                lineIds.forEach(id => params.append('line_id', id));
+
+                // Запрос к /sys/ эндпоинту
+                const response = await fetch(`${API_URL}/sys/?${params}`);
+                const sysData = await response.json();
+
+                // Обработка данных
+                const dateRange = { fromDate, toDate };
+                const pairedAccidents = pairAccidents(sysData, dateRange);
+                groupedAccidents = groupAccidentsByType(pairedAccidents);
+
+                currentData = {
+                    pairedAccidents,
+                    groupedAccidents,
+                    calcId,
+                    lineId
+                };
+
+                // Отображение данных
+                if (groupedAccidents.length === 0) {
+                    showNoData();
+                } else {
+                    displayData(groupedAccidents);
+                    updateStats(groupedAccidents, pairedAccidents);
+                    document.getElementById('exportBtn').disabled = false;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                showError('Ошибка при загрузке данных: ' + error.message);
+            }
+        }
+
+        // Отображение данных в таблице
+        function displayData(groupedData) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            groupedData.forEach((group, index) => {
+                // Строка группы
+                const groupRow = document.createElement('tr');
+                groupRow.className = 'group-row';
+                groupRow.dataset.groupId = index;
+                groupRow.onclick = () => toggleGroup(index);
+
+                const isExpanded = expandedRows.has(index);
+
+                groupRow.innerHTML = `
+                    <td>
+                        <span class="expand-icon ${isExpanded ? 'expanded' : ''}">▶</span>
+                        ${group.sys_name}
+                    </td>
+                    <td>${group.totalCount}</td>
+                    <td>${group.totalDurationFormatted}</td>
+                    <td>${(Number(group.totalVolume) || 0).toFixed(2)}</td>
+                `;
+
+                tbody.appendChild(groupRow);
+
+                // Строки деталей
+                if (isExpanded) {
+                    group.occurrences.forEach((occurrence, occIndex) => {
+                        const detailRow = document.createElement('tr');
+                        detailRow.className = 'detail-row';
+                        detailRow.dataset.groupId = index;
+
+                        const startDate = parseLocalDateTime(occurrence.startTime);
+                        const endDate = parseLocalDateTime(occurrence.endTime);
+
+                        const typeBadge = occurrence.type === 'full'
+                            ? '<span class="badge badge-full">Полная</span>'
+                            : occurrence.type === 'start_only'
+                            ? '<span class="badge badge-start">Только начало</span>'
+                            : '<span class="badge badge-end">Только конец</span>';
+
+                        const lineName = getLineName(occurrence.line_id);
+
+                        detailRow.innerHTML = `
+                            <td>${typeBadge} <strong>${lineName}</strong> — ${formatDateTime(startDate)} - ${formatDateTime(endDate)}</td>
+                            <td>—</td>
+                            <td>${occurrence.duration}</td>
+                            <td>${(Number(occurrence.volume) || 0).toFixed(2)}</td>
+                        `;
+
+                        tbody.appendChild(detailRow);
+                    });
+                }
+            });
+
+            document.getElementById('loadingContainer').style.display = 'none';
+            document.getElementById('errorContainer').style.display = 'none';
+            document.getElementById('noDataContainer').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'block';
+        }
+
+        // Получение названия линии по ID
+        function getLineName(lineId) {
+            const line = allLines.find(l => l.id === lineId);
+            return line ? (line.name || `Линия ${lineId}`) : `Линия ${lineId}`;
+        }
+
+        // Переключение раскрытия группы
+        function toggleGroup(groupId) {
+            if (expandedRows.has(groupId)) {
+                expandedRows.delete(groupId);
+            } else {
+                expandedRows.add(groupId);
+            }
+            displayData(groupedAccidents);
+        }
+
+        // Обновление статистики
+        function updateStats(groupedData, allAccidents) {
+            const totalAccidents = allAccidents.length;
+            const accidentTypes = groupedData.length;
+
+            let totalDurationMs = 0;
+            let totalVolume = 0;
+
+            groupedData.forEach(group => {
+                totalDurationMs += (Number(group.totalDuration) || 0);
+                totalVolume += (Number(group.totalVolume) || 0);
+            });
+
+            const hours = Math.floor(totalDurationMs / (1000 * 60 * 60));
+            const minutes = Math.floor((totalDurationMs % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((totalDurationMs % (1000 * 60)) / 1000);
+            const totalDuration = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+            document.getElementById('totalAccidents').textContent = totalAccidents;
+            document.getElementById('accidentTypes').textContent = accidentTypes;
+            document.getElementById('totalDuration').textContent = totalDuration;
+            document.getElementById('totalVolume').textContent = (Number(totalVolume) || 0).toFixed(2);
+
+            document.getElementById('statsContainer').style.display = 'grid';
+        }
+
+        // Экспорт в Excel
+        function exportToExcel() {
+            if (!currentData || !groupedAccidents.length) {
+                alert('Нет данных для экспорта');
+                return;
+            }
+
+            const excelData = [];
+
+            // Заголовок
+            excelData.push(['Отчет по авариям']);
+            excelData.push([]);
+
+            const calcId = currentData.calcId;
+            const lineId = currentData.lineId;
+
+            const calcName = calcId
+                ? allCalcs.find(c => c.id == calcId)?.name || `Вычислитель ${calcId}`
+                : 'Все вычислители';
+
+            const lineName = lineId
+                ? allLines.find(l => l.id == lineId)?.name || `Линия ${lineId}`
+                : 'Все линии';
+
+            excelData.push(['Вычислитель:', calcName]);
+            excelData.push(['Линия:', lineName]);
+            excelData.push(['Период:', `${document.getElementById('fromDate').value} - ${document.getElementById('toDate').value}`]);
+            excelData.push([]);
+
+            // Таблица
+            excelData.push(['Тип аварии', 'Количество случаев', 'Общая длительность', 'Общий объем (м³)']);
+
+            groupedAccidents.forEach(group => {
+                excelData.push([
+                    group.sys_name,
+                    group.totalCount,
+                    group.totalDurationFormatted,
+                    (Number(group.totalVolume) || 0).toFixed(2)
+                ]);
+
+                // Детали
+                group.occurrences.forEach(occurrence => {
+                    const typeText = occurrence.type === 'full'
+                        ? 'Полная'
+                        : occurrence.type === 'start_only'
+                        ? 'Только начало'
+                        : 'Только конец';
+
+                    const lineName = getLineName(occurrence.line_id);
+
+                    excelData.push([
+                        `  ${typeText}: ${lineName} — ${formatDateTime(parseLocalDateTime(occurrence.startTime))} - ${formatDateTime(parseLocalDateTime(occurrence.endTime))}`,
+                        '',
+                        occurrence.duration,
+                        (Number(occurrence.volume) || 0).toFixed(2)
+                    ]);
+                });
+
+                excelData.push([]);
+            });
+
+            // Создание workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(excelData);
+
+            // Автоширина колонок
+            const colWidths = [
+                { wch: 60 },
+                { wch: 20 },
+                { wch: 20 },
+                { wch: 20 }
+            ];
+            ws['!cols'] = colWidths;
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Аварии');
+
+            // Скачивание
+            const timestamp = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `accidents_${timestamp}.xlsx`);
+        }
+
+        // Вспомогательные функции UI
+        function showLoading() {
+            document.getElementById('loadingContainer').style.display = 'flex';
+            document.getElementById('errorContainer').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('noDataContainer').style.display = 'none';
+        }
+
+        function showError(message) {
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerHTML = `<div class="error">${message}</div>`;
+            errorContainer.style.display = 'block';
+            document.getElementById('loadingContainer').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('noDataContainer').style.display = 'none';
+        }
+
+        function showNoData() {
+            document.getElementById('loadingContainer').style.display = 'none';
+            document.getElementById('errorContainer').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('noDataContainer').style.display = 'block';
+        }
+
+        // Форматирование даты в ISO строку без timezone
+        function formatToLocalISO(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // Парсинг даты как локальной без учета timezone
+        function parseLocalDateTime(dateString) {
+            // Убираем Z и timezone offset из строки
+            const cleanStr = dateString.replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+
+            // Парсим компоненты даты вручную
+            const match = cleanStr.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/);
+
+            if (match) {
+                const [, year, month, day, hours, minutes, seconds] = match;
+                return new Date(
+                    parseInt(year),
+                    parseInt(month) - 1, // месяцы с 0
+                    parseInt(day),
+                    parseInt(hours),
+                    parseInt(minutes),
+                    parseInt(seconds)
+                );
+            }
+
+            // Fallback на обычный парсинг
+            return new Date(dateString);
+        }
+
+        function formatDateTime(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+
+            return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // Делаем функции глобальными для onclick
+        window.loadAccidentsData = loadAccidentsData;
+        window.exportToExcel = exportToExcel;
+        window.handleCalcChange = handleCalcChange;
+
+        // Запуск при загрузке страницы
+        initializePage();
+    </script>
+</body>
+</html>

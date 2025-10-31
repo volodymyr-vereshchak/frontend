@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Date Parse Test</title>
+</head>
+<body>
+    <h1>Date Parse Test</h1>
+    <div id="output"></div>
+
+    <script>
+        const testData = [
+            { period: "2025-10-02T00:00:00", volume: 26.68, line_id: 25 },
+            { period: "2025-10-02T01:00:00", volume: 24.15, line_id: 25 },
+            { period: "2025-10-02T02:00:00", volume: 23.72, line_id: 25 },
+            { period: "2025-10-02T03:00:00", volume: 25.10, line_id: 25 },
+            { period: "2025-10-02T04:00:00", volume: 23.19, line_id: 25 },
+            { period: "2025-10-02T05:00:00", volume: 23.19, line_id: 25 },
+        ];
+
+        const output = document.getElementById('output');
+        let html = '<h2>Test Results:</h2>';
+
+        html += '<h3>Your timezone offset: ' + new Date().getTimezoneOffset() / -60 + ' hours</h3>';
+
+        html += '<table border="1" style="border-collapse: collapse; margin: 20px 0;">';
+        html += '<tr><th>Period String</th><th>Extracted Date</th><th>Extracted Hour</th><th>Volume</th></tr>';
+
+        testData.forEach(record => {
+            const periodStr = String(record.period);
+            const isoMatch = periodStr.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+
+            if (isoMatch) {
+                const [, year, month, day, hours] = isoMatch;
+                const date = `${year}-${month}-${day}`;
+                const hour = parseInt(hours, 10);
+
+                html += `<tr>
+                    <td>${periodStr}</td>
+                    <td>${date}</td>
+                    <td>${hour}</td>
+                    <td>${record.volume}</td>
+                </tr>`;
+            }
+        });
+
+        html += '</table>';
+
+        html += '<h3>Expected: All dates should be 2025-10-02, minimum volume = 23.19</h3>';
+
+        output.innerHTML = html;
+    </script>
+</body>
+</html>
