@@ -144,9 +144,8 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       });
       worksheet['!cols'] = columnWidths;
 
-      // Format numeric cells with 2 decimal places
-      // Note: Base xlsx library has limited styling support
-      // This formatting helps Excel interpret the data correctly
+      // Apply number format to numeric cells
+      // Excel will automatically use system locale (comma for Russian, period for English)
       const range = XLSX.utils.decode_range(worksheet['!ref']);
 
       for (let row = 1; row <= range.e.r; row++) {
@@ -156,14 +155,10 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
           const cell = worksheet[cellAddress];
 
-          // Format numbers with thousand separator and 2 decimal places
+          // Apply number format for 2 decimal places
+          // The format will be adapted by Excel to user's regional settings
           if (typeof cell.v === 'number') {
-            // Format number with spaces as thousand separator for better readability
-            const formatted = cell.v.toFixed(2);
-            const [intPart, decPart] = formatted.split('.');
-            const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-            cell.v = `${formattedInt}.${decPart}`;
-            cell.t = 's'; // Treat as string to preserve formatting
+            cell.z = '#,##0.00'; // Number format with thousand separator and 2 decimals
           }
         }
       }
