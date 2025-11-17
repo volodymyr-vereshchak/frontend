@@ -129,6 +129,8 @@ export const ru = {
   periodStart: "Начало периода",
   periodEnd: "Конец периода",
   selectDateTime: "Выберите дату и время",
+  today: "Сегодня",
+  setToday: "Установить текущую дату",
 
   // GRS Report errors and messages
   calculationError: "Ошибка при расчете отчета",

@@ -182,6 +182,85 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, i
 
   const currentLocale = language === 'uk' ? 'uk' : 'ru';
 
+  // Highlight today's date
+  const getTodayClassName = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+
+    return compareDate.getTime() === today.getTime() ? 'react-datepicker__day--today-highlight' : undefined;
+  };
+
+  // Custom header with year increment/decrement buttons
+  const renderCustomHeader = ({
+    date,
+    changeYear,
+    changeMonth,
+    decreaseMonth,
+    increaseMonth,
+    prevMonthButtonDisabled,
+    nextMonthButtonDisabled
+  }) => {
+    const months = currentLocale === 'ru'
+      ? ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+      : ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'];
+
+    return (
+      <div className="custom-header">
+        <button
+          type="button"
+          onClick={decreaseMonth}
+          disabled={prevMonthButtonDisabled}
+          className="header-arrow"
+        >
+          {'<'}
+        </button>
+
+        <div className="header-center">
+          <select
+            value={date.getMonth()}
+            onChange={({ target: { value } }) => changeMonth(Number(value))}
+            className="month-select"
+          >
+            {months.map((month, index) => (
+              <option key={month} value={index}>
+                {month}
+              </option>
+            ))}
+          </select>
+
+          <div className="year-control">
+            <button
+              type="button"
+              onClick={() => changeYear(date.getFullYear() - 1)}
+              className="year-arrow"
+            >
+              ▲
+            </button>
+            <span className="year-display">{date.getFullYear()}</span>
+            <button
+              type="button"
+              onClick={() => changeYear(date.getFullYear() + 1)}
+              className="year-arrow"
+            >
+              ▼
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={increaseMonth}
+          disabled={nextMonthButtonDisabled}
+          className="header-arrow"
+        >
+          {'>'}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="datetime-pickers">
       <div className="picker-row">
@@ -199,6 +278,9 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, i
           placeholderText={t('selectDateTime')}
           shouldCloseOnSelect={false}
           onSelect={handleStartDateSelect}
+          dayClassName={getTodayClassName}
+          renderCustomHeader={renderCustomHeader}
+          todayButton={t('today')}
         />
 
         <label className="picker-label">{t('periodEnd')}</label>
@@ -216,6 +298,9 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, i
           minDate={startDateTime}
           shouldCloseOnSelect={false}
           onSelect={handleEndDateSelect}
+          dayClassName={getTodayClassName}
+          renderCustomHeader={renderCustomHeader}
+          todayButton={t('today')}
         />
 
         <input

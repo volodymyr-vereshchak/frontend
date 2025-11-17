@@ -41,18 +41,36 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
           if (col.key === 'period' && value) {
             const date = new Date(value);
             if (!isNaN(date.getTime())) {
-              // For edit and sys archives, format with seconds for better readability in Excel
-              if (archiveType === 'edit' || archiveType === 'sys') {
-                const locale = getLocale();
+              const locale = getLocale();
+
+              // For daily archive, export only date (no time)
+              if (archiveType === 'daily') {
+                value = date.toLocaleDateString(locale);
+              }
+              // For hourly archive, export date and time (without seconds)
+              else if (archiveType === 'hourly') {
+                value = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                });
+              }
+              // For edit and sys archives, format with seconds
+              else if (archiveType === 'edit' || archiveType === 'sys') {
                 value = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
                   hour: '2-digit',
                   minute: '2-digit',
                   second: '2-digit',
                   hour12: false
                 });
-              } else {
-                // Excel recognizes Date objects directly for other archives
-                value = date;
+              }
+              // For other archives (param), use default format
+              else {
+                value = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                });
               }
             }
           }

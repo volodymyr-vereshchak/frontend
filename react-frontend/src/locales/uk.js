@@ -129,6 +129,8 @@ export const uk = {
   periodStart: "Початок періоду",
   periodEnd: "Кінець періоду",
   selectDateTime: "Оберіть дату та час",
+  today: "Сьогодні",
+  setToday: "Встановити поточну дату",
 
   // GRS Report errors and messages
   calculationError: "Помилка при розрахунку звіту",
