@@ -31,10 +31,12 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     try {
       const columns = getColumns();
 
-      // Prepare data for Excel
-      const excelData = rowData.map(row => {
-        const excelRow = {};
-        columns.forEach(col => {
+      // Prepare header row
+      const headers = columns.map(col => col.label);
+
+      // Prepare data rows
+      const dataRows = rowData.map(row => {
+        return columns.map(col => {
           let value = row[col.key];
 
           // Format dates for Excel
@@ -45,11 +47,11 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
               // For daily archive, export only date (no time)
               if (archiveType === 'daily') {
-                value = date.toLocaleDateString(locale);
+                return date.toLocaleDateString(locale);
               }
               // For hourly archive, export date and time (without seconds)
               else if (archiveType === 'hourly') {
-                value = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
+                return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
                   hour: '2-digit',
                   minute: '2-digit',
                   hour12: false
@@ -57,7 +59,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
               }
               // For edit and sys archives, format with seconds
               else if (archiveType === 'edit' || archiveType === 'sys') {
-                value = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
+                return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
                   hour: '2-digit',
                   minute: '2-digit',
                   second: '2-digit',
@@ -66,7 +68,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
               }
               // For other archives (param), use default format
               else {
-                value = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
+                return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
                   hour: '2-digit',
                   minute: '2-digit',
                   hour12: false
@@ -75,34 +77,96 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
             }
           }
 
-          // Keep numbers as numbers for Excel
+          // Return numbers as-is for Excel
           if (typeof value === 'number') {
-            // Excel will handle number formatting
-            excelRow[col.label] = value;
-          } else {
-            excelRow[col.label] = value || '';
+            return value;
           }
+
+          return value || '';
         });
-        return excelRow;
       });
 
-      // Create workbook
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      // Add summary row for daily and hourly archives
+      let summaryRow = null;
+      if (archiveType === 'daily' || archiveType === 'hourly') {
+        summaryRow = columns.map(col => {
+          if (col.key === 'period') {
+            return t('total');
+          } else if (col.isSummable) {
+            // Calculate sum for volume, edit_counts, sys_counts
+            const sum = rowData.reduce((acc, row) => {
+              const value = parseFloat(row[col.key]) || 0;
+              return acc + value;
+            }, 0);
+            return sum;
+          } else if (col.isAveragable) {
+            // Calculate average for other numeric columns
+            const validValues = rowData
+              .map(row => parseFloat(row[col.key]))
+              .filter(value => !isNaN(value));
 
-      // Auto-size columns
-      const columnWidths = columns.map(col => {
-        const maxLength = Math.max(
-          col.label.length,
+            if (validValues.length > 0) {
+              const avg = validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
+              return avg;
+            }
+            return '';
+          }
+          return '';
+        });
+      }
+
+      // Combine all rows
+      const allRows = [headers, ...dataRows];
+      if (summaryRow) {
+        allRows.push(summaryRow);
+      }
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.aoa_to_sheet(allRows);
+
+      // Auto-size columns with better width calculation
+      const columnWidths = columns.map((col, colIndex) => {
+        const headerLength = col.label.length;
+        const maxDataLength = Math.max(
           ...rowData.map(row => {
             const value = row[col.key];
             if (value === null || value === undefined) return 0;
+            // For numbers, consider decimal places
+            if (typeof value === 'number') {
+              return value.toFixed(2).length + 2;
+            }
             return String(value).length;
           })
         );
-        return { wch: Math.min(Math.max(maxLength + 2, 10), 50) };
+        const width = Math.max(headerLength, maxDataLength) + 3;
+        return { wch: Math.min(Math.max(width, 12), 50) };
       });
       worksheet['!cols'] = columnWidths;
+
+      // Format numeric cells with 2 decimal places
+      // Note: Base xlsx library has limited styling support
+      // This formatting helps Excel interpret the data correctly
+      const range = XLSX.utils.decode_range(worksheet['!ref']);
+
+      for (let row = 1; row <= range.e.r; row++) {
+        for (let col = range.s.c; col <= range.e.c; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+          if (!worksheet[cellAddress]) continue;
+
+          const cell = worksheet[cellAddress];
+
+          // Format numbers with thousand separator and 2 decimal places
+          if (typeof cell.v === 'number') {
+            // Format number with spaces as thousand separator for better readability
+            const formatted = cell.v.toFixed(2);
+            const [intPart, decPart] = formatted.split('.');
+            const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+            cell.v = `${formattedInt}.${decPart}`;
+            cell.t = 's'; // Treat as string to preserve formatting
+          }
+        }
+      }
 
       // Add worksheet to workbook
       const archiveTypeNames = {
