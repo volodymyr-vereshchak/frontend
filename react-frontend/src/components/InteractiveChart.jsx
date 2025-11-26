@@ -54,19 +54,26 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
         return;
       }
 
+      // Sort data by period (date) to ensure correct chronological order in chart
+      const sortedChartData = [...chartData].sort((a, b) => {
+        const dateA = new Date(a.period);
+        const dateB = new Date(b.period);
+        return dateA - dateB;
+      });
+
       // Prepare chart components in chunks to avoid blocking
       const columns = getChartColumns();
       const chunks = [];
 
       // Process data in chunks
       const CHUNK_SIZE = 1000;
-      for (let i = 0; i < chartData.length; i += CHUNK_SIZE) {
+      for (let i = 0; i < sortedChartData.length; i += CHUNK_SIZE) {
         if (cancelToken.cancelled) {
           console.log('Chart rendering cancelled during data processing');
           return;
         }
 
-        const chunk = chartData.slice(i, i + CHUNK_SIZE);
+        const chunk = sortedChartData.slice(i, i + CHUNK_SIZE);
         chunks.push(chunk);
 
         // Yield control periodically
@@ -84,7 +91,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
       // Create chart JSX
       const chartJSX = (
         <ResponsiveContainer width="100%" height={800}>
-          <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+          <LineChart data={sortedChartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
             <XAxis
               dataKey="period"
