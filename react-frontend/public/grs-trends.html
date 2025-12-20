@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Тренды ГРС</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <!-- Chart.js libraries (self-hosted for offline server support) -->
+    <script src="/vendor/chartjs/chart.umd.min.js"></script>
+    <script src="/vendor/chartjs/chartjs-adapter-date-fns.bundle.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -516,6 +517,12 @@
 
         // Load trends data
         async function loadTrends() {
+            // Verify Chart.js is loaded
+            if (typeof Chart === 'undefined') {
+                showError('Библиотека Chart.js не загружена. Пожалуйста, обновите страницу.');
+                return;
+            }
+
             const fromDate = document.getElementById('fromDate').value;
             const toDate = document.getElementById('toDate').value;
 
@@ -638,6 +645,12 @@
 
         // Render chart using Chart.js
         function renderChart(data, periodType = 'daily') {
+            // Verify Chart.js is loaded
+            if (typeof Chart === 'undefined') {
+                showError('Ошибка: библиотека Chart.js недоступна');
+                return;
+            }
+
             chartData = data;
 
             if (!data || data.length === 0) {
