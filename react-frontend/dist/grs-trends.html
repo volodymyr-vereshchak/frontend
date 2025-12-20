@@ -266,6 +266,61 @@
             height: 500px;
             margin-top: 20px;
         }
+
+        /* Period Type Toggle */
+        .period-toggle {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .period-toggle label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #B9E42B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .toggle-group {
+            display: flex;
+            background: #1a1a1a;
+            border: 1px solid #404040;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .toggle-group input[type="radio"] {
+            display: none;
+        }
+
+        .toggle-option {
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: transparent;
+            color: #9e9e9e;
+            border: none;
+            flex: 1;
+            text-align: center;
+        }
+
+        .toggle-group input[type="radio"]:checked + .toggle-option {
+            background: #B9E42B;
+            color: #1a1a1a;
+        }
+
+        .toggle-option:hover {
+            background: rgba(185, 228, 43, 0.1);
+        }
+
+        .toggle-group input[type="radio"]:checked + .toggle-option:hover {
+            background: #a0c926;
+        }
     </style>
 </head>
 <body>
@@ -284,6 +339,16 @@
                 <div class="date-group">
                     <label for="toDate">Дата по:</label>
                     <input type="date" id="toDate">
+                </div>
+                <div class="period-toggle">
+                    <label>Период:</label>
+                    <div class="toggle-group">
+                        <input type="radio" id="periodDaily" name="periodType" value="daily" checked>
+                        <label for="periodDaily" class="toggle-option">Суточные</label>
+
+                        <input type="radio" id="periodHourly" name="periodType" value="hourly">
+                        <label for="periodHourly" class="toggle-option">Часовые</label>
+                    </div>
                 </div>
                 <button class="btn btn-primary" id="loadBtn" onclick="loadTrends()">
                     Загрузить данные
@@ -327,9 +392,16 @@
                 description: 'Анализ процентного потребления газа по ГРС за выбранный период',
                 dateFrom: 'Дата с:',
                 dateTo: 'Дата по:',
+                periodType: 'Период:',
+                daily: 'Суточные',
+                hourly: 'Часовые',
                 loadData: 'Загрузить данные',
                 chartTitle: 'График трендов потребления ГРС',
+                chartTitleDaily: 'График трендов потребления ГРС (суточные данные)',
+                chartTitleHourly: 'График трендов потребления ГРС (часовые данные)',
                 chartDescription: 'График показывает процентное распределение потребления газа по каждой ГРС относительно общего объема за период',
+                chartDescriptionDaily: 'График показывает процентное распределение потребления газа по каждой ГРС относительно общего объема за период (по дням)',
+                chartDescriptionHourly: 'График показывает процентное распределение потребления газа по каждой ГРС относительно общего объема за период (по часам)',
                 loading: 'Загрузка данных...',
                 noData: 'Нет данных для отображения',
                 error: 'Ошибка загрузки данных:',
@@ -340,9 +412,16 @@
                 description: 'Аналіз процентного споживання газу по ГРС за обраний період',
                 dateFrom: 'Дата з:',
                 dateTo: 'Дата по:',
+                periodType: 'Період:',
+                daily: 'Добові',
+                hourly: 'Погодинні',
                 loadData: 'Завантажити дані',
                 chartTitle: 'Графік трендів споживання ГРС',
+                chartTitleDaily: 'Графік трендів споживання ГРС (добові дані)',
+                chartTitleHourly: 'Графік трендів споживання ГРС (погодинні дані)',
                 chartDescription: 'Графік показує процентний розподіл споживання газу по кожній ГРС відносно загального обсягу за період',
+                chartDescriptionDaily: 'Графік показує процентний розподіл споживання газу по кожній ГРС відносно загального обсягу за період (по днях)',
+                chartDescriptionHourly: 'Графік показує процентний розподіл споживання газу по кожній ГРС відносно загального обсягу за період (по годинах)',
                 loading: 'Завантаження даних...',
                 noData: 'Немає даних для відображення',
                 error: 'Помилка завантаження даних:',
@@ -365,11 +444,22 @@
             document.querySelector('.header p').textContent = t('description');
             document.querySelector('label[for="fromDate"]').textContent = t('dateFrom');
             document.querySelector('label[for="toDate"]').textContent = t('dateTo');
+            document.querySelector('.period-toggle > label').textContent = t('periodType');
+            document.querySelector('label[for="periodDaily"]').textContent = t('daily');
+            document.querySelector('label[for="periodHourly"]').textContent = t('hourly');
             document.querySelector('#loadBtn').textContent = t('loadData');
-            document.querySelector('.chart-header h3').textContent = t('chartTitle');
-            document.querySelector('.chart-description').textContent = t('chartDescription');
             document.querySelector('#loadingText').textContent = t('loading');
             document.querySelector('#noDataText').textContent = t('noData');
+
+            // Update chart title/description based on current mode
+            updateChartLabels();
+        }
+
+        function updateChartLabels() {
+            const titleKey = currentPeriodType === 'daily' ? 'chartTitleDaily' : 'chartTitleHourly';
+            const descKey = currentPeriodType === 'daily' ? 'chartDescriptionDaily' : 'chartDescriptionHourly';
+            document.querySelector('.chart-header h3').textContent = t(titleKey);
+            document.querySelector('.chart-description').textContent = t(descKey);
         }
 
         // Configuration
@@ -379,6 +469,7 @@
         let chart = null;
         let chartData = [];
         let lineNames = {};
+        let currentPeriodType = 'daily'; // Track current period type
 
         // Color palette for GRS lines
         const colors = [
@@ -427,6 +518,10 @@
             const fromDate = document.getElementById('fromDate').value;
             const toDate = document.getElementById('toDate').value;
 
+            // Get selected period type
+            const periodTypeInput = document.querySelector('input[name="periodType"]:checked');
+            currentPeriodType = periodTypeInput ? periodTypeInput.value : 'daily';
+
             if (!fromDate || !toDate) {
                 showError(t('selectDates'));
                 return;
@@ -437,11 +532,15 @@
             hideChart();
 
             try {
-                const data = await fetchDailyData(fromDate, toDate);
+                const data = currentPeriodType === 'daily'
+                    ? await fetchDailyData(fromDate, toDate)
+                    : await fetchHourlyData(fromDate, toDate);
+
                 if (data && data.length > 0) {
-                    const trendsData = calculateTrends(data);
+                    const trendsData = calculateTrends(data, currentPeriodType);
                     if (trendsData.length > 0) {
-                        renderChart(trendsData);
+                        updateChartLabels(); // Update labels before rendering
+                        renderChart(trendsData, currentPeriodType);
                     } else {
                         showNoData();
                     }
@@ -470,11 +569,25 @@
             return await response.json();
         }
 
+        // Fetch hourly data from API
+        async function fetchHourlyData(fromDate, toDate) {
+            const params = new URLSearchParams();
+            GRS_LINES.forEach(lineId => params.append('line_id', lineId));
+            params.append('from_date', fromDate);
+            params.append('to_date', toDate);
+
+            const response = await fetch(`${API_BASE_URL}/hourly/?${params}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return await response.json();
+        }
+
         // Calculate percentage trends
-        function calculateTrends(dailyData) {
+        function calculateTrends(data, periodType = 'daily') {
             // Group data by line_id
             const lineDataMap = {};
-            dailyData.forEach(record => {
+            data.forEach(record => {
                 const lineId = record.line_id;
                 if (!lineDataMap[lineId]) {
                     lineDataMap[lineId] = [];
@@ -499,27 +612,31 @@
 
                 if (totalVolume > 0) {
                     lineData.forEach(record => {
-                        const date = record.period.split('T')[0];
+                        // For hourly: keep full datetime, for daily: extract date only
+                        const periodKey = periodType === 'daily'
+                            ? record.period.split('T')[0]
+                            : record.period;
+
                         const volume = record.volume || 0;
                         const percentage = (volume / totalVolume) * 100;
 
-                        if (!chartDataMap[date]) {
-                            chartDataMap[date] = { date: date };
+                        if (!chartDataMap[periodKey]) {
+                            chartDataMap[periodKey] = { period: periodKey };
                         }
 
-                        chartDataMap[date][`grs_${lineId}`] = percentage;
+                        chartDataMap[periodKey][`grs_${lineId}`] = percentage;
                     });
                 }
             });
 
-            // Convert to array and sort by date
+            // Convert to array and sort by period
             return Object.values(chartDataMap).sort((a, b) =>
-                new Date(a.date) - new Date(b.date)
+                new Date(a.period) - new Date(b.period)
             );
         }
 
         // Render chart using Chart.js
-        function renderChart(data) {
+        function renderChart(data, periodType = 'daily') {
             chartData = data;
 
             if (!data || data.length === 0) {
@@ -548,17 +665,54 @@
                     borderWidth: 2,
                     fill: false,
                     tension: 0.1,
-                    pointRadius: 3,
-                    pointHoverRadius: 6
+                    pointRadius: periodType === 'hourly' ? 2 : 3,
+                    pointHoverRadius: periodType === 'hourly' ? 4 : 6
                 });
             });
 
             const ctx = document.getElementById('chartCanvas').getContext('2d');
 
+            // Configure x-axis based on period type
+            const xAxisConfig = periodType === 'daily'
+                ? {
+                    type: 'category',
+                    grid: { color: '#404040' },
+                    ticks: {
+                        color: '#9e9e9e',
+                        maxRotation: 45,
+                        minRotation: 0,
+                        callback: function(value, index) {
+                            const date = new Date(this.getLabelForValue(value));
+                            return date.toLocaleDateString('ru-RU', {
+                                day: '2-digit',
+                                month: '2-digit'
+                            });
+                        }
+                    }
+                }
+                : {
+                    type: 'time',
+                    time: {
+                        unit: 'hour',
+                        displayFormats: {
+                            hour: 'dd.MM HH:mm'
+                        },
+                        tooltipFormat: 'dd.MM.yyyy HH:mm'
+                    },
+                    grid: { color: '#404040' },
+                    ticks: {
+                        color: '#9e9e9e',
+                        maxRotation: 45,
+                        minRotation: 0,
+                        source: 'auto',
+                        maxTicksLimit: 24
+                    }
+                };
+
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.map(item => item.date),
+                    labels: data.map(item => item.period),
                     datasets: datasets
                 },
                 options: {
@@ -577,6 +731,20 @@
                             borderColor: '#404040',
                             borderWidth: 1,
                             callbacks: {
+                                title: function(context) {
+                                    const label = context[0].label;
+                                    if (periodType === 'hourly') {
+                                        const date = new Date(label);
+                                        return date.toLocaleString('ru-RU', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        });
+                                    }
+                                    return label;
+                                },
                                 label: function(context) {
                                     return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`;
                                 }
@@ -584,22 +752,7 @@
                         }
                     },
                     scales: {
-                        x: {
-                            type: 'category',
-                            grid: {
-                                color: '#404040'
-                            },
-                            ticks: {
-                                color: '#9e9e9e',
-                                callback: function(value, index) {
-                                    const date = new Date(this.getLabelForValue(value));
-                                    return date.toLocaleDateString('ru-RU', {
-                                        day: '2-digit',
-                                        month: '2-digit'
-                                    });
-                                }
-                            }
-                        },
+                        x: xAxisConfig,
                         y: {
                             beginAtZero: true,
                             grid: {
@@ -693,6 +846,14 @@
             initializeDates();
             await fetchLineNames();
             updateUI();
+
+            // Add event listener for period type toggle
+            document.querySelectorAll('input[name="periodType"]').forEach(input => {
+                input.addEventListener('change', function() {
+                    currentPeriodType = this.value;
+                    updateChartLabels();
+                });
+            });
         });
     </script>
 </body>
