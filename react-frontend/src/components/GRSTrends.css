@@ -8,7 +8,7 @@
   flex-direction: column;
 }
 
-.grs-trends-modal .modal-body {
+.grs-trends-modal .grs-trends-modal-body {
   flex: 1;
   overflow-y: auto;
   padding: 20px;

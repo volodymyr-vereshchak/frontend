@@ -8,7 +8,7 @@
   flex-direction: column;
 }
 
-.night-consumption-modal .modal-body {
+.night-consumption-modal .night-consumption-modal-body {
   flex: 1;
   overflow-y: auto;
   padding: 20px;

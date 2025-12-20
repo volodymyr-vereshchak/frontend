@@ -248,7 +248,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="modal-body">
+        <div className="night-consumption-modal-body">
           {/* Date Range Picker */}
           <div className="date-picker-section">
             <DateTimePickers

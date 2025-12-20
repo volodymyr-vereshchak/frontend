@@ -79,7 +79,7 @@
 }
 
 /* Modal Body */
-.modal-body {
+.grs-modal-body {
   flex: 1;
   padding: 24px;
   overflow-y: auto;
@@ -320,7 +320,7 @@
   }
 
   .modal-header,
-  .modal-body,
+  .grs-modal-body,
   .modal-footer {
     padding: 16px;
   }

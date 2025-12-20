@@ -158,7 +158,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="modal-body">
+        <div className="grs-trends-modal-body">
           {/* Date Range Picker */}
           <div className="date-picker-section">
             <h4>{t('selectPeriod')}</h4>

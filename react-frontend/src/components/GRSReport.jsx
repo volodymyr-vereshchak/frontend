@@ -207,7 +207,7 @@ const GRSReport = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <div className="modal-body">
+        <div className="grs-modal-body">
           {isLoading && (
             <div className="loading-container">
               <div className="loading-spinner"></div>
