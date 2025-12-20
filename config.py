@@ -22,7 +22,6 @@ settings = {
 
     # GRS Configuration
     "GRS_LINES_IDS": parse_int_list("GRS_LINES_IDS", [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11]),
-    "GRS_TRENDS_IDS": parse_int_list("GRS_TRENDS_IDS", [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11]),
     "GRS_HIGH_P_LINES_IDS": parse_int_list("GRS_HIGH_P_LINES_IDS", [1, 6, 8, 12]),
     "GRS_PRESSURE_DIVISOR": int(os.getenv("GRS_PRESSURE_DIVISOR", "10000")),
 }
