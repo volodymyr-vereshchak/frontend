@@ -34,10 +34,10 @@ const GRSTrends = ({ isOpen, onClose }) => {
 
   const [dateRange, setDateRange] = useState(getInitialDateRange);
 
-  // Get GRS trends lines from runtime config (injected by Python server)
+  // Get GRS lines from runtime config (same as GRS 24h report for consistency)
   const grsLines = useMemo(() => {
-    if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.TRENDS_IDS) {
-      return window.APP_CONFIG.GRS_CONFIG.TRENDS_IDS;
+    if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
+      return window.APP_CONFIG.GRS_CONFIG.LINES_IDS;
     }
     // Fallback to default
     return [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11];
