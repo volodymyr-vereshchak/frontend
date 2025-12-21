@@ -285,6 +285,18 @@ export const archiveDataApi = {
   }
 };
 
+// Enterprise volume API methods
+export const enterpriseApi = {
+  async getEnterpriseVolumes(lineIds, fromDate, toDate) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate
+    };
+    return await apiClient.get('/enterprise/volumes/', params);
+  }
+};
+
 // Commercial day aggregation utilities
 export const commercialDayUtils = {
   // Aggregate hourly counts to commercial days (07:00 to 06:00)

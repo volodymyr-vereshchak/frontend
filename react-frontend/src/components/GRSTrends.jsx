@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { archiveDataApi } from '../services/api';
+import { archiveDataApi, enterpriseApi } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
 import InteractiveChart from './InteractiveChart';
@@ -53,12 +53,11 @@ const GRSTrends = ({ isOpen, onClose }) => {
     setError(null);
 
     try {
-      // Fetch daily data for all GRS lines for the selected period
-      const dailyData = await archiveDataApi.getDailyData(
-        grsLines,
-        dateRange.fromDate,
-        dateRange.toDate
-      );
+      // Fetch daily data and enterprise data in parallel
+      const [dailyData, enterpriseData] = await Promise.all([
+        archiveDataApi.getDailyData(grsLines, dateRange.fromDate, dateRange.toDate),
+        enterpriseApi.getEnterpriseVolumes(grsLines, dateRange.fromDate, dateRange.toDate)
+      ]);
 
       if (!dailyData || dailyData.length === 0) {
         setError(t('noDataAvailable'));
@@ -66,8 +65,17 @@ const GRSTrends = ({ isOpen, onClose }) => {
         return;
       }
 
-      // Calculate trends
-      const trendsData = calculateGRSTrendsPercentages(dailyData, grsLines);
+      // Log warning if no enterprise data (not an error)
+      if (!enterpriseData || enterpriseData.length === 0) {
+        console.warn('No enterprise data available, using GS volumes only');
+      }
+
+      // Calculate trends with enterprise subtraction
+      const trendsData = calculateGRSTrendsPercentages(
+        dailyData,
+        grsLines,
+        enterpriseData || []
+      );
       setChartData(trendsData);
 
     } catch (err) {
@@ -78,7 +86,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
     }
   };
 
-  const calculateGRSTrendsPercentages = (dailyData, lineIds) => {
+  const calculateGRSTrendsPercentages = (dailyData, lineIds, enterpriseData = []) => {
     // Group data by line_id
     const lineDataMap = {};
 
@@ -90,12 +98,31 @@ const GRSTrends = ({ isOpen, onClose }) => {
       lineDataMap[lineId].push(record);
     });
 
-    // Calculate total volume per line for the entire period
+    // Create enterprise volume lookup map: {line_id: {date: total_volume}}
+    const enterpriseMap = {};
+    enterpriseData.forEach(entry => {
+      const lineId = entry.line_id;
+      const date = new Date(entry.period).toISOString().split('T')[0];
+
+      if (!enterpriseMap[lineId]) {
+        enterpriseMap[lineId] = {};
+      }
+      enterpriseMap[lineId][date] = entry.total_volume;
+    });
+
+    // Calculate total NET volume per line (GS - Enterprise) for the entire period
     const lineTotals = {};
     Object.keys(lineDataMap).forEach(lineId => {
       const lineData = lineDataMap[lineId];
       const totalVolume = lineData.reduce((sum, record) => {
-        return sum + (record.volume || 0);
+        const date = new Date(record.period).toISOString().split('T')[0];
+        const gsVolume = record.volume || 0;
+
+        // Subtract enterprise volume if exists for this line and date
+        const enterpriseVolume = (enterpriseMap[lineId] && enterpriseMap[lineId][date]) || 0;
+        const netVolume = Math.max(0, gsVolume - enterpriseVolume);
+
+        return sum + netVolume;
       }, 0);
       lineTotals[lineId] = totalVolume;
     });
@@ -110,15 +137,21 @@ const GRSTrends = ({ isOpen, onClose }) => {
       if (totalVolume > 0) {
         lineData.forEach(record => {
           const date = new Date(record.period).toISOString().split('T')[0];
-          const volume = record.volume || 0;
-          const percentage = (volume / totalVolume) * 100;
+          const gsVolume = record.volume || 0;
+
+          // Subtract enterprise volume
+          const enterpriseVolume = (enterpriseMap[lineId] && enterpriseMap[lineId][date]) || 0;
+          const netVolume = Math.max(0, gsVolume - enterpriseVolume);
+
+          const percentage = (netVolume / totalVolume) * 100;
 
           if (!chartDataMap[date]) {
             chartDataMap[date] = { period: date };
           }
 
           chartDataMap[date][`line_${lineId}`] = percentage;
-          chartDataMap[date][`line_${lineId}_volume`] = volume;
+          chartDataMap[date][`line_${lineId}_volume`] = netVolume;
+          chartDataMap[date][`line_${lineId}_enterprise`] = enterpriseVolume;
         });
       }
     });
