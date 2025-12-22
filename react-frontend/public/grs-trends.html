@@ -696,7 +696,14 @@
                         maxRotation: 45,
                         minRotation: 0,
                         callback: function(value, index) {
-                            const date = new Date(this.getLabelForValue(value));
+                            const label = this.getLabelForValue(value);
+                            const date = new Date(label);
+
+                            // Validate date before formatting
+                            if (isNaN(date.getTime())) {
+                                return label; // Return original if invalid
+                            }
+
                             return date.toLocaleDateString('ru-RU', {
                                 day: '2-digit',
                                 month: '2-digit'
@@ -747,8 +754,14 @@
                             callbacks: {
                                 title: function(context) {
                                     const label = context[0].label;
+                                    const date = new Date(label);
+
+                                    // Validate date before formatting
+                                    if (isNaN(date.getTime())) {
+                                        return label; // Return original if invalid
+                                    }
+
                                     if (periodType === 'hourly') {
-                                        const date = new Date(label);
                                         return date.toLocaleString('ru-RU', {
                                             day: '2-digit',
                                             month: '2-digit',
@@ -757,7 +770,12 @@
                                             minute: '2-digit'
                                         });
                                     }
-                                    return label;
+                                    // Format daily data as date only (no time)
+                                    return date.toLocaleDateString('ru-RU', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric'
+                                    });
                                 },
                                 label: function(context) {
                                     return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`;
