@@ -218,9 +218,11 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
   const formatXAxisLabel = (value) => {
     const date = new Date(value);
     const locale = getLocale();
-    if (archiveType === 'daily') {
+    // Show only date for daily and trends archives (date-only data)
+    if (archiveType === 'daily' || archiveType === 'trends') {
       return date.toLocaleDateString(locale);
     } else {
+      // Show date + time for hourly, param, sys, edit archives
       return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
     }
   };
@@ -233,9 +235,11 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
       const locale = getLocale();
 
       let formattedLabel;
-      if (currentArchiveType === 'daily') {
+      // Show only date for daily and trends archives (date-only data)
+      if (currentArchiveType === 'daily' || currentArchiveType === 'trends') {
         formattedLabel = date.toLocaleDateString(locale);
       } else {
+        // Show date + time for hourly, param, sys, edit archives
         formattedLabel = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
       }
 
