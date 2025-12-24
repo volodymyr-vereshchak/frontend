@@ -69,7 +69,8 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
           chartDataPeriods: sortedChartData.length,
           enterprisePeriods: Object.keys(enterpriseData.byPeriod).length,
           sampleChartPeriods: sortedChartData.slice(0, 3).map(d => d.period),
-          sampleEnterprisePeriods: Object.keys(enterpriseData.byPeriod).slice(0, 3)
+          sampleEnterprisePeriods: Object.keys(enterpriseData.byPeriod).slice(0, 3),
+          sampleChartData: sortedChartData.slice(0, 2).map(d => ({ period: d.period, volume: d.volume }))
         });
 
         let matchedCount = 0;
@@ -79,15 +80,29 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
 
           if (enterpriseValues) {
             matchedCount++;
+
+            // Calculate netVolume from actual line volume in chart data
+            const lineVolume = item.volume || 0;
+            const enterpriseVolume = enterpriseValues.totalEnterpriseVolume || 0;
+            const netVolume = lineVolume - enterpriseVolume;
+
             return {
               ...item,
-              ...enterpriseValues // Add netVolume and/or totalEnterpriseVolume
+              totalEnterpriseVolume: enterpriseVolume,
+              netVolume: enterpriseData.includeNet ? netVolume : undefined
             };
           }
           return item;
         });
 
-        console.log(`Merged enterprise data: ${matchedCount}/${sortedChartData.length} periods matched`);
+        console.log(`Merged enterprise data: ${matchedCount}/${sortedChartData.length} periods matched`, {
+          sampleMerged: sortedChartData.slice(0, 2).map(d => ({
+            period: d.period,
+            volume: d.volume,
+            totalEnterpriseVolume: d.totalEnterpriseVolume,
+            netVolume: d.netVolume
+          }))
+        });
       }
 
       // Prepare chart components in chunks to avoid blocking

@@ -35,7 +35,6 @@ const SimplifiedEnterpriseControl = ({
       if (!byPeriod[period]) {
         byPeriod[period] = {
           period: period,
-          lineVolume: item.total_volume || 0,
           totalEnterpriseVolume: 0
         };
       }
@@ -57,6 +56,7 @@ const SimplifiedEnterpriseControl = ({
 
   // Build chart data from processed enterprise data
   // Returns object with period mappings for merging with main chart data
+  // Net Volume will be calculated in InteractiveChart using actual line volume
   const buildChartData = (processedData, includeNet, includeTotal) => {
     if (!processedData) return null;
 
@@ -68,17 +68,11 @@ const SimplifiedEnterpriseControl = ({
     };
 
     Object.keys(processedData).forEach(period => {
-      result.byPeriod[period] = {};
-
-      if (includeNet) {
-        result.byPeriod[period].netVolume =
-          processedData[period].lineVolume - processedData[period].totalEnterpriseVolume;
-      }
-
-      if (includeTotal) {
-        result.byPeriod[period].totalEnterpriseVolume =
-          processedData[period].totalEnterpriseVolume;
-      }
+      // Only include totalEnterpriseVolume here
+      // netVolume will be calculated in InteractiveChart from actual line volume
+      result.byPeriod[period] = {
+        totalEnterpriseVolume: processedData[period].totalEnterpriseVolume
+      };
     });
 
     console.log('Built chart data:', {
