@@ -29,6 +29,7 @@ const SimplifiedEnterpriseControl = ({
     const byPeriod = {};
 
     rawData.forEach(item => {
+      // Use period as-is from API (should match main chart data format)
       const period = item.period;
 
       if (!byPeriod[period]) {
@@ -45,30 +46,50 @@ const SimplifiedEnterpriseControl = ({
       });
     });
 
+    console.log('Processed enterprise data by period:', {
+      totalPeriods: Object.keys(byPeriod).length,
+      samplePeriods: Object.keys(byPeriod).slice(0, 3),
+      sampleData: Object.values(byPeriod).slice(0, 2)
+    });
+
     return byPeriod;
   };
 
   // Build chart data from processed enterprise data
+  // Returns object with period mappings for merging with main chart data
   const buildChartData = (processedData, includeNet, includeTotal) => {
     if (!processedData) return null;
 
-    const result = {};
+    // Return data as a map by period for easy merging in InteractiveChart
+    const result = {
+      byPeriod: {},
+      includeNet,
+      includeTotal
+    };
 
-    if (includeNet) {
-      result.netVolume = Object.keys(processedData).sort().map(period => ({
-        period: period,
-        value: processedData[period].lineVolume - processedData[period].totalEnterpriseVolume
-      }));
-    }
+    Object.keys(processedData).forEach(period => {
+      result.byPeriod[period] = {};
 
-    if (includeTotal) {
-      result.totalEnterprise = Object.keys(processedData).sort().map(period => ({
-        period: period,
-        value: processedData[period].totalEnterpriseVolume
-      }));
-    }
+      if (includeNet) {
+        result.byPeriod[period].netVolume =
+          processedData[period].lineVolume - processedData[period].totalEnterpriseVolume;
+      }
 
-    return Object.keys(result).length > 0 ? result : null;
+      if (includeTotal) {
+        result.byPeriod[period].totalEnterpriseVolume =
+          processedData[period].totalEnterpriseVolume;
+      }
+    });
+
+    console.log('Built chart data:', {
+      totalPeriods: Object.keys(result.byPeriod).length,
+      includeNet,
+      includeTotal,
+      samplePeriods: Object.keys(result.byPeriod).slice(0, 3),
+      sampleValues: Object.entries(result.byPeriod).slice(0, 2).map(([p, v]) => ({ period: p, values: v }))
+    });
+
+    return Object.keys(result.byPeriod).length > 0 ? result : null;
   };
 
   // Fetch enterprise data from API

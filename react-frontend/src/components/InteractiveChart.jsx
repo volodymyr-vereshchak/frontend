@@ -57,11 +57,38 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
       }
 
       // Sort data by period (date) to ensure correct chronological order in chart
-      const sortedChartData = [...chartData].sort((a, b) => {
+      let sortedChartData = [...chartData].sort((a, b) => {
         const dateA = new Date(a.period);
         const dateB = new Date(b.period);
         return dateA - dateB;
       });
+
+      // Merge enterprise data into main chart data if available
+      if (enterpriseData && enterpriseData.byPeriod) {
+        console.log('Merging enterprise data into chart data', {
+          chartDataPeriods: sortedChartData.length,
+          enterprisePeriods: Object.keys(enterpriseData.byPeriod).length,
+          sampleChartPeriods: sortedChartData.slice(0, 3).map(d => d.period),
+          sampleEnterprisePeriods: Object.keys(enterpriseData.byPeriod).slice(0, 3)
+        });
+
+        let matchedCount = 0;
+        sortedChartData = sortedChartData.map(item => {
+          const period = item.period;
+          const enterpriseValues = enterpriseData.byPeriod[period];
+
+          if (enterpriseValues) {
+            matchedCount++;
+            return {
+              ...item,
+              ...enterpriseValues // Add netVolume and/or totalEnterpriseVolume
+            };
+          }
+          return item;
+        });
+
+        console.log(`Merged enterprise data: ${matchedCount}/${sortedChartData.length} periods matched`);
+      }
 
       // Prepare chart components in chunks to avoid blocking
       const columns = getChartColumns();
@@ -123,34 +150,34 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
             ))}
 
             {/* Enterprise Overlay Lines */}
-            {/* Net Volume - ALWAYS shown when Enterprise enabled */}
-            {enterpriseData?.netVolume && enterpriseData.netVolume.length > 0 && (
+            {/* Net Volume - shown when enterprise enabled and includeNet is true */}
+            {enterpriseData?.includeNet && (
               <Line
                 key="enterprise-net-volume"
                 type="monotone"
-                data={enterpriseData.netVolume}
-                dataKey="value"
+                dataKey="netVolume"
                 stroke="#33ff57"
                 strokeWidth={2.5}
                 strokeDasharray="5 5"
                 dot={false}
                 activeDot={{ r: 4, stroke: "#33ff57", strokeWidth: 1 }}
                 name={t('netVolume') || 'Net Volume (Line - Enterprise)'}
+                connectNulls={true}
               />
             )}
 
-            {/* Total Enterprise - OPTIONAL */}
-            {enterpriseData?.totalEnterprise && enterpriseData.totalEnterprise.length > 0 && (
+            {/* Total Enterprise - shown when enterprise enabled and includeTotal is true */}
+            {enterpriseData?.includeTotal && (
               <Line
                 key="enterprise-total"
                 type="monotone"
-                data={enterpriseData.totalEnterprise}
-                dataKey="value"
+                dataKey="totalEnterpriseVolume"
                 stroke="#ff5733"
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4, stroke: "#ff5733", strokeWidth: 1 }}
                 name={t('totalEnterpriseVolume') || 'Total Enterprise'}
+                connectNulls={true}
               />
             )}
 
