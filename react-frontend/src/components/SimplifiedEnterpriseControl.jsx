@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { enterpriseApi } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import './SimplifiedEnterpriseControl.css';
@@ -21,6 +21,8 @@ const SimplifiedEnterpriseControl = ({
 
   // Refs
   const dropdownRef = useRef(null);
+  const previousParamsRef = useRef(null);
+  const previousChartDataRef = useRef(null);
 
   // Process raw API data into period-based structure
   const processEnterpriseData = (rawData) => {
@@ -70,7 +72,7 @@ const SimplifiedEnterpriseControl = ({
   };
 
   // Fetch enterprise data from API
-  const fetchEnterpriseData = async () => {
+  const fetchEnterpriseData = useCallback(async () => {
     if (!selectedLines || selectedLines.length === 0) {
       console.warn('No lines selected for enterprise data fetch');
       return;
@@ -81,6 +83,21 @@ const SimplifiedEnterpriseControl = ({
       return;
     }
 
+    // Create params signature to check if we need to refetch
+    const currentParams = JSON.stringify({
+      lines: selectedLines?.sort(),
+      from: dateRange.fromDate,
+      to: dateRange.toDate,
+      type: archiveType
+    });
+
+    // Skip if params haven't changed
+    if (previousParamsRef.current === currentParams) {
+      console.log('Parameters unchanged, skipping fetch');
+      return;
+    }
+
+    previousParamsRef.current = currentParams;
     setLoading(true);
 
     try {
@@ -106,7 +123,6 @@ const SimplifiedEnterpriseControl = ({
       if (!data || data.length === 0) {
         console.log('No enterprise data available from API');
         setEnterpriseData(null);
-        onEnterpriseDataChange(null);
         setLoading(false);
         return;
       }
@@ -115,40 +131,45 @@ const SimplifiedEnterpriseControl = ({
       const processed = processEnterpriseData(data);
       setEnterpriseData(processed);
 
-      // Build and send chart data
-      const chartData = buildChartData(processed, showNetVolume, showTotal);
-      onEnterpriseDataChange(chartData);
-
     } catch (err) {
       console.error('Error fetching enterprise data:', err);
       setEnterpriseData(null);
-      onEnterpriseDataChange(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedLines, dateRange, archiveType]);
+
+  // Memoize chart data to prevent unnecessary recalculations
+  const chartData = useMemo(() => {
+    if (!isActive || !enterpriseData) {
+      return null;
+    }
+    return buildChartData(enterpriseData, showNetVolume, showTotal);
+  }, [isActive, enterpriseData, showNetVolume, showTotal]);
 
   // useEffect #1: Load data when activated or parameters change
   useEffect(() => {
     if (!isActive) {
       setEnterpriseData(null);
-      onEnterpriseDataChange(null);
       setIsDropdownOpen(false); // Close dropdown when disabled
+      previousParamsRef.current = null; // Reset params cache when disabled
       return;
     }
 
     fetchEnterpriseData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, selectedLines, dateRange, archiveType]);
+  }, [isActive, fetchEnterpriseData]);
 
-  // useEffect #2: Update chart when checkboxes change (without re-fetching)
+  // useEffect #2: Update parent when chart data changes
   useEffect(() => {
-    if (isActive && enterpriseData) {
-      const chartData = buildChartData(enterpriseData, showNetVolume, showTotal);
+    // Stringify to compare by value, not by reference
+    const currentDataString = JSON.stringify(chartData);
+    const previousDataString = previousChartDataRef.current;
+
+    if (currentDataString !== previousDataString) {
+      previousChartDataRef.current = currentDataString;
       onEnterpriseDataChange(chartData);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showNetVolume, showTotal]);
+  }, [chartData, onEnterpriseDataChange]);
 
   // useEffect #3: Click outside to close dropdown
   useEffect(() => {
