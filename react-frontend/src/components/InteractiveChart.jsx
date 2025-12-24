@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import './InteractiveChart.css';
 import { useLanguage } from '../contexts/LanguageContext';
+import SimplifiedEnterpriseControl from './SimplifiedEnterpriseControl';
 
 const InteractiveChart = ({ data, archiveType, selectedLines }) => {
   const { t, getLocale } = useLanguage();
@@ -19,12 +20,13 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
   const [yAxisDomain, setYAxisDomain] = useState(['dataMin', 'dataMax']);
   const [isChartLoading, setIsChartLoading] = useState(false);
   const [renderedChart, setRenderedChart] = useState(null);
+  const [enterpriseOverlayData, setEnterpriseOverlayData] = useState(null);
 
   const renderCancelRef = useRef(null);
   const renderTimeoutRef = useRef(null);
 
   // Async chart rendering with cancellation
-  const renderChartAsync = useCallback(async (chartData, archiveType, visibleLines) => {
+  const renderChartAsync = useCallback(async (chartData, archiveType, visibleLines, enterpriseData) => {
     // Cancel any existing render
     if (renderCancelRef.current) {
       renderCancelRef.current.cancelled = true;
@@ -120,6 +122,39 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
               )
             ))}
 
+            {/* Enterprise Overlay Lines */}
+            {/* Net Volume - ALWAYS shown when Enterprise enabled */}
+            {enterpriseData?.netVolume && enterpriseData.netVolume.length > 0 && (
+              <Line
+                key="enterprise-net-volume"
+                type="monotone"
+                data={enterpriseData.netVolume}
+                dataKey="value"
+                stroke="#33ff57"
+                strokeWidth={2.5}
+                strokeDasharray="5 5"
+                dot={false}
+                activeDot={{ r: 4, stroke: "#33ff57", strokeWidth: 1 }}
+                name={t('netVolume') || 'Net Volume (Line - Enterprise)'}
+              />
+            )}
+
+            {/* Total Enterprise - OPTIONAL */}
+            {enterpriseData?.totalEnterprise && enterpriseData.totalEnterprise.length > 0 && (
+              <Line
+                key="enterprise-total"
+                type="monotone"
+                data={enterpriseData.totalEnterprise}
+                dataKey="value"
+                stroke="#ff5733"
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4, stroke: "#ff5733", strokeWidth: 1 }}
+                name={t('totalEnterpriseVolume') || 'Total Enterprise'}
+              />
+            )}
+
+
             <Brush
               dataKey="period"
               height={30}
@@ -161,12 +196,12 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
   useEffect(() => {
     if (data && data.length > 0 && Object.keys(visibleLines).length > 0) {
       console.log('Starting async chart rendering...');
-      renderChartAsync(data, archiveType, visibleLines);
+      renderChartAsync(data, archiveType, visibleLines, enterpriseOverlayData);
     } else {
       setRenderedChart(null);
       setIsChartLoading(false);
     }
-  }, [data, archiveType, visibleLines, renderChartAsync]);
+  }, [data, archiveType, visibleLines, enterpriseOverlayData, renderChartAsync]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -265,6 +300,29 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
     }));
   };
 
+  // Handle enterprise overlay data changes
+  const handleEnterpriseDataChange = useCallback((data) => {
+    console.log('Enterprise overlay data changed:', data);
+    setEnterpriseOverlayData(data);
+  }, []);
+
+
+  // Extract date range from data for EnterpriseOverlayControl
+  const extractDateRange = useCallback(() => {
+    if (!data || data.length === 0) return null;
+
+    const sortedData = [...data].sort((a, b) => {
+      const dateA = new Date(a.period);
+      const dateB = new Date(b.period);
+      return dateA - dateB;
+    });
+
+    const fromDate = sortedData[0].period.split('T')[0];
+    const toDate = sortedData[sortedData.length - 1].period.split('T')[0];
+
+    return { fromDate, toDate };
+  }, [data]);
+
   const columns = getChartColumns();
 
   if (!data || data.length === 0) {
@@ -300,7 +358,18 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
               {col.label}
             </button>
           ))}
+
+          {/* Enterprise Overlay Control - only for daily/hourly archives */}
+          {(archiveType === 'daily' || archiveType === 'hourly') && selectedLines && extractDateRange() && (
+            <SimplifiedEnterpriseControl
+              selectedLines={selectedLines}
+              dateRange={extractDateRange()}
+              archiveType={archiveType}
+              onEnterpriseDataChange={handleEnterpriseDataChange}
+            />
+          )}
         </div>
+
         {isChartLoading && (
           <div className="chart-loading-indicator">
             <span>🔄 {t('updatingChart')}</span>

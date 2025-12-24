@@ -156,5 +156,13 @@ export const ru = {
   selectPeriod: "Выберите период",
   calculatingTrends: "Расчет трендов...",
   grsConsumptionTrends: "Тренды потребления ГРС",
-  grsTracksDescription: "График показывает процентное распределение потребления газа по каждой ГРС относительно общего объема за период"
+  grsTracksDescription: "График показывает процентное распределение потребления газа по каждой ГРС относительно общего объема за период",
+
+  // Enterprise Overlay
+  enterpriseOverlay: "Промышленность",
+  enterpriseNetVolumeInfo: "Показывается Net Volume (разница между объемом линии и промышленностью) и Total Enterprise",
+  loadingEnterpriseData: "Загрузка данных предприятий...",
+  netVolume: "Net Volume (Линия - Предприятия)",
+  totalEnterpriseVolume: "Суммарный объем предприятий",
+  enterpriseNoData: "Нет данных по предприятиям за выбранный период"
 };

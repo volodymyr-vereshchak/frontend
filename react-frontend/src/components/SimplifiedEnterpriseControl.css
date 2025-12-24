@@ -1,0 +1,280 @@
+.enterprise-control {
+  position: relative;
+  display: inline-block;
+}
+
+/* Controls Wrapper - Contains checkbox and settings button */
+.enterprise-controls-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  background-color: #2a2a2a;
+  transition: all 0.2s ease;
+}
+
+.enterprise-controls-wrapper:hover {
+  border-color: #4CAF50;
+  background-color: #2f2f2f;
+}
+
+/* Checkbox Label */
+.enterprise-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.enterprise-checkbox-label:hover {
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.enterprise-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4CAF50;
+}
+
+.enterprise-checkbox:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.enterprise-checkbox-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #d0d0d0;
+  white-space: nowrap;
+}
+
+/* Settings Button */
+.enterprise-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #404040;
+  background-color: transparent;
+  color: #808080;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.enterprise-settings-btn:hover:not(:disabled) {
+  background-color: rgba(76, 175, 80, 0.1);
+  border-color: #4CAF50;
+  color: #4CAF50;
+}
+
+.enterprise-settings-btn.active {
+  color: #4CAF50;
+  border-color: #4CAF50;
+}
+
+.enterprise-settings-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.button-icon {
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-indicator {
+  font-size: 12px;
+  animation: pulse 1.5s ease-in-out infinite;
+  margin-left: 4px;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Control Panel Styles */
+.enterprise-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0; /* Выравнивание по правому краю кнопки */
+  background-color: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  min-width: 320px;
+  max-width: 400px;
+  padding: 16px;
+  animation: panelFadeIn 0.15s ease-out;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading State */
+.enterprise-loading {
+  padding: 20px;
+  text-align: center;
+  color: #d0d0d0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 12px;
+  border: 3px solid #3a3a3a;
+  border-top-color: #4CAF50;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.enterprise-loading p {
+  margin: 12px 0;
+  font-size: 13px;
+  color: #b0b0b0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background-color: #3a3a3a;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #66BB6A, #4CAF50);
+  background-size: 200% 100%;
+  animation: progressAnimation 1.5s ease-in-out infinite;
+}
+
+@keyframes progressAnimation {
+  0% {
+    width: 0%;
+    background-position: 0% 0%;
+  }
+  50% {
+    width: 70%;
+    background-position: 100% 0%;
+  }
+  100% {
+    width: 100%;
+    background-position: 200% 0%;
+  }
+}
+
+/* Info Section */
+.enterprise-info {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background-color: #1a3a1a;
+  border-radius: 4px;
+  color: #90ee90;
+  font-size: 12px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+}
+
+/* Checkbox Options */
+.enterprise-option {
+  margin: 8px 0;
+}
+
+.enterprise-option label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #d0d0d0;
+  font-size: 14px;
+  user-select: none;
+  transition: color 0.2s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.enterprise-option label span {
+  flex: 1;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.enterprise-option label:hover {
+  color: #fff;
+}
+
+.enterprise-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4CAF50;
+}
+
+/* Empty State */
+.enterprise-empty {
+  padding: 12px 8px;
+  margin-top: 8px;
+  color: #ff9800;
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+  background-color: #2a2010;
+  border: 1px solid #3a3020;
+  border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .enterprise-panel {
+    min-width: 280px;
+    max-width: calc(100vw - 40px); /* Ограничение по ширине экрана */
+  }
+
+  .enterprise-checkbox-text {
+    font-size: 11px;
+  }
+
+  .enterprise-settings-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+}

@@ -287,11 +287,12 @@ export const archiveDataApi = {
 
 // Enterprise volume API methods
 export const enterpriseApi = {
-  async getEnterpriseVolumes(lineIds, fromDate, toDate) {
+  async getEnterpriseVolumes(lineIds, fromDate, toDate, periodType = 'daily') {
     const params = {
       line_id: lineIds,
       from_date: fromDate,
-      to_date: toDate
+      to_date: toDate,
+      period_type: periodType
     };
     return await apiClient.get('/enterprise/volumes/', params);
   }
