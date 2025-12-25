@@ -1079,6 +1079,15 @@
 
             // Create legend controls
             createLegendControls(datasets);
+
+            // Force chart resize and update to ensure proper rendering
+            setTimeout(() => {
+                if (chart) {
+                    chart.resize();
+                    chart.update();
+                }
+            }, 0);
+
             showChart();
         }
 
@@ -1136,7 +1145,7 @@
             });
 
             // Update chart to apply hidden states
-            chart.update('none'); // 'none' skips animation
+            chart.update(); // Full update to ensure proper rendering
         }
 
         // Toggle dataset visibility
