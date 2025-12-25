@@ -963,7 +963,10 @@
                 const dataKey = `grs_${lineId}`;
                 datasets.push({
                     label: getLineName(lineId),
-                    data: data.map(item => item[dataKey] || 0),
+                    data: data.map(item => ({
+                        x: item.period,
+                        y: item[dataKey] || 0
+                    })),
                     borderColor: colors[index % colors.length],
                     backgroundColor: colors[index % colors.length] + '20',
                     borderWidth: 2,
@@ -1001,7 +1004,6 @@
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.map(item => item.period),
                     datasets: datasets
                 },
                 options: {
