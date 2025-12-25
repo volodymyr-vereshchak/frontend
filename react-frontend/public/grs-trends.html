@@ -950,9 +950,12 @@
                 : {
                     type: 'time',
                     time: {
-                        unit: 'hour',
+                        // Don't force unit - let Chart.js determine based on data range
                         displayFormats: {
-                            hour: 'dd.MM HH:mm'
+                            hour: 'dd.MM HH:mm',
+                            day: 'dd.MM',
+                            week: 'dd.MM',
+                            month: 'MMM yyyy'
                         },
                         tooltipFormat: 'dd.MM.yyyy HH:mm'
                     },
@@ -962,7 +965,8 @@
                         maxRotation: 45,
                         minRotation: 0,
                         source: 'auto',
-                        maxTicksLimit: 24
+                        autoSkip: true,
+                        maxTicksLimit: 50
                     }
                 };
 
