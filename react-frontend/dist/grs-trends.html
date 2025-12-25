@@ -625,10 +625,8 @@
                     processed[period] = {};
                 }
 
-                let totalEnterpriseVolume = 0;
-                item.devices?.forEach(device => {
-                    totalEnterpriseVolume += device.volume || 0;
-                });
+                // Use total_volume from API response (already summed by backend)
+                const totalEnterpriseVolume = item.total_volume || 0;
 
                 processed[period][item.line_id] = totalEnterpriseVolume;
             });
