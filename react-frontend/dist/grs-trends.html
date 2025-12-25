@@ -538,7 +538,8 @@
         const GRS_LINES = window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS || [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11];
 
         let chart = null;
-        let chartData = [];
+        let rawChartData = []; // Original volume data from API
+        let chartData = []; // Processed trend data (percentages)
         let lineNames = {};
         let currentPeriodType = 'daily'; // Track current period type
 
@@ -667,6 +668,9 @@
             try {
                 const data = await fetchEnterpriseVolumes(fromDate, toDate, currentPeriodType);
 
+                console.log('Enterprise API response:', data.length, 'records');
+                console.log('Sample enterprise data:', data.slice(0, 2));
+
                 if (!data || data.length === 0) {
                     showError('Нет данных по предприятиям за выбранный период');
                     document.getElementById('enterpriseToggle').checked = false;
@@ -675,10 +679,21 @@
                 }
 
                 enterpriseData = processEnterpriseData(data);
+                console.log('Processed enterprise data periods:', Object.keys(enterpriseData).length);
+                console.log('Sample processed data:', Object.entries(enterpriseData).slice(0, 2));
 
-                // Subtract enterprise volumes and recalculate trends
-                const netData = subtractEnterpriseVolumes(chartData, enterpriseData);
+                console.log('Original raw chart data:', rawChartData.length, 'records');
+                console.log('Sample raw chart data:', rawChartData.slice(0, 2));
+
+                // Subtract enterprise volumes from RAW data and recalculate trends
+                const netData = subtractEnterpriseVolumes(rawChartData, enterpriseData);
+                console.log('Net data after subtraction:', netData.length, 'records');
+                console.log('Sample net data:', netData.slice(0, 2));
+
                 const trendsData = calculateTrends(netData, currentPeriodType);
+                console.log('Trends data after calculation:', trendsData.length, 'records');
+                console.log('Sample trends data:', trendsData.slice(0, 2));
+
                 renderChart(trendsData, currentPeriodType);
 
             } catch (error) {
@@ -697,8 +712,8 @@
             enterpriseEnabled = checkbox.checked;
 
             if (enterpriseEnabled) {
-                // Check if chart data exists
-                if (!chartData || chartData.length === 0) {
+                // Check if raw chart data exists
+                if (!rawChartData || rawChartData.length === 0) {
                     showError('Сначала загрузите данные графика');
                     checkbox.checked = false;
                     enterpriseEnabled = false;
@@ -707,10 +722,10 @@
 
                 await loadEnterpriseData();
             } else {
-                // Deactivation - restore original trends
+                // Deactivation - restore original trends from raw data
                 enterpriseData = null;
-                if (chartData && chartData.length > 0) {
-                    const trendsData = calculateTrends(chartData, currentPeriodType);
+                if (rawChartData && rawChartData.length > 0) {
+                    const trendsData = calculateTrends(rawChartData, currentPeriodType);
                     renderChart(trendsData, currentPeriodType);
                 }
             }
@@ -757,7 +772,7 @@
                     : await fetchHourlyData(fromDate, toDate);
 
                 if (data && data.length > 0) {
-                    chartData = data; // Save original data
+                    rawChartData = data; // Save original volume data
 
                     // If enterprise is enabled, subtract volumes
                     let dataForTrends = data;
@@ -871,6 +886,7 @@
                 return;
             }
 
+            // Store processed trend data for reference
             chartData = data;
 
             if (!data || data.length === 0) {
