@@ -359,11 +359,19 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
       return dateA - dateB;
     });
 
-    const fromDate = sortedData[0].period.split('T')[0];
-    const toDate = sortedData[sortedData.length - 1].period.split('T')[0];
-
-    return { fromDate, toDate };
-  }, [data]);
+    // For hourly archive, preserve full datetime; for daily, use date only
+    if (archiveType === 'hourly') {
+      // Preserve full ISO datetime for hourly data
+      const fromDate = sortedData[0].period;
+      const toDate = sortedData[sortedData.length - 1].period;
+      return { fromDate, toDate };
+    } else {
+      // Extract date only for daily archive (backward compatible)
+      const fromDate = sortedData[0].period.split('T')[0];
+      const toDate = sortedData[sortedData.length - 1].period.split('T')[0];
+      return { fromDate, toDate };
+    }
+  }, [data, archiveType]);
 
   const columns = getChartColumns();
 
