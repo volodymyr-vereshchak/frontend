@@ -767,9 +767,16 @@
             hideChart();
 
             try {
-                const data = currentPeriodType === 'daily'
+                let data = currentPeriodType === 'daily'
                     ? await fetchDailyData(fromDate, toDate)
                     : await fetchHourlyData(fromDate, toDate);
+
+                // Filter irregular timestamps for hourly data
+                if (currentPeriodType === 'hourly' && data && data.length > 0) {
+                    console.log('[Trends] Raw hourly data:', data.length, 'records');
+                    data = filterIrregularHourlyTimestamps(data);
+                    console.log('[Trends] After filtering irregular timestamps:', data.length, 'records');
+                }
 
                 if (data && data.length > 0) {
                     rawChartData = data; // Save original volume data
@@ -824,6 +831,47 @@
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             return await response.json();
+        }
+
+        // Filter irregular hourly timestamps by line
+        function filterIrregularHourlyTimestamps(data) {
+            // Group by line_id
+            const lineDataMap = {};
+            data.forEach(record => {
+                const lineId = record.line_id;
+                if (!lineDataMap[lineId]) {
+                    lineDataMap[lineId] = [];
+                }
+                lineDataMap[lineId].push(record);
+            });
+
+            // Filter each line separately
+            const filtered = [];
+            Object.keys(lineDataMap).forEach(lineId => {
+                const lineRecords = lineDataMap[lineId];
+
+                lineRecords.forEach(record => {
+                    const date = new Date(record.period);
+
+                    // Validate date
+                    if (isNaN(date.getTime())) {
+                        console.warn('[Trends] Invalid date in record:', record.period);
+                        return;
+                    }
+
+                    // Keep only records at :00 minutes (regular hourly marks)
+                    const minutes = date.getMinutes();
+                    if (minutes !== 0) {
+                        console.log('[Trends] Filtered irregular timestamp for line', lineId + ':',
+                                    record.period, `(minutes=${minutes})`);
+                        return;
+                    }
+
+                    filtered.push(record);
+                });
+            });
+
+            return filtered;
         }
 
         // Calculate percentage trends
