@@ -1046,10 +1046,33 @@
             showChart();
         }
 
+        // Load dataset visibility preferences from localStorage
+        function loadDatasetPreferences() {
+            const storageKey = 'hlviewer-trends-dataset-visibility';
+            const saved = localStorage.getItem(storageKey);
+            if (saved) {
+                try {
+                    return JSON.parse(saved);
+                } catch (e) {
+                    return {};
+                }
+            }
+            return {};
+        }
+
+        // Save dataset visibility preferences to localStorage
+        function saveDatasetPreferences(preferences) {
+            const storageKey = 'hlviewer-trends-dataset-visibility';
+            localStorage.setItem(storageKey, JSON.stringify(preferences));
+        }
+
         // Create interactive legend
         function createLegendControls(datasets) {
             const legendContainer = document.getElementById('legendControls');
             legendContainer.innerHTML = '';
+
+            // Load saved preferences
+            const savedPreferences = loadDatasetPreferences();
 
             datasets.forEach((dataset, index) => {
                 const legendItem = document.createElement('div');
@@ -1066,7 +1089,18 @@
                 legendItem.appendChild(colorBox);
                 legendItem.appendChild(label);
                 legendContainer.appendChild(legendItem);
+
+                // Apply saved visibility state
+                const meta = chart.getDatasetMeta(index);
+                const isHidden = savedPreferences[dataset.label];
+                if (isHidden !== undefined) {
+                    meta.hidden = isHidden;
+                    legendItem.classList.toggle('hidden', isHidden);
+                }
             });
+
+            // Update chart to apply hidden states
+            chart.update('none'); // 'none' skips animation
         }
 
         // Toggle dataset visibility
@@ -1077,6 +1111,14 @@
 
             const legendItems = document.querySelectorAll('.legend-item');
             legendItems[index].classList.toggle('hidden', meta.hidden);
+
+            // Save preferences
+            const preferences = {};
+            chart.data.datasets.forEach((dataset, idx) => {
+                const datasetMeta = chart.getDatasetMeta(idx);
+                preferences[dataset.label] = datasetMeta.hidden;
+            });
+            saveDatasetPreferences(preferences);
         }
 
         // UI helper functions

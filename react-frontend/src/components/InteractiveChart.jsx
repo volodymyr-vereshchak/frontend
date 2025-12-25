@@ -225,11 +225,34 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
   // Initialize visible lines when data changes
   useEffect(() => {
     if (data && data.length > 0) {
-      const initialVisible = {};
       const columns = getChartColumns();
-      columns.forEach(col => {
-        initialVisible[col.key] = true;
-      });
+
+      // Try to load saved preferences from localStorage
+      const storageKey = `hlviewer-chart-visible-${archiveType}`;
+      const savedPreferences = localStorage.getItem(storageKey);
+
+      const initialVisible = {};
+
+      if (savedPreferences) {
+        try {
+          const saved = JSON.parse(savedPreferences);
+          // Use saved preferences but ensure all current columns are present
+          columns.forEach(col => {
+            initialVisible[col.key] = saved[col.key] !== undefined ? saved[col.key] : true;
+          });
+        } catch (e) {
+          // If parsing fails, default to all visible
+          columns.forEach(col => {
+            initialVisible[col.key] = true;
+          });
+        }
+      } else {
+        // No saved preferences, default to all visible
+        columns.forEach(col => {
+          initialVisible[col.key] = true;
+        });
+      }
+
       setVisibleLines(initialVisible);
     }
   }, [data, archiveType]);
@@ -336,10 +359,18 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
 
   const toggleLine = (lineKey) => {
     console.log('Toggling line:', lineKey);
-    setVisibleLines(prev => ({
-      ...prev,
-      [lineKey]: !prev[lineKey]
-    }));
+    setVisibleLines(prev => {
+      const newVisibleLines = {
+        ...prev,
+        [lineKey]: !prev[lineKey]
+      };
+
+      // Save to localStorage
+      const storageKey = `hlviewer-chart-visible-${archiveType}`;
+      localStorage.setItem(storageKey, JSON.stringify(newVisibleLines));
+
+      return newVisibleLines;
+    });
   };
 
   // Handle enterprise overlay data changes
