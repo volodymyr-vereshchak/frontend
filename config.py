@@ -21,7 +21,8 @@ settings = {
     "SERVER_PORT": int(os.getenv("SERVER_PORT", "8060")),
 
     # GRS Configuration
-    "GRS_LINES_IDS": parse_int_list("GRS_LINES_IDS", [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11]),
-    "GRS_HIGH_P_LINES_IDS": parse_int_list("GRS_HIGH_P_LINES_IDS", [1, 6, 8, 12]),
+    # Virtual lines (1001-1004) + physical lines not in rings
+    "GRS_LINES_IDS": parse_int_list("GRS_LINES_IDS", [6, 11, 16, 17, 18, 19, 20, 21, 1001, 1002, 1003, 1004]),
+    "GRS_HIGH_P_LINES_IDS": parse_int_list("GRS_HIGH_P_LINES_IDS", [6, 1002]),  # Updated: 1002 (ring) instead of 1, 8
     "GRS_PRESSURE_DIVISOR": int(os.getenv("GRS_PRESSURE_DIVISOR", "10000")),
 }

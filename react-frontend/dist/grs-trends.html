@@ -579,25 +579,32 @@
             return lineNames[lineId] || `${lineId}`;
         }
 
-        // Fetch visible lines from virtual lines API
+        // Fetch line names from virtual lines API (for both virtual and physical lines)
         async function fetchVisibleLines() {
             try {
                 const response = await fetch(`${API_BASE_URL}/virtual_lines/visible`);
                 if (response.ok) {
                     const lines = await response.json();
                     if (lines && lines.length > 0) {
-                        GRS_LINES = lines.map(line => line.id);
-                        console.log('Loaded visible lines from API:', GRS_LINES);
-                        // Update line names map
+                        // Update line names map with data from API
                         lines.forEach(line => {
                             lineNames[line.id] = line.name || `Line ${line.id}`;
                         });
+                        console.log('Loaded line names from virtual_lines API:', Object.keys(lineNames).length, 'lines');
+                        console.log('Using GRS lines from config:', GRS_LINES);
                     }
                 }
             } catch (error) {
-                console.warn('Could not fetch visible lines, using fallback:', error);
+                console.warn('Could not fetch visible lines, using fallback names:', error);
+                // Fallback to default names
+                GRS_LINES.forEach(lineId => {
+                    if (!lineNames[lineId]) {
+                        lineNames[lineId] = `Line ${lineId}`;
+                    }
+                });
             }
         }
+
 
         // Show/hide enterprise loading indicator
         function showEnterpriseLoading(show) {
@@ -1219,7 +1226,7 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', async function() {
             initializeDates();
-            await fetchLineNames();
+            
             await fetchVisibleLines();
             updateUI();
 
