@@ -535,7 +535,7 @@
         // Configuration
         const API_BASE_URL = window.APP_CONFIG?.API_URL || 'http://localhost:8000';
         // Use same lines as GRS 24h report for consistency
-        const GRS_LINES = window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS || [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11];
+        let GRS_LINES = window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS || [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11];
 
         let chart = null;
         let rawChartData = []; // Original volume data from API
@@ -579,6 +579,26 @@
             return lineNames[lineId] || `${lineId}`;
         }
 
+        // Fetch visible lines from virtual lines API
+        async function fetchVisibleLines() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/virtual_lines/visible`);
+                if (response.ok) {
+                    const lines = await response.json();
+                    if (lines && lines.length > 0) {
+                        GRS_LINES = lines.map(line => line.id);
+                        console.log('Loaded visible lines from API:', GRS_LINES);
+                        // Update line names map
+                        lines.forEach(line => {
+                            lineNames[line.id] = line.name || `Line ${line.id}`;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.warn('Could not fetch visible lines, using fallback:', error);
+            }
+        }
+
         // Show/hide enterprise loading indicator
         function showEnterpriseLoading(show) {
             document.getElementById('enterpriseLoading').style.display = show ? 'flex' : 'none';
@@ -596,7 +616,7 @@
             let lastError = null;
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
-                    const response = await fetch(`${API_BASE_URL}/enterprise/volumes/?${params}`);
+                    const response = await fetch(`${API_BASE_URL}/enterprise/volumes_virtual/?${params}`);
                     if (!response.ok) {
                         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
@@ -812,7 +832,7 @@
             params.append('from_date', fromDate);
             params.append('to_date', toDate);
 
-            const response = await fetch(`${API_BASE_URL}/daily/?${params}`);
+            const response = await fetch(`${API_BASE_URL}/daily_virtual/?${params}`);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -826,7 +846,7 @@
             params.append('from_date', fromDate);
             params.append('to_date', toDate);
 
-            const response = await fetch(`${API_BASE_URL}/hourly/?${params}`);
+            const response = await fetch(`${API_BASE_URL}/hourly_virtual/?${params}`);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -1200,6 +1220,7 @@
         document.addEventListener('DOMContentLoaded', async function() {
             initializeDates();
             await fetchLineNames();
+            await fetchVisibleLines();
             updateUI();
 
             // Add event listener for period type toggle

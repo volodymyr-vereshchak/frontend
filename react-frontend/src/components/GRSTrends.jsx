@@ -102,6 +102,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
   }, [visibleLines]);
 
   const calculateTrends = async () => {
+    console.log('VIRTUAL_LINES_TEST_12345'); // DEBUG: test if new code is loaded
     if (grsLines.length === 0) {
       setError(t('noGrsLinesConfigured'));
       return;
