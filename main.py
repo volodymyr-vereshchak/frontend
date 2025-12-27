@@ -26,6 +26,7 @@ class ReactApp:
         grs_config = {
             "LINES_IDS": settings.get('GRS_LINES_IDS', []),
             "HIGH_P_LINES_IDS": settings.get('GRS_HIGH_P_LINES_IDS', []),
+            "TRENDS_IDS": settings.get('GRS_TRENDS_IDS', []),
             "PRESSURE_DIVISOR": settings.get('GRS_PRESSURE_DIVISOR', 10000)
         }
 
