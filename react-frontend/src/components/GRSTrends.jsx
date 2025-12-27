@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { archiveDataApi, enterpriseApi } from '../services/api';
+import {
+  virtualLinesApi,
+  archiveDataVirtualApi,
+  enterpriseVirtualApi
+} from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
 import InteractiveChart from './InteractiveChart';
@@ -10,6 +14,8 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [chartData, setChartData] = useState([]);
+  const [visibleLines, setVisibleLines] = useState([]);
+  const [linesLoading, setLinesLoading] = useState(false);
 
   // Get initial date range (first day of current month to today)
   const getInitialDateRange = () => {
@@ -34,14 +40,66 @@ const GRSTrends = ({ isOpen, onClose }) => {
 
   const [dateRange, setDateRange] = useState(getInitialDateRange);
 
-  // Get GRS lines from runtime config (same as GRS 24h report for consistency)
-  const grsLines = useMemo(() => {
-    if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
-      return window.APP_CONFIG.GRS_CONFIG.LINES_IDS;
+  // Load visible lines on component mount
+  useEffect(() => {
+    const loadVisibleLines = async () => {
+      setLinesLoading(true);
+      try {
+        const lines = await virtualLinesApi.getVisibleLines();
+        if (lines && lines.length > 0) {
+          setVisibleLines(lines);
+        } else {
+          // Fallback to hardcoded config if API returns empty
+          if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
+            const fallbackLines = window.APP_CONFIG.GRS_CONFIG.LINES_IDS.map(id => ({
+              id: id,
+              name: `Line ${id}`,
+              is_virtual: false
+            }));
+            setVisibleLines(fallbackLines);
+          } else {
+            // Default fallback
+            const defaultLines = [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11].map(id => ({
+              id: id,
+              name: `Line ${id}`,
+              is_virtual: false
+            }));
+            setVisibleLines(defaultLines);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading visible lines:', err);
+        // Fallback to hardcoded config on error
+        if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
+          const fallbackLines = window.APP_CONFIG.GRS_CONFIG.LINES_IDS.map(id => ({
+            id: id,
+            name: `Line ${id}`,
+            is_virtual: false
+          }));
+          setVisibleLines(fallbackLines);
+        } else {
+          // Default fallback
+          const defaultLines = [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11].map(id => ({
+            id: id,
+            name: `Line ${id}`,
+            is_virtual: false
+          }));
+          setVisibleLines(defaultLines);
+        }
+      } finally {
+        setLinesLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      loadVisibleLines();
     }
-    // Fallback to default
-    return [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11];
-  }, []);
+  }, [isOpen]);
+
+  // Extract line IDs from visible lines
+  const grsLines = useMemo(() => {
+    return visibleLines.map(line => line.id);
+  }, [visibleLines]);
 
   const calculateTrends = async () => {
     if (grsLines.length === 0) {
@@ -53,10 +111,10 @@ const GRSTrends = ({ isOpen, onClose }) => {
     setError(null);
 
     try {
-      // Fetch daily data and enterprise data in parallel
+      // Fetch daily data and enterprise data in parallel using VIRTUAL endpoints
       const [dailyData, enterpriseData] = await Promise.all([
-        archiveDataApi.getDailyData(grsLines, dateRange.fromDate, dateRange.toDate),
-        enterpriseApi.getEnterpriseVolumes(grsLines, dateRange.fromDate, dateRange.toDate)
+        archiveDataVirtualApi.getDailyDataVirtual(grsLines, dateRange.fromDate, dateRange.toDate),
+        enterpriseVirtualApi.getEnterpriseVolumesVirtual(grsLines, dateRange.fromDate, dateRange.toDate)
       ]);
 
       if (!dailyData || dailyData.length === 0) {

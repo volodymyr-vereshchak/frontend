@@ -298,6 +298,48 @@ export const enterpriseApi = {
   }
 };
 
+// ========================================
+// Virtual Lines API (with virtual lines support)
+// ========================================
+
+export const virtualLinesApi = {
+  async getVisibleLines() {
+    return await apiClient.get('/virtual_lines/visible');
+  }
+};
+
+export const archiveDataVirtualApi = {
+  async getDailyDataVirtual(lineIds, fromDate, toDate) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate
+    };
+    return await apiClient.get('/daily_virtual/', params);
+  },
+
+  async getHourlyDataVirtual(lineIds, fromDate, toDate) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate
+    };
+    return await apiClient.get('/hourly_virtual/', params);
+  }
+};
+
+export const enterpriseVirtualApi = {
+  async getEnterpriseVolumesVirtual(lineIds, fromDate, toDate, periodType = 'daily') {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate,
+      period_type: periodType
+    };
+    return await apiClient.get('/enterprise/volumes_virtual/', params);
+  }
+};
+
 // Commercial day aggregation utilities
 export const commercialDayUtils = {
   // Aggregate hourly counts to commercial days (07:00 to 06:00)
