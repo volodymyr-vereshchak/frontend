@@ -308,7 +308,7 @@
     <div class="container">
         <div class="header">
             <h1>Ночные расходы</h1>
-            <p>Минимальный расход газа с 00:00 до 05:00 по каждой ГРС</p>
+            <p>Минимальный NET объем (без промышленности) с 00:00 до 05:00 по каждой ГРС</p>
         </div>
 
         <div class="controls">
@@ -329,7 +329,7 @@
 
         <div class="table-container">
             <div class="table-header">
-                <h3>Таблица минимальных расходов</h3>
+                <h3>Таблица минимальных NET расходов</h3>
                 <button class="excel-export-btn" id="exportBtn" onclick="exportToExcel()" style="display: none;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M18.53 9L13 3.47C12.8595 3.32931 12.6688 3.25018 12.47 3.25H8C7.27065 3.25 6.57118 3.53973 6.05546 4.05546C5.53973 4.57118 5.25 5.27065 5.25 6V18C5.25 18.7293 5.53973 19.4288 6.05546 19.9445C6.57118 20.4603 7.27065 20.75 8 20.75H16C16.7293 20.75 17.4288 20.4603 17.9445 19.9445C18.4603 19.4288 18.75 18.7293 18.75 18V9.5C18.7421 9.3116 18.6636 9.13309 18.53 9Z" fill="currentColor"/>
@@ -363,11 +363,11 @@
         const translations = {
             ru: {
                 title: 'Ночные расходы',
-                description: 'Минимальный расход газа с 00:00 до 05:00 по каждой ГРС',
+                description: 'Минимальный NET объем (без промышленности) с 00:00 до 05:00 по каждой ГРС',
                 dateFrom: 'Дата с:',
                 dateTo: 'Дата по:',
                 loadData: 'Загрузить данные',
-                tableTitle: 'Таблица минимальных расходов',
+                tableTitle: 'Таблица минимальных NET расходов',
                 loading: 'Загрузка данных...',
                 noData: 'Нет данных для отображения',
                 error: 'Ошибка загрузки данных:',
@@ -376,11 +376,11 @@
             },
             uk: {
                 title: 'Нічні витрати',
-                description: 'Мінімальна витрата газу з 00:00 до 05:00 по кожній ГРС',
+                description: 'Мінімальний NET об\'єм (без промисловості) з 00:00 до 05:00 по кожній ГРС',
                 dateFrom: 'Дата з:',
                 dateTo: 'Дата по:',
                 loadData: 'Завантажити дані',
-                tableTitle: 'Таблиця мінімальних витрат',
+                tableTitle: 'Таблиця мінімальних NET витрат',
                 loading: 'Завантаження даних...',
                 noData: 'Немає даних для відображення',
                 error: 'Помилка завантаження даних:',
@@ -408,10 +408,12 @@
         }
 
         const API_BASE_URL = window.APP_CONFIG?.API_URL || 'http://localhost:8000';
-        const GRS_LINES = window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS || [6,9,10,26,25,24,23,21,11,13,20,22,17,15,16];
+        let GRS_LINES = window.APP_CONFIG?.GRS_CONFIG?.TRENDS_IDS || [6, 11, 16, 17, 18, 19, 20, 21, 1001, 1002, 1003, 1004];
 
         let tableData = [];
         let lineNames = {};
+        let visibleLines = [];
+        let useVirtualLines = false;
 
         async function fetchLineNames() {
             try {
@@ -432,6 +434,36 @@
 
         function getLineName(lineId) {
             return lineNames[lineId] || `Line ${lineId}`;
+        }
+
+        async function fetchVisibleLines() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/virtual_lines/visible`);
+                if (response.ok) {
+                    const lines = await response.json();
+                    if (lines && lines.length > 0) {
+                        visibleLines = lines;
+                        useVirtualLines = true;
+
+                        // Update line names from visible lines
+                        lines.forEach(line => {
+                            lineNames[line.id] = line.name || `Line ${line.id}`;
+                        });
+
+                        // Update GRS_LINES with line IDs
+                        GRS_LINES = lines.map(line => line.id);
+
+                        console.log('Loaded visible lines from API:', GRS_LINES.length, 'lines');
+                        return true;
+                    }
+                }
+            } catch (error) {
+                console.warn('Could not fetch visible lines, using fallback:', error);
+            }
+
+            // Fallback: use config or default
+            useVirtualLines = false;
+            return false;
         }
 
         function initializeDates() {
@@ -458,16 +490,28 @@
             hideTable();
 
             try {
-                const hourlyData = await fetchHourlyData(fromDate, toDate);
-                if (hourlyData && hourlyData.length > 0) {
-                    const nightData = calculateNightConsumption(hourlyData);
-                    if (nightData.length > 0) {
-                        tableData = nightData;
-                        renderTable(nightData);
-                        document.getElementById('exportBtn').style.display = 'flex';
-                    } else {
-                        showNoData();
-                    }
+                // Fetch hourly data and enterprise data in parallel
+                const [hourlyData, enterpriseData] = await Promise.all([
+                    fetchHourlyData(fromDate, toDate),
+                    fetchEnterpriseVolumes(fromDate, toDate)
+                ]);
+
+                if (!hourlyData || hourlyData.length === 0) {
+                    showNoData();
+                    return;
+                }
+
+                // Warning if no enterprise data (not an error)
+                if (!enterpriseData || enterpriseData.length === 0) {
+                    console.warn('No enterprise data available, using GS volumes only');
+                }
+
+                // Calculate night consumption with enterprise subtraction
+                const nightData = calculateNightConsumption(hourlyData, enterpriseData || []);
+                if (nightData.length > 0) {
+                    tableData = nightData;
+                    renderTable(nightData);
+                    document.getElementById('exportBtn').style.display = 'flex';
                 } else {
                     showNoData();
                 }
@@ -485,14 +529,69 @@
             params.append('from_date', fromDate);
             params.append('to_date', toDate);
 
-            const response = await fetch(`${API_BASE_URL}/hourly/?${params}`);
+            const response = await fetch(`${API_BASE_URL}/hourly_virtual/?${params}`);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             return await response.json();
         }
 
-        function calculateNightConsumption(hourlyData) {
+        async function fetchEnterpriseVolumes(fromDate, toDate) {
+            const params = new URLSearchParams();
+            GRS_LINES.forEach(lineId => params.append('line_id', lineId));
+            params.append('from_date', fromDate);
+            params.append('to_date', toDate);
+            params.append('period_type', 'hourly'); // CRITICAL: period_type='hourly' for hourly matching
+
+            let lastError = null;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/enterprise/volumes_virtual/?${params}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Attempt ${attempt}/3 failed:`, error);
+                    lastError = error;
+                    if (attempt < 3) {
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                    }
+                }
+            }
+
+            // Graceful degradation - return empty array instead of throwing
+            console.warn('Enterprise data unavailable:', lastError);
+            return [];
+        }
+
+        function calculateNightConsumption(hourlyData, enterpriseData = []) {
+            // STEP 1: Create enterprise lookup map with FULL datetime for exact hourly matching
+            // Structure: {line_id: {datetime: total_volume}}
+            const enterpriseMap = {};
+
+            enterpriseData.forEach(entry => {
+                const lineId = entry.line_id;
+                const datetime = entry.period; // Keep full datetime: "2025-12-01T03:00:00"
+
+                if (!enterpriseMap[lineId]) {
+                    enterpriseMap[lineId] = {};
+                }
+
+                // Sum up all device volumes for this period
+                let totalVolume = 0;
+                if (entry.devices && Array.isArray(entry.devices)) {
+                    entry.devices.forEach(device => {
+                        totalVolume += device.volume || 0;
+                    });
+                } else if (entry.total_volume !== undefined) {
+                    totalVolume = entry.total_volume;
+                }
+
+                enterpriseMap[lineId][datetime] = totalVolume;
+            });
+
+            // STEP 2: Group hourly data by date and line for night period (0-5 hours)
             const dataByDateAndLine = {};
 
             hourlyData.forEach(record => {
@@ -526,8 +625,15 @@
                     }
                 }
 
+                // Only consider hours 00:00 to 05:00 (inclusive)
                 if (hour >= 0 && hour <= 5) {
                     const lineId = record.line_id;
+                    const fullDatetime = periodStr; // Keep full datetime for enterprise lookup
+
+                    // STEP 3: Calculate NET = MAX(0, GS Volume - Enterprise Volume)
+                    const gsVolume = record.volume || 0;
+                    const enterpriseVolume = (enterpriseMap[lineId]?.[fullDatetime]) || 0;
+                    const netVolume = Math.max(0, gsVolume - enterpriseVolume);
 
                     if (!dataByDateAndLine[date]) {
                         dataByDateAndLine[date] = {};
@@ -537,21 +643,21 @@
                         dataByDateAndLine[date][lineId] = [];
                     }
 
-                    // Use volume for night consumption
-                    const flowValue = record.volume || 0;
-                    dataByDateAndLine[date][lineId].push(flowValue);
+                    // Store NET volume instead of raw GS volume
+                    dataByDateAndLine[date][lineId].push(netVolume);
                 }
             });
 
+            // STEP 4: Find MIN(NET volumes) for each date and line
             const result = [];
 
             Object.keys(dataByDateAndLine).sort().forEach(date => {
                 const row = { date };
 
                 GRS_LINES.forEach(lineId => {
-                    const flows = dataByDateAndLine[date][lineId];
-                    if (flows && flows.length > 0) {
-                        row[`line_${lineId}`] = Math.min(...flows);
+                    const netVolumes = dataByDateAndLine[date][lineId];
+                    if (netVolumes && netVolumes.length > 0) {
+                        row[`line_${lineId}`] = Math.min(...netVolumes);
                     } else {
                         row[`line_${lineId}`] = null;
                     }
@@ -664,7 +770,15 @@
 
         document.addEventListener('DOMContentLoaded', async function() {
             initializeDates();
-            await fetchLineNames();
+
+            // Try to load virtual lines first, fallback to fetchLineNames
+            const virtualLinesLoaded = await fetchVisibleLines();
+
+            // If virtual lines didn't load, use fetchLineNames as fallback
+            if (!virtualLinesLoaded) {
+                await fetchLineNames();
+            }
+
             updateUI();
         });
     </script>

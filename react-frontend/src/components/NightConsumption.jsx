@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { archiveDataApi, dataApi } from '../services/api';
+import {
+  archiveDataApi,
+  dataApi,
+  virtualLinesApi,
+  archiveDataVirtualApi,
+  enterpriseVirtualApi,
+  virtualLinesHelper
+} from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
 import * as XLSX from 'xlsx';
@@ -19,6 +26,8 @@ const NightConsumption = ({ isOpen, onClose }) => {
   const [error, setError] = useState(null);
   const [tableData, setTableData] = useState([]);
   const [lineNames, setLineNames] = useState({});
+  const [visibleLines, setVisibleLines] = useState([]);
+  const [linesLoading, setLinesLoading] = useState(false);
 
   // Get initial date range (first day of current month to today)
   const getInitialDateRange = () => {
@@ -40,31 +49,98 @@ const NightConsumption = ({ isOpen, onClose }) => {
 
   const [dateRange, setDateRange] = useState(getInitialDateRange);
 
-  // Get GRS lines from runtime config (injected by Python server)
-  const grsLines = useMemo(() => {
-    if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
-      return window.APP_CONFIG.GRS_CONFIG.LINES_IDS;
-    }
-    return [6, 9, 10, 26, 25, 24, 23, 21, 11, 13, 20, 22, 17, 15, 16];
-  }, []);
-
-  // Fetch line names
+  // Load visible lines on component mount
   useEffect(() => {
-    const fetchLineNames = async () => {
+    const loadVisibleLines = async () => {
+      if (!isOpen) return;
+
+      setLinesLoading(true);
       try {
-        const lines = await dataApi.getLines();
-        const namesMap = {};
-        lines.forEach(line => {
-          namesMap[line.id] = line.name || `Line ${line.id}`;
-        });
-        setLineNames(namesMap);
+        const lines = await virtualLinesApi.getVisibleLines();
+        if (lines && lines.length > 0) {
+          setVisibleLines(lines);
+
+          // Extract line names from visible lines
+          const namesMap = {};
+          lines.forEach(line => {
+            namesMap[line.id] = line.name || `Line ${line.id}`;
+          });
+          setLineNames(namesMap);
+        } else {
+          // Fallback to hardcoded config if API returns empty
+          if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
+            const fallbackLines = window.APP_CONFIG.GRS_CONFIG.LINES_IDS.map(id => ({
+              id: id,
+              name: `Line ${id}`,
+              is_virtual: false
+            }));
+            setVisibleLines(fallbackLines);
+
+            // Fetch line names for fallback
+            try {
+              const linesData = await dataApi.getLines();
+              const namesMap = {};
+              linesData.forEach(line => {
+                namesMap[line.id] = line.name || `Line ${line.id}`;
+              });
+              setLineNames(namesMap);
+            } catch (err) {
+              console.error('Error fetching line names:', err);
+              const namesMap = {};
+              fallbackLines.forEach(line => {
+                namesMap[line.id] = line.name;
+              });
+              setLineNames(namesMap);
+            }
+          } else {
+            // Default fallback - use TRENDS_IDS from config
+            const defaultLineIds = (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.TRENDS_IDS)
+              ? window.APP_CONFIG.GRS_CONFIG.TRENDS_IDS
+              : [6, 11, 16, 17, 18, 19, 20, 21, 1001, 1002, 1003, 1004];
+
+            const defaultLines = defaultLineIds.map(id => ({
+              id: id,
+              name: `Line ${id}`,
+              is_virtual: id >= 1000
+            }));
+            setVisibleLines(defaultLines);
+
+            const namesMap = {};
+            defaultLines.forEach(line => {
+              namesMap[line.id] = line.name;
+            });
+            setLineNames(namesMap);
+          }
+        }
       } catch (err) {
-        console.error('Error fetching line names:', err);
+        console.error('Error loading visible lines:', err);
+        // Fallback on error
+        if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
+          const fallbackLines = window.APP_CONFIG.GRS_CONFIG.LINES_IDS.map(id => ({
+            id: id,
+            name: `Line ${id}`,
+            is_virtual: false
+          }));
+          setVisibleLines(fallbackLines);
+
+          const namesMap = {};
+          fallbackLines.forEach(line => {
+            namesMap[line.id] = line.name;
+          });
+          setLineNames(namesMap);
+        }
+      } finally {
+        setLinesLoading(false);
       }
     };
 
-    fetchLineNames();
-  }, []);
+    loadVisibleLines();
+  }, [isOpen]);
+
+  // Extract line IDs from visible lines
+  const grsLines = useMemo(() => {
+    return visibleLines.map(line => line.id);
+  }, [visibleLines]);
 
   const calculateNightConsumption = async () => {
     if (grsLines.length === 0) {
@@ -76,12 +152,20 @@ const NightConsumption = ({ isOpen, onClose }) => {
     setError(null);
 
     try {
-      // Fetch hourly data for all GRS lines for the selected period
-      const hourlyData = await archiveDataApi.getHourlyData(
-        grsLines,
-        dateRange.fromDate,
-        dateRange.toDate
-      );
+      // Fetch hourly data and enterprise data in parallel using VIRTUAL endpoints
+      const [hourlyData, enterpriseData] = await Promise.all([
+        archiveDataVirtualApi.getHourlyDataVirtual(
+          grsLines,
+          dateRange.fromDate,
+          dateRange.toDate
+        ),
+        enterpriseVirtualApi.getEnterpriseVolumesVirtual(
+          grsLines,
+          dateRange.fromDate,
+          dateRange.toDate,
+          'hourly' // CRITICAL: period_type='hourly' for hourly enterprise data
+        )
+      ]);
 
       if (!hourlyData || hourlyData.length === 0) {
         setError(t('noDataAvailable'));
@@ -89,8 +173,17 @@ const NightConsumption = ({ isOpen, onClose }) => {
         return;
       }
 
-      // Calculate night consumption
-      const nightData = calculateMinNightFlow(hourlyData, grsLines);
+      // Log warning if no enterprise data (not an error)
+      if (!enterpriseData || enterpriseData.length === 0) {
+        console.warn('No enterprise data available, using GS volumes only');
+      }
+
+      // Calculate night consumption with enterprise subtraction
+      const nightData = calculateMinNightFlow(
+        hourlyData,
+        grsLines,
+        enterpriseData || []
+      );
       setTableData(nightData);
 
     } catch (err) {
@@ -101,8 +194,33 @@ const NightConsumption = ({ isOpen, onClose }) => {
     }
   };
 
-  const calculateMinNightFlow = (hourlyData, lineIds) => {
-    // Group data by date and line_id
+  const calculateMinNightFlow = (hourlyData, lineIds, enterpriseData = []) => {
+    // STEP 1: Create enterprise lookup map with FULL datetime for exact hourly matching
+    // Structure: {line_id: {datetime: total_volume}}
+    const enterpriseMap = {};
+
+    enterpriseData.forEach(entry => {
+      const lineId = entry.line_id;
+      const datetime = entry.period; // Keep full datetime: "2025-12-01T03:00:00"
+
+      if (!enterpriseMap[lineId]) {
+        enterpriseMap[lineId] = {};
+      }
+
+      // Sum up all device volumes for this period
+      let totalVolume = 0;
+      if (entry.devices && Array.isArray(entry.devices)) {
+        entry.devices.forEach(device => {
+          totalVolume += device.volume || 0;
+        });
+      } else if (entry.total_volume !== undefined) {
+        totalVolume = entry.total_volume;
+      }
+
+      enterpriseMap[lineId][datetime] = totalVolume;
+    });
+
+    // STEP 2: Group hourly data by date and line for night period (0-5 hours)
     const dataByDateAndLine = {};
 
     hourlyData.forEach((record) => {
@@ -140,6 +258,12 @@ const NightConsumption = ({ isOpen, onClose }) => {
       // Only consider hours 00:00 to 05:00 (inclusive)
       if (hour >= 0 && hour <= 5) {
         const lineId = record.line_id;
+        const fullDatetime = periodStr; // Keep full datetime for enterprise lookup
+
+        // STEP 3: Calculate NET = MAX(0, GS Volume - Enterprise Volume)
+        const gsVolume = record.volume !== undefined ? record.volume : (record.flow || 0);
+        const enterpriseVolume = (enterpriseMap[lineId]?.[fullDatetime]) || 0;
+        const netVolume = Math.max(0, gsVolume - enterpriseVolume);
 
         if (!dataByDateAndLine[date]) {
           dataByDateAndLine[date] = {};
@@ -149,22 +273,21 @@ const NightConsumption = ({ isOpen, onClose }) => {
           dataByDateAndLine[date][lineId] = [];
         }
 
-        // Use volume instead of flow
-        const value = record.volume !== undefined ? record.volume : (record.flow || 0);
-        dataByDateAndLine[date][lineId].push(value);
+        // Store NET volume instead of raw GS volume
+        dataByDateAndLine[date][lineId].push(netVolume);
       }
     });
 
-    // Calculate minimum flow for each date and line
+    // STEP 4: Find MIN(NET volumes) for each date and line
     const result = [];
 
     Object.keys(dataByDateAndLine).sort().forEach(date => {
       const row = { date };
 
       lineIds.forEach(lineId => {
-        const flows = dataByDateAndLine[date][lineId];
-        if (flows && flows.length > 0) {
-          row[`line_${lineId}`] = Math.min(...flows);
+        const netVolumes = dataByDateAndLine[date][lineId];
+        if (netVolumes && netVolumes.length > 0) {
+          row[`line_${lineId}`] = Math.min(...netVolumes);
         } else {
           row[`line_${lineId}`] = null;
         }
@@ -279,7 +402,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
           {!isLoading && !error && tableData.length > 0 && (
             <div className="table-section">
               <div className="table-header">
-                <h4>{t('nightConsumptionDescription')}</h4>
+                <h4>{t('nightConsumptionNetDescription')}</h4>
                 <button
                   className="export-button"
                   onClick={exportToExcel}

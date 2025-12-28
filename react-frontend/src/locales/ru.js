@@ -68,6 +68,7 @@ export const ru = {
   grsTrends: "Тренды ГРС",
   nightConsumption: "Ночные расходы",
   nightConsumptionDescription: "Минимальный расход газа с 00:00 до 05:00 по каждой ГРС",
+  nightConsumptionNetDescription: "Минимальный NET объем (без промышленности) с 00:00 до 05:00 по каждой ГРС",
   accidents: "Аварии",
   accidentsReport: "Отчет по авариям",
   accidentsDescription: "Анализ аварийных событий по линиям за выбранный период",
