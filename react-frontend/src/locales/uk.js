@@ -164,5 +164,11 @@ export const uk = {
   loadingEnterpriseData: "Завантаження даних підприємств...",
   netVolume: "Net Volume (Лінія - Підприємства)",
   totalEnterpriseVolume: "Сумарний об'єм підприємств",
-  enterpriseNoData: "Немає даних по підприємствах за обраний період"
+  enterpriseNoData: "Немає даних по підприємствах за обраний період",
+
+  // Virtual Lines
+  virtualLines: "Віртуальні лінії",
+  virtualLineTooltip: "Віртуальна лінія (агрегація кількох фізичних ліній)",
+  notAvailableForVirtualLines: "Недоступно для віртуальних ліній",
+  virtualLinesSupportOnlyDailyHourly: "Віртуальні лінії підтримують тільки добовий та годинний архіви"
 };

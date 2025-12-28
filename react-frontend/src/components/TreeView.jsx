@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './TreeView.css';
-import { dataApi, lineApi } from '../services/api';
+import { dataApi, lineApi, virtualLinesApi, virtualLinesHelper } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // SVG Icon Components
@@ -37,6 +37,23 @@ const LineIcon = ({ selected = false }) => (
   </svg>
 );
 
+const VirtualLineIcon = ({ selected = false }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle
+      cx="12"
+      cy="12"
+      r="9"
+      fill="none"
+      stroke={selected ? "#ffffff" : "#9C27B0"}
+      strokeWidth="1.5"
+      strokeDasharray="2 2"
+    />
+    <circle cx="8" cy="10" r="2" fill={selected ? "#ffffff" : "#BA68C8"} />
+    <circle cx="16" cy="10" r="2" fill={selected ? "#ffffff" : "#BA68C8"} />
+    <circle cx="12" cy="16" r="2" fill={selected ? "#ffffff" : "#BA68C8"} />
+  </svg>
+);
+
 const TreeView = ({ onLinesSelected, initialLineId }) => {
   const { t } = useLanguage();
   const [treeData, setTreeData] = useState([]);
@@ -45,6 +62,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const treeDataRef = useRef([]);
 
   // Transform flat data into hierarchical structure
   const buildTreeStructure = (flatData) => {
@@ -102,33 +120,63 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
       setError(null);
 
       try {
+        // Загрузить данные параллельно
+        const [gasVolumeGroups, physicalLines, virtualLines] = await Promise.all([
+          dataApi.getGasVolumeCalcs(),
+          lineApi.getLinesByLumg(),
+          virtualLinesApi.getVisibleLines()
+        ]);
 
-        // First, get gas volume groups (metering nodes)
-        const gasVolumeGroups = await dataApi.getGasVolumeCalcs();
+        // Построить дерево
+        const treeStructure = [];
 
-        // Then, get all lines directly from API
-        const allLines = await lineApi.getLinesByLumg();
+        // 1. ВИРТУАЛЬНЫЕ ЛИНИИ (отдельная группа в начале)
+        if (virtualLines && virtualLines.length > 0) {
+          // Отфильтровать только виртуальные линии (id >= 1000)
+          const onlyVirtualLines = virtualLines.filter(line =>
+            virtualLinesHelper.isVirtualLineObject(line)
+          );
 
-        // Build tree structure correctly
-        const treeStructure = gasVolumeGroups.map(group => {
-          // Find lines that belong to this gas volume group
-          const groupLines = allLines.filter(line => line.gas_volume_calc_id === group.id);
+          if (onlyVirtualLines.length > 0) {
+            treeStructure.push({
+              id: 'virtual-group',
+              name_gas_volume: t('virtualLines') || 'Виртуальные линии',
+              gas_volume_calc_id: 'virtual-group',
+              is_virtual_group: true,
+              children: onlyVirtualLines.map(line => ({
+                id: line.id,
+                name: line.name,
+                is_virtual: true,
+                physical_line_ids: line.physical_line_ids || []
+              }))
+            });
+          }
+        }
+
+        // 2. ФИЗИЧЕСКИЕ ЛИНИИ (оригинальная логика)
+        const physicalGroups = gasVolumeGroups.map(group => {
+          // Найти линии, принадлежащие этой группе
+          const groupLines = physicalLines.filter(line => line.gas_volume_calc_id === group.id);
 
           return {
             id: group.id,
             name_gas_volume: group.name,
             gas_volume_calc_id: group.id,
+            is_virtual_group: false,
             children: groupLines.map(line => ({
               id: line.id,
               name: line.name,
               gas_volume_calc_id: line.gas_volume_calc_id,
+              is_virtual: false,
               address: line.address,
               line: line.line,
               meter: line.meter
             }))
           };
-        }).filter(group => group.children.length > 0); // Only show groups that have lines
+        }).filter(group => group.children.length > 0); // Только группы с линиями
 
+        // Добавить физические группы к дереву
+        treeStructure.push(...physicalGroups);
 
         if (!treeStructure || treeStructure.length === 0) {
           setError(t('noDataToDisplay'));
@@ -137,8 +185,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         }
 
         setTreeData(treeStructure);
-
-        // Collapse all groups by default
+        treeDataRef.current = treeStructure;
         setExpandedGroups(new Set());
 
       } catch (error) {
@@ -174,7 +221,19 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
   // Use useEffect to notify parent when selection changes
   useEffect(() => {
     if (onLinesSelected) {
-      onLinesSelected(selectedItem ? [selectedItem] : []);
+      // Найти метаданные выбранной линии из ref (актуальные данные)
+      let lineMetadata = null;
+      if (selectedItem) {
+        for (const group of treeDataRef.current) {
+          const line = group.children?.find(child => child.id === selectedItem);
+          if (line) {
+            lineMetadata = { is_virtual: line.is_virtual };
+            break;
+          }
+        }
+      }
+
+      onLinesSelected(selectedItem ? [selectedItem] : [], lineMetadata);
     }
   }, [selectedItem, onLinesSelected]);
 
@@ -253,11 +312,19 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
                 {group.children.map((line, lineIndex) => (
                   <div
                     key={`line-${line.id}-${lineIndex}`}
-                    className={`tree-line ${isLineSelected(line.id) ? 'selected' : ''}`}
+                    className={`tree-line ${isLineSelected(line.id) ? 'selected' : ''} ${line.is_virtual ? 'virtual-line' : ''}`}
                     onClick={() => toggleLineSelection(line.id)}
+                    title={line.is_virtual ? t('virtualLineTooltip') : line.name}
                   >
-                    <span className="line-icon"><LineIcon selected={isLineSelected(line.id)} /></span>
+                    <span className="line-icon">
+                      {line.is_virtual ? (
+                        <VirtualLineIcon selected={isLineSelected(line.id)} />
+                      ) : (
+                        <LineIcon selected={isLineSelected(line.id)} />
+                      )}
+                    </span>
                     <span className="line-name">{line.name}</span>
+                    {line.is_virtual && <span className="virtual-badge">V</span>}
                   </div>
                 ))}
               </div>

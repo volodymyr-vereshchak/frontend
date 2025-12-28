@@ -164,5 +164,11 @@ export const ru = {
   loadingEnterpriseData: "Загрузка данных предприятий...",
   netVolume: "Net Volume (Линия - Предприятия)",
   totalEnterpriseVolume: "Суммарный объем предприятий",
-  enterpriseNoData: "Нет данных по предприятиям за выбранный период"
+  enterpriseNoData: "Нет данных по предприятиям за выбранный период",
+
+  // Virtual Lines
+  virtualLines: "Виртуальные линии",
+  virtualLineTooltip: "Виртуальная линия (агрегация нескольких физических линий)",
+  notAvailableForVirtualLines: "Недоступно для виртуальных линий",
+  virtualLinesSupportOnlyDailyHourly: "Виртуальные линии поддерживают только суточный и часовой архивы"
 };

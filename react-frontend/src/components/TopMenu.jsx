@@ -52,7 +52,7 @@ const ChevronDownIcon = ({ color = "#B9E42B" }) => (
   </svg>
 );
 
-const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
+const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtualLine }) => {
   const { currentLanguage, changeLanguage, t } = useLanguage();
   const [activeButton, setActiveButton] = useState(archiveType ?
     (archiveType === 'daily' ? 'days' :
@@ -103,12 +103,18 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick }) => {
   };
 
   const buttons = [
-    { id: 'days', label: t('dailyArchive') },
-    { id: 'hours', label: t('hourlyArchive') },
-    { id: 'sys', label: t('systemArchive') },
-    { id: 'edits', label: t('editArchive') },
-    { id: 'param', label: t('parameters') }
+    { id: 'days', label: t('dailyArchive'), disabled: false },
+    { id: 'hours', label: t('hourlyArchive'), disabled: false }
   ];
+
+  // Для виртуальных линий НЕ показываем sys, edit, param
+  if (!isVirtualLine) {
+    buttons.push(
+      { id: 'sys', label: t('systemArchive'), disabled: false },
+      { id: 'edits', label: t('editArchive'), disabled: false },
+      { id: 'param', label: t('parameters'), disabled: false }
+    );
+  }
 
   const handleButtonClick = (buttonId) => {
     if (buttonId === 'reports') {

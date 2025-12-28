@@ -340,6 +340,17 @@ export const enterpriseVirtualApi = {
   }
 };
 
+// Virtual lines helper utilities
+export const virtualLinesHelper = {
+  isVirtualLine(lineId) {
+    return lineId >= 1000;
+  },
+
+  isVirtualLineObject(line) {
+    return line && (line.is_virtual === true || line.id >= 1000);
+  }
+};
+
 // Commercial day aggregation utilities
 export const commercialDayUtils = {
   // Aggregate hourly counts to commercial days (07:00 to 06:00)

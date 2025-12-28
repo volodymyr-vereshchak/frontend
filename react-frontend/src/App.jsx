@@ -7,6 +7,7 @@ import DataTable from './components/DataTable'
 import InteractiveChart from './components/InteractiveChart'
 import GRSReport from './components/GRSReport'
 import { LanguageProvider } from './contexts/LanguageContext'
+import { virtualLinesHelper } from './services/api'
 
 function App() {
   // Initialize dateRange with commercial day logic
@@ -80,9 +81,29 @@ function App() {
   const [chartData, setChartData] = useState([]);
   const [isGRSReportOpen, setIsGRSReportOpen] = useState(false);
   const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
+  const [selectedLineIsVirtual, setSelectedLineIsVirtual] = useState(false);
 
-  const handleLinesSelected = useCallback((lineIds) => {
+  // Auto-switch to daily archive when virtual line is selected with non-allowed archive type
+  useEffect(() => {
+    if (selectedLineIsVirtual) {
+      // Виртуальные линии поддерживают только daily и hourly
+      if (archiveType !== 'daily' && archiveType !== 'hourly') {
+        setArchiveType('daily');
+      }
+    }
+  }, [selectedLineIsVirtual, archiveType]);
+
+  const handleLinesSelected = useCallback((lineIds, lineMetadata) => {
     setSelectedLines(lineIds);
+
+    // Определить, является ли выбранная линия виртуальной
+    if (lineIds && lineIds.length > 0) {
+      const firstLineId = lineIds[0];
+      const isVirtual = lineMetadata?.is_virtual || virtualLinesHelper.isVirtualLine(firstLineId);
+      setSelectedLineIsVirtual(isVirtual);
+    } else {
+      setSelectedLineIsVirtual(false);
+    }
   }, []);
 
   const handleDateRangeChange = useCallback((newDateRange) => {
@@ -123,6 +144,7 @@ function App() {
           onArchiveTypeChange={handleArchiveTypeChange}
           archiveType={archiveType}
           onGRSReportClick={handleGRSReportOpen}
+          isVirtualLine={selectedLineIsVirtual}
         />
         <hr className="separator" />
         <DateTimePickers
@@ -145,6 +167,7 @@ function App() {
               dateRange={dateRange}
               isDateFilterEnabled={isDateFilterEnabled}
               archiveType={archiveType}
+              isVirtualLine={selectedLineIsVirtual}
               onDataChange={handleDataChange}
             />
           </div>
@@ -156,6 +179,7 @@ function App() {
             data={chartData}
             archiveType={archiveType}
             selectedLines={selectedLines}
+            isVirtualLine={selectedLineIsVirtual}
           />
         )}
       </div>

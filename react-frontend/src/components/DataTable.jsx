@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './DataTable.css';
-import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils } from '../services/api';
+import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper } from '../services/api';
 import * as XLSX from 'xlsx';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -12,7 +12,7 @@ const ExcelIcon = ({ color = "#B9E42B" }) => (
   </svg>
 );
 
-const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType, onDataChange }) => {
+const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType, onDataChange, isVirtualLine }) => {
   const { t, getLocale } = useLanguage();
   const [rowData, setRowData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -207,6 +207,15 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     switch (archiveType) {
       case 'daily':
       case 'hourly':
+        // Для виртуальных линий - ТОЛЬКО period и volume
+        if (isVirtualLine) {
+          return [
+            { key: 'period', label: t('period'), sortable: true },
+            { key: 'volume', label: t('volume'), sortable: true, isSummable: true }
+          ];
+        }
+
+        // Для физических линий - все колонки
         return [
           { key: 'period', label: t('period'), sortable: true },
           { key: 'volume', label: t('volume'), sortable: true, isSummable: true },
@@ -287,6 +296,41 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     const startTime = performance.now();
 
     try {
+      // Для виртуальных линий используем виртуальные endpoints
+      if (isVirtualLine) {
+        // Виртуальные линии поддерживают только daily и hourly
+        if (archiveType !== 'daily' && archiveType !== 'hourly') {
+          setError(t('virtualLinesSupportOnlyDailyHourly'));
+          setRowData([]);
+          if (onDataChange) onDataChange([]);
+          return;
+        }
+
+        // Fetch archive data (VIRTUAL)
+        let archiveData;
+        if (archiveType === 'daily') {
+          archiveData = await archiveDataVirtualApi.getDailyDataVirtual(
+            selectedLines,
+            dateRange.fromDate,
+            dateRange.toDate
+          );
+        } else {
+          archiveData = await archiveDataVirtualApi.getHourlyDataVirtual(
+            selectedLines,
+            dateRange.fromDate,
+            dateRange.toDate
+          );
+        }
+
+        if (abortController?.signal?.aborted) return;
+
+        setRowData(archiveData || []);
+        if (onDataChange) onDataChange(archiveData || []);
+        return;
+      }
+
+      // ФИЗИЧЕСКИЕ ЛИНИИ - существующая логика
+
       // Special handling for edit archive with value conversion
       if (archiveType === 'edit') {
         const data = await editArchiveApi.getEditData(selectedLines, dateRange.fromDate, dateRange.toDate);
@@ -451,7 +495,8 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     JSON.stringify(selectedLines),
     JSON.stringify(dateRange),
     isDateFilterEnabled,
-    archiveType
+    archiveType,
+    isVirtualLine
   ]);
 
   const handleSort = (key) => {

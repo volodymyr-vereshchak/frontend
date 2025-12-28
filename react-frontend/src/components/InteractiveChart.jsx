@@ -14,7 +14,7 @@ import './InteractiveChart.css';
 import { useLanguage } from '../contexts/LanguageContext';
 import SimplifiedEnterpriseControl from './SimplifiedEnterpriseControl';
 
-const InteractiveChart = ({ data, archiveType, selectedLines }) => {
+const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) => {
   const { t, getLocale } = useLanguage();
   const [visibleLines, setVisibleLines] = useState({});
   const [yAxisDomain, setYAxisDomain] = useState(['dataMin', 'dataMax']);
@@ -284,6 +284,14 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
     switch (archiveType) {
       case 'daily':
       case 'hourly':
+        // Для виртуальных линий - ТОЛЬКО volume
+        if (isVirtualLine) {
+          return [
+            { key: 'volume', label: t('volumeLabel'), color: '#8884d8' }
+          ];
+        }
+
+        // Для физических линий - все параметры
         return [
           { key: 'volume', label: t('volumeLabel'), color: '#8884d8' },
           { key: 'w_volume_dp', label: t('workingVolumeDpLabel'), color: '#82ca9d' },
@@ -440,6 +448,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines }) => {
               selectedLines={selectedLines}
               dateRange={extractDateRange()}
               archiveType={archiveType}
+              isVirtualLine={isVirtualLine}
               onEnterpriseDataChange={handleEnterpriseDataChange}
             />
           )}

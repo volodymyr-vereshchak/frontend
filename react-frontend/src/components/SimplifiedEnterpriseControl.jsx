@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { enterpriseApi } from '../services/api';
+import { enterpriseApi, enterpriseVirtualApi } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import './SimplifiedEnterpriseControl.css';
 
@@ -7,6 +7,7 @@ const SimplifiedEnterpriseControl = ({
   selectedLines,
   dateRange,
   archiveType,
+  isVirtualLine,
   onEnterpriseDataChange
 }) => {
   const { t } = useLanguage();
@@ -125,12 +126,19 @@ const SimplifiedEnterpriseControl = ({
         periodType
       });
 
-      const data = await enterpriseApi.getEnterpriseVolumes(
-        selectedLines,
-        dateRange.fromDate,
-        dateRange.toDate,
-        periodType
-      );
+      const data = isVirtualLine
+        ? await enterpriseVirtualApi.getEnterpriseVolumesVirtual(
+            selectedLines,
+            dateRange.fromDate,
+            dateRange.toDate,
+            periodType
+          )
+        : await enterpriseApi.getEnterpriseVolumes(
+            selectedLines,
+            dateRange.fromDate,
+            dateRange.toDate,
+            periodType
+          );
 
       console.log('Enterprise data fetched:', data);
 
