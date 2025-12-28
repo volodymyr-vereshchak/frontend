@@ -56,7 +56,18 @@ const NightConsumption = ({ isOpen, onClose }) => {
 
       setLinesLoading(true);
       try {
-        const lines = await virtualLinesApi.getVisibleLines();
+        const allLines = await virtualLinesApi.getVisibleLines();
+
+        // CRITICAL: Filter lines by GRS_TRENDS_IDS from config
+        // API returns ALL lines, but we need only those in TRENDS_IDS
+        const trendsIds = (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.TRENDS_IDS)
+          ? window.APP_CONFIG.GRS_CONFIG.TRENDS_IDS
+          : null;
+
+        const lines = trendsIds
+          ? allLines.filter(line => trendsIds.includes(line.id))
+          : allLines;
+
         if (lines && lines.length > 0) {
           setVisibleLines(lines);
 

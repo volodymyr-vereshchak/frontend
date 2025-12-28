@@ -440,7 +440,18 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/virtual_lines/visible`);
                 if (response.ok) {
-                    const lines = await response.json();
+                    const allLines = await response.json();
+
+                    // CRITICAL: Filter lines by GRS_TRENDS_IDS from config
+                    // API returns ALL lines, but we need only those in TRENDS_IDS
+                    const trendsIds = (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.TRENDS_IDS)
+                        ? window.APP_CONFIG.GRS_CONFIG.TRENDS_IDS
+                        : null;
+
+                    const lines = trendsIds
+                        ? allLines.filter(line => trendsIds.includes(line.id))
+                        : allLines;
+
                     if (lines && lines.length > 0) {
                         visibleLines = lines;
                         useVirtualLines = true;
@@ -453,7 +464,7 @@
                         // Update GRS_LINES with line IDs
                         GRS_LINES = lines.map(line => line.id);
 
-                        console.log('Loaded visible lines from API:', GRS_LINES.length, 'lines');
+                        console.log('Loaded visible lines from API (filtered by TRENDS_IDS):', GRS_LINES.length, 'lines');
                         return true;
                     }
                 }
