@@ -39,6 +39,14 @@ const ParamsIcon = ({ color = "#B9E42B" }) => (
   </svg>
 );
 
+const OverviewIcon = ({ color = "#B9E42B" }) => (
+  <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M5 20C5 21.9698 5.38799 23.9204 6.14181 25.7403C6.89563 27.5601 8.00052 29.2137 9.3934 30.6066C10.7863 31.9995 12.4399 33.1044 14.2598 33.8582C16.0797 34.612 18.0302 35 20 35C21.9698 35 23.9204 34.612 25.7403 33.8582C27.5601 33.1044 29.2137 31.9995 30.6066 30.6066C31.9995 29.2137 33.1044 27.5601 33.8582 25.7403C34.612 23.9204 35 21.9698 35 20" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+    <path d="M20 8V20L28 24" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="20" cy="20" r="2" fill={color}/>
+  </svg>
+);
+
 const ReportsIcon = ({ color = "#B9E42B" }) => (
   <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M31.6667 5H8.33333C7.44928 5 6.60143 5.35119 5.97631 5.97631C5.35119 6.60143 5 7.44928 5 8.33333V31.6667C5 32.5507 5.35119 33.3986 5.97631 34.0237C6.60143 34.6488 7.44928 35 8.33333 35H31.6667C32.5507 35 33.3986 34.6488 34.0237 34.0237C34.6488 33.3986 35 32.5507 35 31.6667V8.33333C35 7.44928 34.6488 6.60143 34.0237 5.97631C33.3986 5.35119 32.5507 5 31.6667 5Z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -55,11 +63,12 @@ const ChevronDownIcon = ({ color = "#B9E42B" }) => (
 const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtualLine }) => {
   const { currentLanguage, changeLanguage, t } = useLanguage();
   const [activeButton, setActiveButton] = useState(archiveType ?
-    (archiveType === 'daily' ? 'days' :
+    (archiveType === 'overview' ? 'overview' :
+     archiveType === 'daily' ? 'days' :
      archiveType === 'hourly' ? 'hours' :
      archiveType === 'sys' ? 'sys' :
      archiveType === 'edit' ? 'edits' :
-     archiveType === 'param' ? 'param' : 'days') : 'days');
+     archiveType === 'param' ? 'param' : 'overview') : 'overview');
   const [isReportsDropdownOpen, setIsReportsDropdownOpen] = useState(false);
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -85,6 +94,8 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
     const iconColor = isActive ? '#000000' : '#B9E42B';
 
     switch (buttonId) {
+      case 'overview':
+        return <OverviewIcon color={iconColor} />;
       case 'days':
         return <CalendarIcon color={iconColor} />;
       case 'hours':
@@ -103,6 +114,7 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
   };
 
   const buttons = [
+    { id: 'overview', label: t('overview'), disabled: false },
     { id: 'days', label: t('dailyArchive'), disabled: false },
     { id: 'hours', label: t('hourlyArchive'), disabled: false }
   ];
@@ -127,6 +139,7 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
 
     // Map button IDs to archive types
     const archiveTypeMap = {
+      'overview': 'overview',
       'days': 'daily',
       'hours': 'hourly',
       'sys': 'sys',

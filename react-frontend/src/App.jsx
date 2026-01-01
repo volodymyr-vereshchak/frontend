@@ -6,6 +6,7 @@ import TreeView from './components/TreeView'
 import DataTable from './components/DataTable'
 import InteractiveChart from './components/InteractiveChart'
 import GRSReport from './components/GRSReport'
+import OverviewTab from './components/OverviewTab'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { virtualLinesHelper } from './services/api'
 
@@ -42,7 +43,7 @@ function App() {
     const dateFilterEnabledParam = params.get('dateFilterEnabled');
 
     const initialState = {
-      archiveType: archiveTypeParam || 'daily',
+      archiveType: archiveTypeParam || 'overview',
       dateRange: getInitialDateRange(),
       selectedLines: [],
       isDateFilterEnabled: false,
@@ -87,7 +88,7 @@ function App() {
   useEffect(() => {
     if (selectedLineIsVirtual) {
       // Виртуальные линии поддерживают только daily и hourly
-      if (archiveType !== 'daily' && archiveType !== 'hourly') {
+      if (archiveType !== 'daily' && archiveType !== 'hourly' && archiveType !== 'overview') {
         setArchiveType('daily');
       }
     }
@@ -147,40 +148,56 @@ function App() {
           isVirtualLine={selectedLineIsVirtual}
         />
         <hr className="separator" />
-        <DateTimePickers
-          onDateRangeChange={handleDateRangeChange}
-          onDateFilterToggle={handleDateFilterToggle}
-          archiveType={archiveType}
-          initialDateRange={dateRange}
-          initialEnabled={isDateFilterEnabled}
-        />
-        <hr className="separator" />
 
-        <div className="main-layout">
-          <div className="sidebar">
-            <TreeView onLinesSelected={handleLinesSelected} initialLineId={lineIdFromURL} />
-          </div>
-
-          <div className="content-area">
-            <DataTable
-              selectedLines={selectedLines}
-              dateRange={dateRange}
-              isDateFilterEnabled={isDateFilterEnabled}
+        {/* Hide DateTimePickers and TreeView when Overview is active */}
+        {archiveType !== 'overview' && (
+          <>
+            <DateTimePickers
+              onDateRangeChange={handleDateRangeChange}
+              onDateFilterToggle={handleDateFilterToggle}
               archiveType={archiveType}
-              isVirtualLine={selectedLineIsVirtual}
-              onDataChange={handleDataChange}
+              initialDateRange={dateRange}
+              initialEnabled={isDateFilterEnabled}
             />
-          </div>
-        </div>
+            <hr className="separator" />
+          </>
+        )}
 
-        {/* Chart section - only for daily and hourly archives */}
-        {(archiveType === 'daily' || archiveType === 'hourly') && (
-          <InteractiveChart
-            data={chartData}
-            archiveType={archiveType}
-            selectedLines={selectedLines}
-            isVirtualLine={selectedLineIsVirtual}
-          />
+        {/* Overview Tab - full width when active */}
+        {archiveType === 'overview' && (
+          <OverviewTab />
+        )}
+
+        {/* Standard layout for other archive types */}
+        {archiveType !== 'overview' && (
+          <>
+            <div className="main-layout">
+              <div className="sidebar">
+                <TreeView onLinesSelected={handleLinesSelected} initialLineId={lineIdFromURL} />
+              </div>
+
+              <div className="content-area">
+                <DataTable
+                  selectedLines={selectedLines}
+                  dateRange={dateRange}
+                  isDateFilterEnabled={isDateFilterEnabled}
+                  archiveType={archiveType}
+                  isVirtualLine={selectedLineIsVirtual}
+                  onDataChange={handleDataChange}
+                />
+              </div>
+            </div>
+
+            {/* Chart section - only for daily and hourly archives */}
+            {(archiveType === 'daily' || archiveType === 'hourly') && (
+              <InteractiveChart
+                data={chartData}
+                archiveType={archiveType}
+                selectedLines={selectedLines}
+                isVirtualLine={selectedLineIsVirtual}
+              />
+            )}
+          </>
         )}
       </div>
 

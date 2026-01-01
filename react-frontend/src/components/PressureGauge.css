@@ -1,0 +1,180 @@
+.pressure-gauge {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #3E3E3E;
+  transition: all 0.3s ease;
+  height: 100%;
+  min-height: 360px;
+}
+
+.pressure-gauge:hover {
+  border-color: #B9E42B;
+  box-shadow: 0 0 10px rgba(185, 228, 43, 0.2);
+}
+
+.gauge-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.gauge-line-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.gauge-range-label {
+  font-size: 11px;
+  color: #999999;
+  font-weight: 500;
+}
+
+.gauge-svg {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.gauge-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: -8px;
+}
+
+.value-number {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.value-unit {
+  font-size: 12px;
+  color: #999999;
+}
+
+.gauge-footer {
+  width: 100%;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.gauge-time {
+  font-size: 11px;
+  color: #666666;
+}
+
+/* Data sections - flow and volume */
+.gauge-data-section {
+  width: 100%;
+  background: #1f1f1f;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.data-header {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #B9E42B;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.data-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.data-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.data-unit {
+  font-size: 10px;
+  color: #999999;
+  font-weight: 500;
+}
+
+.data-change {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.data-change .change-icon {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.data-change.increase {
+  color: #90EE90;
+}
+
+.data-change.decrease {
+  color: #ff6b6b;
+}
+
+.data-change.neutral {
+  color: #999999;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .pressure-gauge {
+    min-height: 340px;
+    padding: 12px;
+  }
+
+  .gauge-line-name {
+    font-size: 12px;
+  }
+
+  .value-number {
+    font-size: 20px;
+  }
+
+  .value-unit {
+    font-size: 10px;
+  }
+
+  .data-value {
+    font-size: 14px;
+  }
+
+  .data-unit {
+    font-size: 9px;
+  }
+
+  .data-change {
+    font-size: 11px;
+  }
+}

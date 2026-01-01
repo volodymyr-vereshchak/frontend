@@ -3,6 +3,7 @@ export const uk = {
   appTitle: "HostLib Viewer",
 
   // Menu items
+  overview: "Огляд",
   daily: "Добовий",
   hourly: "Годинний",
   edit: "Зміни",
@@ -171,5 +172,32 @@ export const uk = {
   virtualLines: "Віртуальні лінії",
   virtualLineTooltip: "Віртуальна лінія (агрегація кількох фізичних ліній)",
   notAvailableForVirtualLines: "Недоступно для віртуальних ліній",
-  virtualLinesSupportOnlyDailyHourly: "Віртуальні лінії підтримують тільки добовий та годинний архіви"
+  virtualLinesSupportOnlyDailyHourly: "Віртуальні лінії підтримують тільки добовий та годинний архіви",
+
+  // Overview Tab
+  grsOverviewTitle: "Огляд ГРС",
+  lastUpdate: "Останнє оновлення",
+  total24hVolume: "Загальний обсяг за 24 години",
+  comparedToPrevious: "порівняно з попередніми 24г",
+  linePressures: "Тиск по лініях",
+  hourlyFlowRates: "Годинні витрати",
+  lastHour: "Остання година",
+  previousHour: "Попередня година",
+  change: "Зміна",
+  volumeComparison24h: "Порівняння обсягів за 24г",
+  current24h: "Поточні 24г",
+  previous24h: "Попередні 24г",
+  refreshNow: "Оновити",
+  autoRefresh: "Авто-оновлення",
+  activeLines: "Активні лінії",
+  nextRefreshIn: "Наступне оновлення через",
+  lineName: "Лінія",
+  flowRate: "Витрата",
+
+  // Short versions for compact tables
+  lastHourShort: "Ост. год",
+  previousHourShort: "Попер. год",
+  current24hShort: "Пот. 24г",
+  previous24hShort: "Попер. 24г",
+  changeShort: "Δ"
 };
