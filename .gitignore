@@ -24,7 +24,7 @@ react-frontend/src/config/grsConfig.js
 # Removed directories (cleanup)
 api/
 pages/
-utils/
+/utils/
 backup/
 deployment/
 front_repo/

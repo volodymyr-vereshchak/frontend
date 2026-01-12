@@ -224,12 +224,27 @@
   text-align: center; /* Center align all cell content */
 }
 
+.custom-table tbody tr {
+  /* Force browser to properly handle hover state changes */
+  will-change: background-color;
+  transition: background-color 0.15s ease-out;
+}
+
 .custom-table tbody tr:nth-child(even) {
   background-color: #1e1e1e;
 }
 
+.custom-table tbody tr:not(:hover) {
+  /* Explicitly reset background when not hovering */
+  background-color: inherit;
+}
+
+.custom-table tbody tr:nth-child(even):not(:hover) {
+  background-color: #1e1e1e;
+}
+
 .custom-table tbody tr:hover {
-  background-color: #252525;
+  background-color: #252525 !important;
 }
 
 /* Summary row styling */

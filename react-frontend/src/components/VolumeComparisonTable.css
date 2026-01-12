@@ -49,19 +49,30 @@
 
 .comparison-table tbody tr {
   border-bottom: 1px solid #3E3E3E;
-  transition: background 0.2s ease;
+  /* Force browser to properly handle hover state changes */
+  will-change: background;
+  transition: background 0.15s ease-out;
+}
+
+.comparison-table tbody tr:not(:hover) {
+  /* Explicitly reset background when not hovering */
+  background: transparent;
 }
 
 .comparison-table tbody tr:hover {
-  background: #333333;
+  background: #333333 !important;
 }
 
 .comparison-table tbody tr.significant-change {
   background: rgba(185, 228, 43, 0.05);
 }
 
+.comparison-table tbody tr.significant-change:not(:hover) {
+  background: rgba(185, 228, 43, 0.05);
+}
+
 .comparison-table tbody tr.significant-change:hover {
-  background: rgba(185, 228, 43, 0.1);
+  background: rgba(185, 228, 43, 0.1) !important;
 }
 
 .comparison-table td {
