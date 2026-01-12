@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './OverviewTab.css';
 import { useLanguage } from '../contexts/LanguageContext';
-import { lineApi, archiveDataApi } from '../services/api';
+import { lineApi, archiveDataApi, paramArchiveApi } from '../services/api';
 import { grsConfig } from '../config/grsConfig';
 import { OverviewCalculator } from '../utils/overviewCalculator';
 import OverviewMetrics from './OverviewMetrics';
@@ -41,6 +41,24 @@ const OverviewTab = () => {
 
       // Filter only GRS lines
       lines = lines.filter(line => grsConfig.LINES_IDS.includes(line.id));
+
+      // Fetch parameters for all GRS lines
+      let paramsMap = {};
+      try {
+        const paramsResponse = await paramArchiveApi.getParamsForLines(grsConfig.LINES_IDS);
+        const paramsData = Array.isArray(paramsResponse) ? paramsResponse : paramsResponse?.data || [];
+
+        paramsData.forEach(param => {
+          if (param && param.line_id) {
+            paramsMap[param.line_id] = {
+              min_dp: param.min_dp || 0,
+              max_dp: param.max_dp || 100
+            };
+          }
+        });
+      } catch (err) {
+        console.warn('Failed to load dP parameters, using defaults:', err);
+      }
 
       // Fetch last 24h hourly data
       const last24hResponse = await archiveDataApi.getHourlyDataLast24h();
@@ -107,7 +125,7 @@ const OverviewTab = () => {
       );
 
       // Pressure readings
-      const pressures = OverviewCalculator.getLastPressures(last24hData, grsConfig.LINES_IDS, lines);
+      const pressures = OverviewCalculator.getLastPressures(last24hData, grsConfig.LINES_IDS, lines, paramsMap);
 
       // Pressure timestamps
       const pressureTimestamps = {};

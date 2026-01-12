@@ -199,5 +199,11 @@ export const uk = {
   previousHourShort: "Попер. год",
   current24hShort: "Пот. 24г",
   previous24hShort: "Попер. 24г",
-  changeShort: "Δ"
+  changeShort: "Δ",
+
+  // Differential Pressure (dP)
+  differentialPressure: "Перепад тиску",
+  differentialPressureShort: "dP",
+  dpRange: "Діапазон dP",
+  currentDp: "Поточний dP"
 };

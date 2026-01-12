@@ -59,6 +59,7 @@ const PressureGaugesGrid = ({
             timestamp={timestamp || pressureData?.timestamp}
             flowData={flowMap[lineId]}
             volumeData={volumeMap[lineId]}
+            dpData={pressureData?.dpData}
           />
         );
       })}

@@ -130,9 +130,9 @@ export class OverviewCalculator {
   }
 
   /**
-   * Get last pressure readings for each line
+   * Get last pressure readings for each line with dP data
    */
-  static getLastPressures(data, lineIds, lines) {
+  static getLastPressures(data, lineIds, lines, paramsMap = null) {
     if (!data || !Array.isArray(data) || !lines) {
       return {};
     }
@@ -162,19 +162,29 @@ export class OverviewCalculator {
 
       // Calculate pressure with differential adjustment for low pressure non-meter lines
       let pressure = lastRecord.pressure || 0;
+      const wVolumeDp = lastRecord.w_volume_dp || 0;
+
       if (!isHighPressure && line && !line.meter) {
-        const wVolumeDp = lastRecord.w_volume_dp || 0;
         pressure = pressure - (wVolumeDp / grsConfig.PRESSURE_DIVISOR);
       }
 
       // Round to 3 decimal places
       pressure = Math.round(pressure * 1000) / 1000;
 
+      // Add dP data for restrictor devices (non-meters)
+      const dpData = (!line?.meter && paramsMap && paramsMap[lineId]) ? {
+        currentDp: Math.round(wVolumeDp * 100) / 100, // Use w_volume_dp directly, no division
+        minDp: paramsMap[lineId].min_dp || 0,
+        maxDp: paramsMap[lineId].max_dp || (paramsMap[lineId].min_dp + 100) || 100,
+        hasDpData: (paramsMap[lineId].max_dp || 0) > (paramsMap[lineId].min_dp || 0)
+      } : null;
+
       pressures[lineId] = {
         pressure: pressure,
         timestamp: lastRecord.periodDate,
         isHighPressure: isHighPressure,
-        recordCount: lineRecords.length
+        recordCount: lineRecords.length,
+        dpData: dpData
       };
     }
 

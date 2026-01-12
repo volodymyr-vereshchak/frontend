@@ -285,6 +285,33 @@ export const archiveDataApi = {
   }
 };
 
+// Parameter archive API methods
+export const paramArchiveApi = {
+  async getParamsForLines(lineIds) {
+    if (!lineIds || lineIds.length === 0) return [];
+
+    const now = new Date();
+    const toDate = now.toISOString().split('T')[0];
+
+    // API doesn't support multiple line_id in one request, so we need to make separate requests
+    const promises = lineIds.map(lineId => {
+      const params = {
+        line_id: lineId,
+        to_date: toDate
+      };
+      return apiClient.get('/param/', params).catch(err => {
+        console.warn(`Failed to load params for line ${lineId}:`, err);
+        return []; // Return empty array if request fails
+      });
+    });
+
+    const results = await Promise.all(promises);
+
+    // Flatten the results - each request returns an array with 0 or 1 element
+    return results.flat();
+  }
+};
+
 // Enterprise volume API methods
 export const enterpriseApi = {
   async getEnterpriseVolumes(lineIds, fromDate, toDate, periodType = 'daily') {

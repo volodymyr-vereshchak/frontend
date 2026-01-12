@@ -15,7 +15,8 @@ const PressureGauge = ({
   isHighPressure,
   timestamp,
   flowData,
-  volumeData
+  volumeData,
+  dpData
 }) => {
   const { t } = useLanguage();
   // Get pressure range based on line type
@@ -243,6 +244,41 @@ const PressureGauge = ({
               <span>{formatNumber(Math.abs(volumeData.changePercent))}%</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* dP Pressure Differential Section - only for non-meter lines */}
+      {dpData && dpData.hasDpData && (
+        <div className="gauge-data-section dp-section">
+          <div className="data-header">{t('differentialPressure')}</div>
+
+          <div className="dp-bar-container">
+            <div className="dp-bar-track">
+              <div className="dp-bar-background"></div>
+
+              <div
+                className="dp-bar-indicator"
+                style={{
+                  left: `${Math.min(Math.max(
+                    ((dpData.currentDp - dpData.minDp) / (dpData.maxDp - dpData.minDp)) * 100,
+                    0
+                  ), 100)}%`
+                }}
+              >
+                <div className="dp-bar-marker"></div>
+              </div>
+            </div>
+
+            <div className="dp-bar-labels">
+              <span className="dp-label-min">{dpData.minDp.toFixed(1)}</span>
+              <span className="dp-label-max">{dpData.maxDp.toFixed(1)}</span>
+            </div>
+          </div>
+
+          <div className="data-row dp-value-row">
+            <span className="data-value">{dpData.currentDp.toFixed(2)}</span>
+            <span className="data-unit">кг/м²</span>
+          </div>
         </div>
       )}
     </div>

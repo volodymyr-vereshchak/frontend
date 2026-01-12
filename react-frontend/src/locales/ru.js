@@ -199,5 +199,11 @@ export const ru = {
   previousHourShort: "Пред. час",
   current24hShort: "Тек. 24ч",
   previous24hShort: "Пред. 24ч",
-  changeShort: "Δ"
+  changeShort: "Δ",
+
+  // Differential Pressure (dP)
+  differentialPressure: "Перепад давления",
+  differentialPressureShort: "dP",
+  dpRange: "Диапазон dP",
+  currentDp: "Текущий dP"
 };
