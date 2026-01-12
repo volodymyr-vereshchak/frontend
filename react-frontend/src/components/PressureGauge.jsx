@@ -224,7 +224,12 @@ const PressureGauge = ({
           {flowData.change !== null && flowData.change !== undefined && (
             <div className={`data-change ${getChangeClass(flowData.isIncrease, flowData.isDecrease)}`}>
               <span className="change-icon">{getChangeIcon(flowData.isIncrease, flowData.isDecrease)}</span>
-              <span>{formatNumber(Math.abs(flowData.changePercent))}%</span>
+              <span className="change-absolute">
+                {formatNumber(Math.abs(flowData.change))} {t('volumeUnit')}/ч
+              </span>
+              <span className="change-percent">
+                ({formatNumber(Math.abs(flowData.changePercent))}%)
+              </span>
             </div>
           )}
         </div>
@@ -241,7 +246,12 @@ const PressureGauge = ({
           {volumeData.change !== null && volumeData.change !== undefined && (
             <div className={`data-change ${getChangeClass(volumeData.isIncrease, volumeData.isDecrease)}`}>
               <span className="change-icon">{getChangeIcon(volumeData.isIncrease, volumeData.isDecrease)}</span>
-              <span>{formatNumber(Math.abs(volumeData.changePercent))}%</span>
+              <span className="change-absolute">
+                {formatNumber(Math.abs(volumeData.change))} {t('volumeUnit')}
+              </span>
+              <span className="change-percent">
+                ({formatNumber(Math.abs(volumeData.changePercent))}%)
+              </span>
             </div>
           )}
         </div>
@@ -250,14 +260,15 @@ const PressureGauge = ({
       {/* dP Pressure Differential Section - only for non-meter lines */}
       {dpData && dpData.hasDpData && (
         <div className="gauge-data-section dp-section">
-          <div className="data-header">{t('differentialPressure')}</div>
+          <div className="data-header">{dpData.isMeter ? t('flowInWorkingConditions') : t('differentialPressure')}</div>
 
           <div className="dp-bar-container">
             <div className="dp-bar-track">
               <div className="dp-bar-background"></div>
 
+              {/* Current value indicator */}
               <div
-                className="dp-bar-indicator"
+                className="dp-bar-indicator dp-bar-indicator-current"
                 style={{
                   left: `${Math.min(Math.max(
                     ((dpData.currentDp - dpData.minDp) / (dpData.maxDp - dpData.minDp)) * 100,
@@ -265,7 +276,20 @@ const PressureGauge = ({
                   ), 100)}%`
                 }}
               >
-                <div className="dp-bar-marker"></div>
+                <div className="dp-bar-marker dp-bar-marker-current"></div>
+              </div>
+
+              {/* Max 24h value indicator */}
+              <div
+                className="dp-bar-indicator dp-bar-indicator-max"
+                style={{
+                  left: `${Math.min(Math.max(
+                    ((dpData.maxDp24h - dpData.minDp) / (dpData.maxDp - dpData.minDp)) * 100,
+                    0
+                  ), 100)}%`
+                }}
+              >
+                <div className="dp-bar-marker dp-bar-marker-max"></div>
               </div>
             </div>
 
@@ -275,9 +299,29 @@ const PressureGauge = ({
             </div>
           </div>
 
-          <div className="data-row dp-value-row">
-            <span className="data-value">{dpData.currentDp.toFixed(2)}</span>
-            <span className="data-unit">кг/м²</span>
+          {/* Values with legend */}
+          <div className="dp-values-container">
+            <div className="dp-value-item">
+              <div className="dp-value-legend">
+                <span className="dp-legend-marker dp-legend-marker-current"></span>
+                <span className="dp-legend-label">{t('currentValue')}:</span>
+              </div>
+              <div className="data-row dp-value-row">
+                <span className="data-value">{dpData.currentDp.toFixed(2)}</span>
+                <span className="data-unit">{dpData.isMeter ? 'м³/ч' : 'кг/м²'}</span>
+              </div>
+            </div>
+
+            <div className="dp-value-item">
+              <div className="dp-value-legend">
+                <span className="dp-legend-marker dp-legend-marker-max"></span>
+                <span className="dp-legend-label">{t('maxValue24h')}:</span>
+              </div>
+              <div className="data-row dp-value-row">
+                <span className="data-value">{dpData.maxDp24h.toFixed(2)}</span>
+                <span className="data-unit">{dpData.isMeter ? 'м³/ч' : 'кг/м²'}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}

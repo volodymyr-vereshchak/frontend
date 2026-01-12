@@ -205,5 +205,8 @@ export const ru = {
   differentialPressure: "Перепад давления",
   differentialPressureShort: "dP",
   dpRange: "Диапазон dP",
-  currentDp: "Текущий dP"
+  currentDp: "Текущий dP",
+  flowInWorkingConditions: "Расход в р.у.",
+  currentValue: "Текущее",
+  maxValue24h: "Макс. 24ч"
 };

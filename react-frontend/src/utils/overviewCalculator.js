@@ -171,12 +171,20 @@ export class OverviewCalculator {
       // Round to 3 decimal places
       pressure = Math.round(pressure * 1000) / 1000;
 
-      // Add dP data for restrictor devices (non-meters)
-      const dpData = (!line?.meter && paramsMap && paramsMap[lineId]) ? {
+      // Calculate max dP over last 24h
+      const maxDp24h = lineRecords.reduce((max, record) => {
+        const dp = record.w_volume_dp || 0;
+        return dp > max ? dp : max;
+      }, 0);
+
+      // Add dP data for both restrictor devices (non-meters) and meters
+      const dpData = (line && paramsMap && paramsMap[lineId]) ? {
         currentDp: Math.round(wVolumeDp * 100) / 100, // Use w_volume_dp directly, no division
+        maxDp24h: Math.round(maxDp24h * 100) / 100, // Max dP over last 24h
         minDp: paramsMap[lineId].min_dp || 0,
         maxDp: paramsMap[lineId].max_dp || (paramsMap[lineId].min_dp + 100) || 100,
-        hasDpData: (paramsMap[lineId].max_dp || 0) > (paramsMap[lineId].min_dp || 0)
+        hasDpData: (paramsMap[lineId].max_dp || 0) > (paramsMap[lineId].min_dp || 0),
+        isMeter: line.meter === true
       } : null;
 
       pressures[lineId] = {

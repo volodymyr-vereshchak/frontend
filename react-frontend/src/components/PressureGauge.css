@@ -223,14 +223,18 @@
 .dp-bar-marker {
   width: 3px;
   height: 18px;
-  background: #ffffff;
   border-radius: 2px;
-  box-shadow: 0 0 8px rgba(185, 228, 43, 0.8),
-              0 0 4px rgba(255, 255, 255, 0.6);
   position: relative;
 }
 
-.dp-bar-marker::before {
+/* Current value marker - green */
+.dp-bar-marker-current {
+  background: #B9E42B;
+  box-shadow: 0 0 8px rgba(185, 228, 43, 0.8),
+              0 0 4px rgba(185, 228, 43, 0.6);
+}
+
+.dp-bar-marker-current::before {
   content: '';
   position: absolute;
   top: -4px;
@@ -240,10 +244,10 @@
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 4px solid #ffffff;
+  border-top: 4px solid #B9E42B;
 }
 
-.dp-bar-marker::after {
+.dp-bar-marker-current::after {
   content: '';
   position: absolute;
   bottom: -4px;
@@ -253,7 +257,40 @@
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-bottom: 4px solid #ffffff;
+  border-bottom: 4px solid #B9E42B;
+}
+
+/* Max value marker - orange */
+.dp-bar-marker-max {
+  background: #FF9500;
+  box-shadow: 0 0 8px rgba(255, 149, 0, 0.8),
+              0 0 4px rgba(255, 149, 0, 0.6);
+}
+
+.dp-bar-marker-max::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #FF9500;
+}
+
+.dp-bar-marker-max::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid #FF9500;
 }
 
 .dp-bar-labels {
@@ -270,8 +307,51 @@
   font-family: 'Courier New', Courier, monospace;
 }
 
+/* Values container with legend */
+.dp-values-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.dp-value-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dp-value-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  color: #999999;
+}
+
+.dp-legend-marker {
+  width: 12px;
+  height: 3px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.dp-legend-marker-current {
+  background: #B9E42B;
+  box-shadow: 0 0 4px rgba(185, 228, 43, 0.6);
+}
+
+.dp-legend-marker-max {
+  background: #FF9500;
+  box-shadow: 0 0 4px rgba(255, 149, 0, 0.6);
+}
+
+.dp-legend-label {
+  font-weight: 600;
+}
+
 .dp-value-row {
-  margin-top: 6px;
+  margin-top: 0;
 }
 
 @media (max-width: 480px) {

@@ -205,5 +205,8 @@ export const uk = {
   differentialPressure: "Перепад тиску",
   differentialPressureShort: "dP",
   dpRange: "Діапазон dP",
-  currentDp: "Поточний dP"
+  currentDp: "Поточний dP",
+  flowInWorkingConditions: "Витрата в р.у.",
+  currentValue: "Поточне",
+  maxValue24h: "Макс. 24г"
 };
