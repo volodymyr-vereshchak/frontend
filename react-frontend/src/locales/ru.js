@@ -208,5 +208,30 @@ export const ru = {
   currentDp: "Текущий dP",
   flowInWorkingConditions: "Расход в р.у.",
   currentValue: "Текущее",
-  maxValue24h: "Макс. 24ч"
+  maxValue24h: "Макс. 24ч",
+
+  // Enterprise Poll Analysis
+  enterprisePoll: "Опрос предприятий",
+  unpolledEnterprises: "Нет опроса",
+  searchEnterprise: "Поиск предприятия...",
+  pollResults: "Результаты опроса",
+  dailyPoll: "Суточный",
+  hourlyPoll: "Часовой",
+  poll: "Опросить",
+  selectEnterprise: "Выберите предприятие",
+  noPollData: "Нет данных опроса",
+  enterpriseList: "Список предприятий",
+  pollDate: "Дата опроса",
+  totalEnterprises: "Всего предприятий",
+  activeEnterprises: "Активных",
+  unpolledCount: "Не опрошенных",
+  lastPollDate: "Последний опрос",
+  neverPolled: "Не опрашивалось",
+  pollError: "Ошибка опроса",
+  loadingEnterprises: "Загрузка предприятий...",
+  noEnterpriseSelected: "Выберите предприятие для просмотра данных",
+  enterpriseVolumeChart: "График объемов",
+  showVolume: "Объем",
+  showTemperature: "Температура",
+  showPressure: "Давление"
 };

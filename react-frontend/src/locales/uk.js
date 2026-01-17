@@ -208,5 +208,30 @@ export const uk = {
   currentDp: "Поточний dP",
   flowInWorkingConditions: "Витрата в р.у.",
   currentValue: "Поточне",
-  maxValue24h: "Макс. 24г"
+  maxValue24h: "Макс. 24г",
+
+  // Enterprise Poll Analysis
+  enterprisePoll: "Опитування підприємств",
+  unpolledEnterprises: "Немає опитування",
+  searchEnterprise: "Пошук підприємства...",
+  pollResults: "Результати опитування",
+  dailyPoll: "Добовий",
+  hourlyPoll: "Годинний",
+  poll: "Опитати",
+  selectEnterprise: "Оберіть підприємство",
+  noPollData: "Немає даних опитування",
+  enterpriseList: "Список підприємств",
+  pollDate: "Дата опитування",
+  totalEnterprises: "Всього підприємств",
+  activeEnterprises: "Активних",
+  unpolledCount: "Не опитаних",
+  lastPollDate: "Останнє опитування",
+  neverPolled: "Не опитувалось",
+  pollError: "Помилка опитування",
+  loadingEnterprises: "Завантаження підприємств...",
+  noEnterpriseSelected: "Оберіть підприємство для перегляду даних",
+  enterpriseVolumeChart: "Графік об'ємів",
+  showVolume: "Об'єм",
+  showTemperature: "Температура",
+  showPressure: "Тиск"
 };

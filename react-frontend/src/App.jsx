@@ -7,6 +7,7 @@ import DataTable from './components/DataTable'
 import InteractiveChart from './components/InteractiveChart'
 import GRSReport from './components/GRSReport'
 import OverviewTab from './components/OverviewTab'
+import EnterprisePollAnalysis from './components/EnterprisePollAnalysis'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { virtualLinesHelper } from './services/api'
 
@@ -149,8 +150,8 @@ function App() {
         />
         <hr className="separator" />
 
-        {/* Hide DateTimePickers and TreeView when Overview is active */}
-        {archiveType !== 'overview' && (
+        {/* Hide DateTimePickers and TreeView when Overview or Poll is active */}
+        {archiveType !== 'overview' && archiveType !== 'poll' && (
           <>
             <DateTimePickers
               onDateRangeChange={handleDateRangeChange}
@@ -168,8 +169,13 @@ function App() {
           <OverviewTab />
         )}
 
+        {/* Enterprise Poll Analysis Tab - full width when active */}
+        {archiveType === 'poll' && (
+          <EnterprisePollAnalysis />
+        )}
+
         {/* Standard layout for other archive types */}
-        {archiveType !== 'overview' && (
+        {archiveType !== 'overview' && archiveType !== 'poll' && (
           <>
             <div className="main-layout">
               <div className="sidebar">

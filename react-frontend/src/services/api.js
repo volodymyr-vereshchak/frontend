@@ -322,6 +322,27 @@ export const enterpriseApi = {
       period_type: periodType
     };
     return await apiClient.get('/enterprise/volumes/', params);
+  },
+
+  async getAllEnterprises() {
+    return await apiClient.get('/enterprise/mappings/');
+  }
+};
+
+// Enterprise Poll Analysis API methods
+export const enterprisePollApi = {
+  async getAllEnterprises() {
+    return await apiClient.get('/enterprise/mappings/');
+  },
+
+  async pollEnterprise(lineIds, fromDate, toDate, periodType = 'daily') {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate,
+      period_type: periodType
+    };
+    return await apiClient.get('/enterprise/volumes/', params);
   }
 };
 

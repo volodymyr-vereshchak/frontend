@@ -54,6 +54,16 @@ const ReportsIcon = ({ color = "#B9E42B" }) => (
   </svg>
 );
 
+const PollIcon = ({ color = "#B9E42B" }) => (
+  <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6.66667 20H13.3333M6.66667 28.3333H13.3333M6.66667 11.6667H13.3333" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M20 11.6667H33.3333M20 20H33.3333M20 28.3333H26.6667" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="10" cy="11.6667" r="2.5" stroke={color} strokeWidth="1.5"/>
+    <circle cx="10" cy="20" r="2.5" stroke={color} strokeWidth="1.5"/>
+    <circle cx="10" cy="28.3333" r="2.5" stroke={color} strokeWidth="1.5"/>
+  </svg>
+);
+
 const ChevronDownIcon = ({ color = "#B9E42B" }) => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M3 4.5L6 7.5L9 4.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -68,7 +78,8 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
      archiveType === 'hourly' ? 'hours' :
      archiveType === 'sys' ? 'sys' :
      archiveType === 'edit' ? 'edits' :
-     archiveType === 'param' ? 'param' : 'overview') : 'overview');
+     archiveType === 'param' ? 'param' :
+     archiveType === 'poll' ? 'poll' : 'overview') : 'overview');
   const [isReportsDropdownOpen, setIsReportsDropdownOpen] = useState(false);
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -108,6 +119,8 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
         return <ParamsIcon color={iconColor} />;
       case 'reports':
         return <ReportsIcon color={iconColor} />;
+      case 'poll':
+        return <PollIcon color={iconColor} />;
       default:
         return null;
     }
@@ -128,6 +141,9 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
     );
   }
 
+  // Poll button is always visible (independent feature)
+  buttons.push({ id: 'poll', label: t('enterprisePoll'), disabled: false });
+
   const handleButtonClick = (buttonId) => {
     if (buttonId === 'reports') {
       setIsReportsDropdownOpen(!isReportsDropdownOpen);
@@ -144,7 +160,8 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
       'hours': 'hourly',
       'sys': 'sys',
       'edits': 'edit',
-      'param': 'param'
+      'param': 'param',
+      'poll': 'poll'
     };
 
     if (onArchiveTypeChange && archiveTypeMap[buttonId]) {
