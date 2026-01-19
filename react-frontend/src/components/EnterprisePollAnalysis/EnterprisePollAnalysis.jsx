@@ -199,14 +199,17 @@ const EnterprisePollAnalysis = () => {
       );
 
       if (data && Array.isArray(data)) {
-        // Backend now returns only the selected device's data
-        // Keep null/undefined for volume to show dash when no data
-        const results = data.map(record => ({
-          period: record.period,
-          volume: record.total_volume != null ? record.total_volume : null,
-          temperature: record.devices?.[0]?.temperature ?? null,
-          pressure: record.devices?.[0]?.pressure ?? null
-        })).sort((a, b) => new Date(a.period) - new Date(b.period));
+        // Backend returns device data in devices array
+        // Volume is in device.volume, not record.total_volume
+        const results = data.map(record => {
+          const device = record.devices?.[0];
+          return {
+            period: record.period,
+            volume: device?.volume ?? null,
+            temperature: device?.temperature ?? null,
+            pressure: device?.pressure ?? null
+          };
+        }).sort((a, b) => new Date(a.period) - new Date(b.period));
 
         setPollResults(results);
       }
@@ -657,7 +660,7 @@ const EnterprisePollAnalysis = () => {
           </div>
 
           <div className="poll-chart-container">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={460}>
               <LineChart data={pollResults} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
                 <XAxis
