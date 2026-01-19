@@ -148,19 +148,22 @@ const EnterprisePollAnalysis = () => {
         'daily'
       );
 
-      // Collect device keys that have data
+      // Collect device keys that have actual volume data (not null)
       const polledDevices = new Set();
       if (volumeData && Array.isArray(volumeData)) {
         volumeData.forEach(record => {
           if (record.devices && Array.isArray(record.devices)) {
             record.devices.forEach(d => {
-              polledDevices.add(`${d.serNum}_${d.chNum}`);
+              // Only count as polled if volume is not null/undefined
+              if (d.volume != null) {
+                polledDevices.add(`${d.serNum}_${d.chNum}`);
+              }
             });
           }
         });
       }
 
-      // Find active enterprises without data
+      // Find active enterprises without data or with null volumes
       const unpolled = activeEnterprises.filter(e =>
         !polledDevices.has(`${e.serNum}_${e.chNum}`)
       );
@@ -197,11 +200,12 @@ const EnterprisePollAnalysis = () => {
 
       if (data && Array.isArray(data)) {
         // Backend now returns only the selected device's data
+        // Keep null/undefined for volume to show dash when no data
         const results = data.map(record => ({
           period: record.period,
-          volume: record.total_volume || 0,
-          temperature: record.devices?.[0]?.temperature,
-          pressure: record.devices?.[0]?.pressure
+          volume: record.total_volume != null ? record.total_volume : null,
+          temperature: record.devices?.[0]?.temperature ?? null,
+          pressure: record.devices?.[0]?.pressure ?? null
         })).sort((a, b) => new Date(a.period) - new Date(b.period));
 
         setPollResults(results);
@@ -272,7 +276,7 @@ const EnterprisePollAnalysis = () => {
    * Calculate totals
    */
   const totals = useMemo(() => {
-    const total = pollResults.reduce((acc, r) => acc + (r.volume || 0), 0);
+    const total = pollResults.reduce((acc, r) => acc + (r.volume ?? 0), 0);
     return {
       volume: total.toFixed(2)
     };
@@ -653,7 +657,7 @@ const EnterprisePollAnalysis = () => {
           </div>
 
           <div className="poll-chart-container">
-            <ResponsiveContainer width="100%" height={600}>
+            <ResponsiveContainer width="100%" height="100%">
               <LineChart data={pollResults} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
                 <XAxis
@@ -664,8 +668,8 @@ const EnterprisePollAnalysis = () => {
                   textAnchor="end"
                   height={80}
                 />
-                <YAxis yAxisId="left" stroke="#B9E42B" />
-                <YAxis yAxisId="right" orientation="right" stroke="#00BCD4" />
+                <YAxis yAxisId="left" stroke="#B9E42B" domain={['auto', 'auto']} allowDataOverflow={false} />
+                <YAxis yAxisId="right" orientation="right" stroke="#00BCD4" domain={['auto', 'auto']} allowDataOverflow={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
 
@@ -679,6 +683,7 @@ const EnterprisePollAnalysis = () => {
                     strokeWidth={2}
                     dot={{ fill: '#B9E42B', r: 3 }}
                     activeDot={{ r: 5 }}
+                    connectNulls={true}
                   />
                 )}
                 {showTemperature && (
@@ -691,6 +696,7 @@ const EnterprisePollAnalysis = () => {
                     strokeWidth={2}
                     dot={{ fill: '#FF5722', r: 3 }}
                     activeDot={{ r: 5 }}
+                    connectNulls={true}
                   />
                 )}
                 {showPressure && (
@@ -703,6 +709,7 @@ const EnterprisePollAnalysis = () => {
                     strokeWidth={2}
                     dot={{ fill: '#00BCD4', r: 3 }}
                     activeDot={{ r: 5 }}
+                    connectNulls={true}
                   />
                 )}
               </LineChart>

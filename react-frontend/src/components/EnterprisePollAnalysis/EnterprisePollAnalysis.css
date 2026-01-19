@@ -356,7 +356,7 @@
 .poll-chart-container {
   background-color: #1a1a1a;
   padding: 20px;
-  min-height: 800px;
+  height: 500px;
   position: relative;
 }
 
