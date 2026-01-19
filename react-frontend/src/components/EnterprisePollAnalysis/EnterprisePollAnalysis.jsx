@@ -186,38 +186,25 @@ const EnterprisePollAnalysis = () => {
     setPollResults([]);
 
     try {
-      const data = await enterprisePollApi.pollEnterprise(
-        [selectedEnterprise.line_id],
+      const data = await enterprisePollApi.pollEnterpriseDevice(
+        selectedEnterprise.line_id,
+        selectedEnterprise.serNum,
+        selectedEnterprise.chNum,
         formatDateForAPI(startDateTime),
         formatDateForAPI(endDateTime),
         periodType
       );
 
       if (data && Array.isArray(data)) {
-        // Filter results for selected enterprise device
-        const filteredResults = [];
+        // Backend now returns only the selected device's data
+        const results = data.map(record => ({
+          period: record.period,
+          volume: record.total_volume || 0,
+          temperature: record.devices?.[0]?.temperature,
+          pressure: record.devices?.[0]?.pressure
+        })).sort((a, b) => new Date(a.period) - new Date(b.period));
 
-        data.forEach(record => {
-          if (record.devices && Array.isArray(record.devices)) {
-            const matchingDevice = record.devices.find(d =>
-              d.serNum === selectedEnterprise.serNum &&
-              d.chNum === selectedEnterprise.chNum
-            );
-
-            if (matchingDevice) {
-              filteredResults.push({
-                period: record.period,
-                volume: matchingDevice.volume || 0,
-                temperature: matchingDevice.temperature,
-                pressure: matchingDevice.pressure
-              });
-            }
-          }
-        });
-
-        // Sort by period
-        filteredResults.sort((a, b) => new Date(a.period) - new Date(b.period));
-        setPollResults(filteredResults);
+        setPollResults(results);
       }
     } catch (err) {
       console.error('Error polling enterprise:', err);
@@ -620,91 +607,6 @@ const EnterprisePollAnalysis = () => {
                       </tfoot>
                     </table>
                   </div>
-
-                  {/* Chart */}
-                  <div className="poll-chart-container">
-                    <div className="chart-toggles">
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={showVolume}
-                          onChange={(e) => setShowVolume(e.target.checked)}
-                        />
-                        {t('showVolume')}
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={showTemperature}
-                          onChange={(e) => setShowTemperature(e.target.checked)}
-                        />
-                        {t('showTemperature')}
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={showPressure}
-                          onChange={(e) => setShowPressure(e.target.checked)}
-                        />
-                        {t('showPressure')}
-                      </label>
-                    </div>
-
-                    <ResponsiveContainer width="100%" height={400}>
-                      <LineChart data={pollResults} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                        <XAxis
-                          dataKey="period"
-                          tickFormatter={formatPeriod}
-                          stroke="#9e9e9e"
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
-                        />
-                        <YAxis yAxisId="left" stroke="#B9E42B" />
-                        <YAxis yAxisId="right" orientation="right" stroke="#00BCD4" />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend />
-
-                        {showVolume && (
-                          <Line
-                            yAxisId="left"
-                            type="monotone"
-                            dataKey="volume"
-                            name={t('volume')}
-                            stroke="#B9E42B"
-                            strokeWidth={2}
-                            dot={{ fill: '#B9E42B', r: 3 }}
-                            activeDot={{ r: 5 }}
-                          />
-                        )}
-                        {showTemperature && (
-                          <Line
-                            yAxisId="right"
-                            type="monotone"
-                            dataKey="temperature"
-                            name={t('temperature')}
-                            stroke="#FF5722"
-                            strokeWidth={2}
-                            dot={{ fill: '#FF5722', r: 3 }}
-                            activeDot={{ r: 5 }}
-                          />
-                        )}
-                        {showPressure && (
-                          <Line
-                            yAxisId="right"
-                            type="monotone"
-                            dataKey="pressure"
-                            name={t('pressure')}
-                            stroke="#00BCD4"
-                            strokeWidth={2}
-                            dot={{ fill: '#00BCD4', r: 3 }}
-                            activeDot={{ r: 5 }}
-                          />
-                        )}
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
                 </>
               ) : (
                 <div className="no-results-message">
@@ -719,6 +621,95 @@ const EnterprisePollAnalysis = () => {
           )}
         </div>
       </div>
+
+      {/* Chart Section - moved outside poll-content */}
+      {pollResults.length > 0 && (
+        <div className="poll-chart-section">
+          <div className="chart-toggles">
+            <label>
+              <input
+                type="checkbox"
+                checked={showVolume}
+                onChange={(e) => setShowVolume(e.target.checked)}
+              />
+              {t('showVolume')}
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={showTemperature}
+                onChange={(e) => setShowTemperature(e.target.checked)}
+              />
+              {t('showTemperature')}
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={showPressure}
+                onChange={(e) => setShowPressure(e.target.checked)}
+              />
+              {t('showPressure')}
+            </label>
+          </div>
+
+          <div className="poll-chart-container">
+            <ResponsiveContainer width="100%" height={600}>
+              <LineChart data={pollResults} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
+                <XAxis
+                  dataKey="period"
+                  tickFormatter={formatPeriod}
+                  stroke="#9e9e9e"
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis yAxisId="left" stroke="#B9E42B" />
+                <YAxis yAxisId="right" orientation="right" stroke="#00BCD4" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+
+                {showVolume && (
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="volume"
+                    name={t('volume')}
+                    stroke="#B9E42B"
+                    strokeWidth={2}
+                    dot={{ fill: '#B9E42B', r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                )}
+                {showTemperature && (
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="temperature"
+                    name={t('temperature')}
+                    stroke="#FF5722"
+                    strokeWidth={2}
+                    dot={{ fill: '#FF5722', r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                )}
+                {showPressure && (
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="pressure"
+                    name={t('pressure')}
+                    stroke="#00BCD4"
+                    strokeWidth={2}
+                    dot={{ fill: '#00BCD4', r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* Unpolled Enterprises Modal */}
       {showUnpolledModal && (

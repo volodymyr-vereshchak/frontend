@@ -344,6 +344,19 @@ export const enterprisePollApi = {
     };
     return await apiClient.get('/enterprise/volumes/', params);
   }
+  ,
+
+  async pollEnterpriseDevice(lineId, serNum, chNum, fromDate, toDate, periodType = 'daily') {
+    const params = {
+      line_id: lineId,
+      serNum: serNum,
+      chNum: chNum,
+      from_date: fromDate,
+      to_date: toDate,
+      period_type: periodType
+    };
+    return await apiClient.get('/enterprise/volumes/', params);
+  }
 };
 
 // ========================================
