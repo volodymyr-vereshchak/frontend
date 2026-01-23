@@ -129,7 +129,7 @@
 .poll-sidebar {
   width: 300px;
   min-width: 280px;
-  height: 500px;
+  height: 75vh;
   display: flex;
   flex-direction: column;
   background-color: #2a2a2a;
@@ -255,7 +255,7 @@
 /* Main Panel - Poll Results */
 .poll-main {
   flex: 1;
-  height: 500px;
+  height: 75vh;
   display: flex;
   flex-direction: column;
   background-color: #2a2a2a;
@@ -281,7 +281,7 @@
 
 /* Results Table */
 .poll-results-table-container {
-  max-height: 500px;
+  max-height: 75vh;
   overflow-y: auto;
   margin: 16px;
   border: 1px solid #444;
@@ -355,7 +355,7 @@
 .poll-chart-container {
   background-color: #1a1a1a;
   padding: 20px;
-  height: 500px;
+  height: 850px;
   position: relative;
 }
 

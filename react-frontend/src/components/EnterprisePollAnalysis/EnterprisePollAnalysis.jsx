@@ -260,19 +260,32 @@ const EnterprisePollAnalysis = () => {
   const formatPeriod = (period) => {
     if (!period) return '';
     const date = new Date(period);
-    if (periodType === 'hourly') {
-      return date.toLocaleString(currentLocale === 'uk' ? 'uk-UA' : 'ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
+    const locale = currentLocale === 'uk' ? 'uk-UA' : 'ru-RU';
+
+    if (periodType === 'daily') {
+      // Только дата, без времени
+      return date.toLocaleDateString(locale);
+    } else if (periodType === 'hourly') {
+      // Дата + время (часы:минуты, без секунд)
+      return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        hour12: false
       });
     }
-    return date.toLocaleDateString(currentLocale === 'uk' ? 'uk-UA' : 'ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    return date.toLocaleDateString(locale);
+  };
+
+  /**
+   * Форматирование чисел: 2 знака после запятой, пробелы в разрядах тысяч
+   * Соответствует DataTable.jsx (строки 551-565)
+   */
+  const formatNumber = (value) => {
+    if (typeof value !== 'number' || isNaN(value)) return value;
+
+    const formatted = value.toFixed(2);
+    const [integerPart, decimalPart] = formatted.split('.');
+    return integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '.' + decimalPart;
   };
 
   /**
@@ -281,7 +294,7 @@ const EnterprisePollAnalysis = () => {
   const totals = useMemo(() => {
     const total = pollResults.reduce((acc, r) => acc + (r.volume ?? 0), 0);
     return {
-      volume: total.toFixed(2)
+      volume: total  // Оставляем как число для formatNumber
     };
   }, [pollResults]);
 
@@ -424,7 +437,7 @@ const EnterprisePollAnalysis = () => {
         <p className="tooltip-period">{formatPeriod(label)}</p>
         {payload.map((entry, index) => (
           <p key={index} style={{ color: entry.color }}>
-            {entry.name}: {entry.value?.toFixed(2) || '-'}
+            {entry.name}: {typeof entry.value === 'number' ? formatNumber(entry.value) : '-'}
           </p>
         ))}
       </div>
@@ -598,16 +611,16 @@ const EnterprisePollAnalysis = () => {
                         {pollResults.map((result, index) => (
                           <tr key={index}>
                             <td>{formatPeriod(result.period)}</td>
-                            <td>{result.volume?.toFixed(2) || '-'}</td>
-                            <td>{result.temperature?.toFixed(1) || '-'}</td>
-                            <td>{result.pressure?.toFixed(2) || '-'}</td>
+                            <td>{result.volume != null ? formatNumber(result.volume) : '-'}</td>
+                            <td>{result.temperature != null ? formatNumber(result.temperature) : '-'}</td>
+                            <td>{result.pressure != null ? formatNumber(result.pressure) : '-'}</td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
                         <tr className="totals-row">
                           <td><strong>{t('total')}</strong></td>
-                          <td><strong>{totals.volume}</strong></td>
+                          <td><strong>{formatNumber(totals.volume)}</strong></td>
                           <td>-</td>
                           <td>-</td>
                         </tr>
@@ -660,7 +673,7 @@ const EnterprisePollAnalysis = () => {
           </div>
 
           <div className="poll-chart-container">
-            <ResponsiveContainer width="100%" height={460}>
+            <ResponsiveContainer width="100%" height={800}>
               <LineChart data={pollResults} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
                 <XAxis
@@ -671,8 +684,8 @@ const EnterprisePollAnalysis = () => {
                   textAnchor="end"
                   height={80}
                 />
-                <YAxis yAxisId="left" stroke="#B9E42B" domain={['auto', 'auto']} allowDataOverflow={false} />
-                <YAxis yAxisId="right" orientation="right" stroke="#00BCD4" domain={['auto', 'auto']} allowDataOverflow={false} />
+                <YAxis yAxisId="left" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
+                <YAxis yAxisId="right" orientation="right" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
 
@@ -682,9 +695,9 @@ const EnterprisePollAnalysis = () => {
                     type="monotone"
                     dataKey="volume"
                     name={t('volume')}
-                    stroke="#B9E42B"
+                    stroke="#8884d8"
                     strokeWidth={2}
-                    dot={{ fill: '#B9E42B', r: 3 }}
+                    dot={{ fill: '#8884d8', r: 3 }}
                     activeDot={{ r: 5 }}
                     connectNulls={true}
                   />
@@ -695,9 +708,9 @@ const EnterprisePollAnalysis = () => {
                     type="monotone"
                     dataKey="temperature"
                     name={t('temperature')}
-                    stroke="#FF5722"
+                    stroke="#ff7300"
                     strokeWidth={2}
-                    dot={{ fill: '#FF5722', r: 3 }}
+                    dot={{ fill: '#ff7300', r: 3 }}
                     activeDot={{ r: 5 }}
                     connectNulls={true}
                   />
@@ -708,9 +721,9 @@ const EnterprisePollAnalysis = () => {
                     type="monotone"
                     dataKey="pressure"
                     name={t('pressure')}
-                    stroke="#00BCD4"
+                    stroke="#ffc658"
                     strokeWidth={2}
-                    dot={{ fill: '#00BCD4', r: 3 }}
+                    dot={{ fill: '#ffc658', r: 3 }}
                     activeDot={{ r: 5 }}
                     connectNulls={true}
                   />
