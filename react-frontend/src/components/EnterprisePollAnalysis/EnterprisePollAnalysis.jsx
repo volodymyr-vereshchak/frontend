@@ -289,12 +289,36 @@ const EnterprisePollAnalysis = () => {
   };
 
   /**
-   * Calculate totals
+   * Calculate totals and averages
    */
   const totals = useMemo(() => {
-    const total = pollResults.reduce((acc, r) => acc + (r.volume ?? 0), 0);
+    if (pollResults.length === 0) {
+      return { volume: 0, temperature: 0, pressure: 0 };
+    }
+
+    // Sum for volume
+    const totalVolume = pollResults.reduce((acc, r) => acc + (r.volume ?? 0), 0);
+
+    // Average for temperature
+    const tempValues = pollResults
+      .map(r => r.temperature)
+      .filter(v => v != null);
+    const avgTemperature = tempValues.length > 0
+      ? tempValues.reduce((sum, v) => sum + v, 0) / tempValues.length
+      : 0;
+
+    // Average for pressure
+    const pressValues = pollResults
+      .map(r => r.pressure)
+      .filter(v => v != null);
+    const avgPressure = pressValues.length > 0
+      ? pressValues.reduce((sum, v) => sum + v, 0) / pressValues.length
+      : 0;
+
     return {
-      volume: total  // Оставляем как число для formatNumber
+      volume: totalVolume,
+      temperature: avgTemperature,
+      pressure: avgPressure
     };
   }, [pollResults]);
 
@@ -597,34 +621,41 @@ const EnterprisePollAnalysis = () => {
               {/* Results Table */}
               {pollResults.length > 0 ? (
                 <>
-                  <div className="poll-results-table-container">
-                    <table className="poll-results-table">
-                      <thead>
-                        <tr>
-                          <th>{t('period')}</th>
-                          <th>{t('volume')}</th>
-                          <th>{t('temperature')}</th>
-                          <th>{t('pressure')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pollResults.map((result, index) => (
-                          <tr key={index}>
-                            <td>{formatPeriod(result.period)}</td>
-                            <td>{result.volume != null ? formatNumber(result.volume) : '-'}</td>
-                            <td>{result.temperature != null ? formatNumber(result.temperature) : '-'}</td>
-                            <td>{result.pressure != null ? formatNumber(result.pressure) : '-'}</td>
+                  <div className="poll-table-wrapper">
+                    {/* Scrollable Table Body */}
+                    <div className="poll-results-table-container">
+                      <table className="poll-results-table">
+                        <thead>
+                          <tr>
+                            <th>{t('period')}</th>
+                            <th>{t('volume')}</th>
+                            <th>{t('temperature')}</th>
+                            <th>{t('pressure')}</th>
                           </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr className="totals-row">
+                        </thead>
+                        <tbody>
+                          {pollResults.map((result, index) => (
+                            <tr key={index}>
+                              <td>{formatPeriod(result.period)}</td>
+                              <td>{result.volume != null ? formatNumber(result.volume) : '-'}</td>
+                              <td>{result.temperature != null ? formatNumber(result.temperature) : '-'}</td>
+                              <td>{result.pressure != null ? formatNumber(result.pressure) : '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Fixed Summary Row */}
+                    <table className="poll-results-table poll-summary-table">
+                      <tbody>
+                        <tr className="poll-summary-row">
                           <td><strong>{t('total')}</strong></td>
                           <td><strong>{formatNumber(totals.volume)}</strong></td>
-                          <td>-</td>
-                          <td>-</td>
+                          <td><strong>{formatNumber(totals.temperature)}</strong></td>
+                          <td><strong>{formatNumber(totals.pressure)}</strong></td>
                         </tr>
-                      </tfoot>
+                      </tbody>
                     </table>
                   </div>
                 </>
