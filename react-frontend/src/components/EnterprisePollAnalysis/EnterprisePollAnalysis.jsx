@@ -677,7 +677,7 @@ const EnterprisePollAnalysis = () => {
       {pollResults.length > 0 && (
         <div className="poll-chart-section">
           <div className="chart-toggles">
-            <label>
+            <label className={`chart-toggle-volume ${showVolume ? 'active' : ''}`}>
               <input
                 type="checkbox"
                 checked={showVolume}
@@ -685,7 +685,7 @@ const EnterprisePollAnalysis = () => {
               />
               {t('showVolume')}
             </label>
-            <label>
+            <label className={`chart-toggle-temperature ${showTemperature ? 'active' : ''}`}>
               <input
                 type="checkbox"
                 checked={showTemperature}
@@ -693,7 +693,7 @@ const EnterprisePollAnalysis = () => {
               />
               {t('showTemperature')}
             </label>
-            <label>
+            <label className={`chart-toggle-pressure ${showPressure ? 'active' : ''}`}>
               <input
                 type="checkbox"
                 checked={showPressure}

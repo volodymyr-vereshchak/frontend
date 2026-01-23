@@ -100,17 +100,17 @@
 
 .unpolled-button {
   padding: 8px 16px;
-  border: 1px solid #ff9800;
+  border: 1px solid #f62fc8;
   border-radius: 4px;
   background-color: transparent;
-  color: #ff9800;
+  color: #f62fc8;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 14px;
 }
 
 .unpolled-button:hover:not(:disabled) {
-  background-color: rgba(255, 152, 0, 0.1);
+  background-color: rgba(246, 47, 200, 0.1);
 }
 
 .unpolled-button:disabled {
@@ -365,14 +365,59 @@
 .chart-toggles label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
   font-size: 14px;
   color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
 }
 
 .chart-toggles input[type="checkbox"] {
-  accent-color: #B9E42B;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Volume toggle styles */
+.chart-toggle-volume {
+  border-color: #8884d8;
+}
+
+.chart-toggle-volume.active {
+  background-color: rgba(136, 132, 216, 0.15);
+}
+
+.chart-toggle-volume input[type="checkbox"] {
+  accent-color: #8884d8;
+}
+
+/* Temperature toggle styles */
+.chart-toggle-temperature {
+  border-color: #ff7300;
+}
+
+.chart-toggle-temperature.active {
+  background-color: rgba(255, 115, 0, 0.15);
+}
+
+.chart-toggle-temperature input[type="checkbox"] {
+  accent-color: #ff7300;
+}
+
+/* Pressure toggle styles */
+.chart-toggle-pressure {
+  border-color: #ffc658;
+}
+
+.chart-toggle-pressure.active {
+  background-color: rgba(255, 198, 88, 0.15);
+}
+
+.chart-toggle-pressure input[type="checkbox"] {
+  accent-color: #ffc658;
 }
 
 .poll-chart-container {
@@ -444,7 +489,7 @@
 
 .modal-header h3 {
   margin: 0;
-  color: #ff9800;
+  color: #f62fc8;
 }
 
 .modal-close {
