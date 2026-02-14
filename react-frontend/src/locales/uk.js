@@ -233,5 +233,6 @@ export const uk = {
   enterpriseVolumeChart: "Графік об'ємів",
   showVolume: "Об'єм",
   showTemperature: "Температура",
-  showPressure: "Тиск"
+  showPressure: "Тиск",
+  withoutLine: "Без лінії"
 };

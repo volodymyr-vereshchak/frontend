@@ -233,5 +233,6 @@ export const ru = {
   enterpriseVolumeChart: "График объемов",
   showVolume: "Объем",
   showTemperature: "Температура",
-  showPressure: "Давление"
+  showPressure: "Давление",
+  withoutLine: "Без линии"
 };

@@ -130,9 +130,9 @@ const EnterprisePollAnalysis = () => {
       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
       const today = new Date();
 
-      // Get unique line IDs from active enterprises
+      // Get unique line IDs from active enterprises (exclude those without lines)
       const activeEnterprises = enterprises.filter(e => e.active);
-      const lineIds = [...new Set(activeEnterprises.map(e => e.line_id))];
+      const lineIds = [...new Set(activeEnterprises.map(e => e.line_id).filter(id => id != null))];
 
       if (lineIds.length === 0) {
         setUnpolledEnterprises([]);
@@ -182,7 +182,7 @@ const EnterprisePollAnalysis = () => {
    * Poll selected enterprise
    */
   const pollEnterprise = useCallback(async () => {
-    if (!selectedEnterprise) return;
+    if (!selectedEnterprise || selectedEnterprise.line_id == null) return;
 
     setIsPollLoading(true);
     setError(null);
@@ -242,16 +242,31 @@ const EnterprisePollAnalysis = () => {
 
   /**
    * Group enterprises by line_id for better display
+   * Enterprises without line_id are grouped under special '__no_line__' key
    */
   const enterprisesByLine = useMemo(() => {
+    const NO_LINE_KEY = '__no_line__';
     const grouped = {};
     filteredEnterprises.forEach(e => {
-      if (!grouped[e.line_id]) {
-        grouped[e.line_id] = [];
+      const key = (e.line_id != null) ? e.line_id : NO_LINE_KEY;
+      if (!grouped[key]) {
+        grouped[key] = [];
       }
-      grouped[e.line_id].push(e);
+      grouped[key].push(e);
     });
-    return grouped;
+
+    // Sort: lines with actual IDs first (sorted numerically), then no-line group at the end
+    const sortedEntries = Object.entries(grouped).sort(([a], [b]) => {
+      if (a === NO_LINE_KEY) return 1;
+      if (b === NO_LINE_KEY) return -1;
+      return Number(a) - Number(b);
+    });
+
+    const sortedGrouped = {};
+    sortedEntries.forEach(([key, value]) => {
+      sortedGrouped[key] = value;
+    });
+    return sortedGrouped;
   }, [filteredEnterprises]);
 
   /**
@@ -336,6 +351,7 @@ const EnterprisePollAnalysis = () => {
    * Get line name by ID
    */
   const getLineName = (lineId) => {
+    if (lineId === '__no_line__') return t('withoutLine');
     return lineNames[lineId] || `${t('lineName')} ${lineId}`;
   };
 
@@ -530,7 +546,7 @@ const EnterprisePollAnalysis = () => {
           <button
             className="poll-action-button"
             onClick={pollEnterprise}
-            disabled={isPollLoading || !selectedEnterprise}
+            disabled={isPollLoading || !selectedEnterprise || selectedEnterprise.line_id == null}
             title={!selectedEnterprise ? t('selectEnterprise') : t('poll')}
           >
             {isPollLoading ? '...' : t('poll')}
@@ -567,7 +583,7 @@ const EnterprisePollAnalysis = () => {
               <div className="loading-message">{t('loadingEnterprises')}</div>
             ) : (
               Object.entries(enterprisesByLine).map(([lineId, lineEnterprises]) => (
-                <div key={lineId} className="line-group">
+                <div key={`line-group-${lineId}`} className="line-group">
                   <div
                     className="line-header"
                     onClick={() => toggleLineCollapse(lineId)}
@@ -575,15 +591,18 @@ const EnterprisePollAnalysis = () => {
                     <span className={`collapse-icon ${collapsedLines[lineId] ? 'collapsed' : ''}`}>
                       ▼
                     </span>
-                    <span className="line-name">{getLineName(parseInt(lineId))}</span>
+                    <span className="line-name">
+                      {getLineName(lineId === '__no_line__' ? lineId : parseInt(lineId))}
+                    </span>
                     <span className="enterprise-count">({lineEnterprises.length})</span>
                   </div>
                   {!collapsedLines[lineId] && lineEnterprises.map(enterprise => (
                     <div
-                      key={`${enterprise.serNum}_${enterprise.chNum}`}
+                      key={`${enterprise.line_id}_${enterprise.serNum}_${enterprise.chNum}`}
                       className={`enterprise-item ${
                         selectedEnterprise?.serNum === enterprise.serNum &&
-                        selectedEnterprise?.chNum === enterprise.chNum
+                        selectedEnterprise?.chNum === enterprise.chNum &&
+                        selectedEnterprise?.line_id === enterprise.line_id
                           ? 'selected'
                           : ''
                       } ${!enterprise.active ? 'inactive' : ''}`}
@@ -612,7 +631,7 @@ const EnterprisePollAnalysis = () => {
               <div className="selected-enterprise-header">
                 <h3>{selectedEnterprise.enterprise_name}</h3>
                 <span className="enterprise-details">
-                  {getLineName(selectedEnterprise.line_id)} |
+                  {getLineName(selectedEnterprise.line_id != null ? selectedEnterprise.line_id : '__no_line__')} |
                   SN: {selectedEnterprise.serNum} |
                   CH: {selectedEnterprise.chNum}
                 </span>
@@ -788,7 +807,7 @@ const EnterprisePollAnalysis = () => {
                       }}
                     >
                       <span className="enterprise-name">{enterprise.enterprise_name}</span>
-                      <span className="line-id">{getLineName(enterprise.line_id)}</span>
+                      <span className="line-id">{getLineName(enterprise.line_id != null ? enterprise.line_id : '__no_line__')}</span>
                     </div>
                   ))}
                 </div>
