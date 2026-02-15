@@ -12,6 +12,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import * as XLSX from 'xlsx';
 import './EnterprisePollAnalysis.css';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { enterprisePollApi, enterpriseApi, lineApi } from '../../services/api';
@@ -353,6 +354,22 @@ const EnterprisePollAnalysis = () => {
   const getLineName = (lineId) => {
     if (lineId === '__no_line__') return t('withoutLine');
     return lineNames[lineId] || `${t('lineName')} ${lineId}`;
+  };
+
+  const exportUnpolledToExcel = () => {
+    const headers = [t('selectEnterprise'), t('correctorType'), t('correctorNumber'), t('lineName')];
+    const data = unpolledEnterprises.map(e => ([
+      e.enterprise_name,
+      e.typeDev,
+      e.serNum,
+      getLineName(e.line_id != null ? e.line_id : '__no_line__')
+    ]));
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    ws['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 20 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, t('unpolledEnterprises'));
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `unpolled_enterprises_${today}.xlsx`);
   };
 
   /**
@@ -791,27 +808,46 @@ const EnterprisePollAnalysis = () => {
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{t('unpolledEnterprises')} ({unpolledEnterprises.length})</h3>
-              <button className="modal-close" onClick={() => setShowUnpolledModal(false)}>
-                &times;
-              </button>
+              <div className="modal-header-actions">
+                {unpolledEnterprises.length > 0 && (
+                  <button className="export-excel-btn" onClick={exportUnpolledToExcel}>
+                    {t('exportExcel')}
+                  </button>
+                )}
+                <button className="modal-close" onClick={() => setShowUnpolledModal(false)}>
+                  &times;
+                </button>
+              </div>
             </div>
             <div className="modal-body">
               {unpolledEnterprises.length > 0 ? (
-                <div className="unpolled-list">
-                  {unpolledEnterprises.map(enterprise => (
-                    <div
-                      key={`${enterprise.serNum}_${enterprise.chNum}`}
-                      className="unpolled-item"
-                      onClick={() => {
-                        setSelectedEnterprise(enterprise);
-                        setShowUnpolledModal(false);
-                      }}
-                    >
-                      <span className="enterprise-name">{enterprise.enterprise_name}</span>
-                      <span className="line-id">{getLineName(enterprise.line_id != null ? enterprise.line_id : '__no_line__')}</span>
-                    </div>
-                  ))}
-                </div>
+                <table className="unpolled-table">
+                  <thead>
+                    <tr>
+                      <th>{t('selectEnterprise')}</th>
+                      <th>{t('correctorType')}</th>
+                      <th>{t('correctorNumber')}</th>
+                      <th>{t('lineName')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unpolledEnterprises.map(enterprise => (
+                      <tr
+                        key={`${enterprise.serNum}_${enterprise.chNum}`}
+                        className="unpolled-row"
+                        onClick={() => {
+                          setSelectedEnterprise(enterprise);
+                          setShowUnpolledModal(false);
+                        }}
+                      >
+                        <td>{enterprise.enterprise_name}</td>
+                        <td>{enterprise.typeDev}</td>
+                        <td>{enterprise.serNum}</td>
+                        <td>{getLineName(enterprise.line_id != null ? enterprise.line_id : '__no_line__')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <div className="no-unpolled-message">
                   {t('noData')}

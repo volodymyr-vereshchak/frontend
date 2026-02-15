@@ -234,5 +234,8 @@ export const uk = {
   showVolume: "Об'єм",
   showTemperature: "Температура",
   showPressure: "Тиск",
-  withoutLine: "Без лінії"
+  withoutLine: "Без лінії",
+  correctorType: "Тип коректора",
+  correctorNumber: "Номер коректора",
+  exportExcel: "Експорт в Excel"
 };
