@@ -596,13 +596,14 @@ const EnterprisePollAnalysis = () => {
                     </span>
                     <span className="enterprise-count">({lineEnterprises.length})</span>
                   </div>
-                  {!collapsedLines[lineId] && lineEnterprises.map(enterprise => (
+                  {!collapsedLines[lineId] && lineEnterprises.map((enterprise, idx) => (
                     <div
-                      key={`${enterprise.line_id}_${enterprise.serNum}_${enterprise.chNum}`}
+                      key={`${enterprise.line_id}_${enterprise.serNum}_${enterprise.chNum}_${idx}`}
                       className={`enterprise-item ${
                         selectedEnterprise?.serNum === enterprise.serNum &&
                         selectedEnterprise?.chNum === enterprise.chNum &&
-                        selectedEnterprise?.line_id === enterprise.line_id
+                        selectedEnterprise?.line_id === enterprise.line_id &&
+                        selectedEnterprise?.enterprise_name === enterprise.enterprise_name
                           ? 'selected'
                           : ''
                       } ${!enterprise.active ? 'inactive' : ''}`}
