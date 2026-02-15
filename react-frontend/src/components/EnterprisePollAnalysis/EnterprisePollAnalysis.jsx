@@ -382,15 +382,16 @@ const EnterprisePollAnalysis = () => {
   };
 
   const exportUnpolledToExcel = () => {
-    const headers = [t('selectEnterprise'), t('correctorType'), t('correctorNumber'), t('lineName')];
+    const headers = [t('selectEnterprise'), t('correctorType'), t('correctorNumber'), t('channelNumber'), t('lineName')];
     const data = unpolledEnterprises.map(e => ([
       e.enterprise_name,
       getDeviceTypeName(e.mfDev, e.typeDev),
       e.serNum,
+      e.chNum,
       getLineName(e.line_id != null ? e.line_id : '__no_line__')
     ]));
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    ws['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 20 }];
+    ws['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 20 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, t('unpolledEnterprises'));
     const today = new Date().toISOString().slice(0, 10);
@@ -852,6 +853,7 @@ const EnterprisePollAnalysis = () => {
                       <th>{t('selectEnterprise')}</th>
                       <th>{t('correctorType')}</th>
                       <th>{t('correctorNumber')}</th>
+                      <th>{t('channelNumber')}</th>
                       <th>{t('lineName')}</th>
                     </tr>
                   </thead>
@@ -868,6 +870,7 @@ const EnterprisePollAnalysis = () => {
                         <td>{enterprise.enterprise_name}</td>
                         <td>{getDeviceTypeName(enterprise.mfDev, enterprise.typeDev)}</td>
                         <td>{enterprise.serNum}</td>
+                        <td>{enterprise.chNum}</td>
                         <td>{getLineName(enterprise.line_id != null ? enterprise.line_id : '__no_line__')}</td>
                       </tr>
                     ))}

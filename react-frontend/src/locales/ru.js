@@ -237,5 +237,6 @@ export const ru = {
   withoutLine: "Без линии",
   correctorType: "Тип корректора",
   correctorNumber: "Номер корректора",
+  channelNumber: "Номер канала",
   exportExcel: "Экспорт в Excel"
 };
