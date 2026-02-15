@@ -21,6 +21,31 @@ import { enterprisePollApi, enterpriseApi, lineApi } from '../../services/api';
 registerLocale('ru', ru);
 registerLocale('uk', uk);
 
+// Reverse mapping: (mfDev, typeDev) -> device type name
+const DEVICE_TYPE_NAMES = {
+  '1_5': 'ВЕГА-1.01',
+  '1_15': 'ВЕГА-1.01Н',
+  '1_4': 'КПЛГ-2.01Р',
+  '1_2': 'КПЛГ-1.02Р',
+  '1_3': 'КПЛГ-1.02РВ',
+  '1_8': 'ВЕГА-2.01',
+  '1_16': 'ВЕГА-2.01Н',
+  '1_7': 'ВЕГА-1.02',
+  '1_11': 'КВР-1.01',
+  '1_12': 'КВР-1.02',
+  '5_12': 'ФЛОУТЕК-ТМ-2-3-4',
+  '5_15': 'ФЛОУТЕК-ТМ',
+  '5_9': 'ФЛОУТЕК-ТМ-1',
+  '5_2': 'ФЛОУТЕК-ТМ-3',
+  '3_2': 'Універсал-02',
+  '3_1': 'Універсал-01',
+  '4_1': 'ТАНДЕМ-ТР',
+};
+
+const getDeviceTypeName = (mfDev, typeDev) => {
+  return DEVICE_TYPE_NAMES[`${mfDev}_${typeDev}`] || `${mfDev}-${typeDev}`;
+};
+
 /**
  * Enterprise Poll Analysis Component
  * Allows viewing unpolled enterprises and polling specific enterprises
@@ -360,7 +385,7 @@ const EnterprisePollAnalysis = () => {
     const headers = [t('selectEnterprise'), t('correctorType'), t('correctorNumber'), t('lineName')];
     const data = unpolledEnterprises.map(e => ([
       e.enterprise_name,
-      e.typeDev,
+      getDeviceTypeName(e.mfDev, e.typeDev),
       e.serNum,
       getLineName(e.line_id != null ? e.line_id : '__no_line__')
     ]));
@@ -841,7 +866,7 @@ const EnterprisePollAnalysis = () => {
                         }}
                       >
                         <td>{enterprise.enterprise_name}</td>
-                        <td>{enterprise.typeDev}</td>
+                        <td>{getDeviceTypeName(enterprise.mfDev, enterprise.typeDev)}</td>
                         <td>{enterprise.serNum}</td>
                         <td>{getLineName(enterprise.line_id != null ? enterprise.line_id : '__no_line__')}</td>
                       </tr>
