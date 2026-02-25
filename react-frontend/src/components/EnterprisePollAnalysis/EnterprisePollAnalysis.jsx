@@ -855,6 +855,7 @@ const EnterprisePollAnalysis = () => {
                       <th>{t('correctorNumber')}</th>
                       <th>{t('channelNumber')}</th>
                       <th>{t('lineName')}</th>
+                      <th>{t('status')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -872,6 +873,11 @@ const EnterprisePollAnalysis = () => {
                         <td>{enterprise.serNum}</td>
                         <td>{enterprise.chNum}</td>
                         <td>{getLineName(enterprise.line_id != null ? enterprise.line_id : '__no_line__')}</td>
+                        <td>
+                          <span className={`status-badge ${enterprise.active ? 'enabled' : 'disabled'}`}>
+                            {enterprise.active ? t('statusEnabled') : t('statusDisabled')}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
