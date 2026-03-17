@@ -8,10 +8,28 @@ import InteractiveChart from './components/InteractiveChart'
 import GRSReport from './components/GRSReport'
 import OverviewTab from './components/OverviewTab'
 import EnterprisePollAnalysis from './components/EnterprisePollAnalysis'
+import AdminPanel from './components/AdminPanel/AdminPanel'
 import { LanguageProvider } from './contexts/LanguageContext'
+import { UserProvider } from './contexts/UserContext'
+import { useUser } from './contexts/UserContext'
 import { virtualLinesHelper } from './services/api'
 
+function AppInner() {
+  const { user } = useUser();
+  return <AppContent user={user} />;
+}
+
 function App() {
+  return (
+    <UserProvider>
+      <LanguageProvider>
+        <AppInner />
+      </LanguageProvider>
+    </UserProvider>
+  );
+}
+
+function AppContent({ user }) {
   // Initialize dateRange with commercial day logic
   const getInitialDateRange = () => {
     const today = new Date();
@@ -139,7 +157,6 @@ function App() {
   }, []);
 
   return (
-    <LanguageProvider>
       <div className="App">
       <div className="app-container">
         <TopMenu
@@ -150,8 +167,13 @@ function App() {
         />
         <hr className="separator" />
 
-        {/* Hide DateTimePickers and TreeView when Overview or Poll is active */}
-        {archiveType !== 'overview' && archiveType !== 'poll' && (
+        {/* Admin Panel - only for admin role */}
+        {archiveType === 'admin' && user?.role === 'admin' && (
+          <AdminPanel />
+        )}
+
+        {/* Hide DateTimePickers and TreeView when Overview, Poll, or Admin is active */}
+        {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' && (
           <>
             <DateTimePickers
               onDateRangeChange={handleDateRangeChange}
@@ -175,7 +197,7 @@ function App() {
         )}
 
         {/* Standard layout for other archive types */}
-        {archiveType !== 'overview' && archiveType !== 'poll' && (
+        {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' && (
           <>
             <div className="main-layout">
               <div className="sidebar">
@@ -213,7 +235,6 @@ function App() {
         onClose={handleGRSReportClose}
       />
       </div>
-    </LanguageProvider>
   )
 }
 

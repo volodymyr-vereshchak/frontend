@@ -1,0 +1,117 @@
+.user-badge-wrapper {
+  position: relative;
+}
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid #3E3E3E;
+  background-color: #373a3c;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.user-badge:hover {
+  background-color: #495057;
+  border-color: #6c757d;
+}
+
+.user-badge--loading {
+  border: 1px solid #3E3E3E;
+  background-color: #373a3c;
+  color: #888;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+.user-badge__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background-color: #4a4a4a;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  color: #B9E42B;
+  flex-shrink: 0;
+}
+
+.user-badge__name {
+  font-size: 13px;
+}
+
+.user-badge__role-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.user-badge__role-dot--admin {
+  background-color: #B9E42B;
+}
+
+.user-badge__role-dot--viewer {
+  background-color: #6c757d;
+}
+
+/* Dropdown */
+.user-badge-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #373a3c;
+  border: 1px solid #3E3E3E;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 180px;
+  margin-top: 2px;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.user-badge-dropdown__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 15px;
+}
+
+.user-badge-dropdown__username {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.user-badge-dropdown__role {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  align-self: flex-start;
+}
+
+.user-badge-dropdown__role--admin {
+  background-color: rgba(185, 228, 43, 0.15);
+  color: #B9E42B;
+}
+
+.user-badge-dropdown__role--viewer {
+  background-color: rgba(108, 117, 125, 0.2);
+  color: #adb5bd;
+}

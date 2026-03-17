@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import './TopMenu.css';
 import { useLanguage } from '../contexts/LanguageContext';
 import { languages } from '../locales';
+import UserBadge from './UserBadge/UserBadge';
+import { useUser } from '../contexts/UserContext';
 
 // Archive Icons from Python project
 const CalendarIcon = ({ color = "#B9E42B" }) => (
@@ -70,8 +72,16 @@ const ChevronDownIcon = ({ color = "#B9E42B" }) => (
   </svg>
 );
 
+const AdminIcon = ({ color = "#B9E42B" }) => (
+  <svg width="20" height="20" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 3.33334L5 10V21.6667C5 29.4167 11.6 36.6667 20 38.3333C28.4 36.6667 35 29.4167 35 21.6667V10L20 3.33334Z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M14 20L18 24L26 16" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtualLine }) => {
   const { currentLanguage, changeLanguage, t } = useLanguage();
+  const { user } = useUser();
   const [activeButton, setActiveButton] = useState(archiveType ?
     (archiveType === 'overview' ? 'overview' :
      archiveType === 'daily' ? 'days' :
@@ -79,7 +89,8 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
      archiveType === 'sys' ? 'sys' :
      archiveType === 'edit' ? 'edits' :
      archiveType === 'param' ? 'param' :
-     archiveType === 'poll' ? 'poll' : 'overview') : 'overview');
+     archiveType === 'poll' ? 'poll' :
+     archiveType === 'admin' ? 'admin' : 'overview') : 'overview');
   const [isReportsDropdownOpen, setIsReportsDropdownOpen] = useState(false);
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -121,6 +132,8 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
         return <ReportsIcon color={iconColor} />;
       case 'poll':
         return <PollIcon color={iconColor} />;
+      case 'admin':
+        return <AdminIcon color={iconColor} />;
       default:
         return null;
     }
@@ -144,6 +157,11 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
   // Poll button is always visible (independent feature)
   buttons.push({ id: 'poll', label: t('enterprisePoll'), disabled: false });
 
+  // Admin button — only visible to admin role
+  if (user?.role === 'admin') {
+    buttons.push({ id: 'admin', label: 'Адмін', disabled: false });
+  }
+
   const handleButtonClick = (buttonId) => {
     if (buttonId === 'reports') {
       setIsReportsDropdownOpen(!isReportsDropdownOpen);
@@ -161,7 +179,8 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
       'sys': 'sys',
       'edits': 'edit',
       'param': 'param',
-      'poll': 'poll'
+      'poll': 'poll',
+      'admin': 'admin'
     };
 
     if (onArchiveTypeChange && archiveTypeMap[buttonId]) {
@@ -275,6 +294,8 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
       </div>
 
       <div className="right-section">
+        <UserBadge />
+
         {/* Language Switcher */}
         <div className="language-switcher" ref={languageDropdownRef}>
           <button

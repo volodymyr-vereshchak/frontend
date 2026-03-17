@@ -49,6 +49,9 @@ class ApiClient {
           );
         }
 
+        if (response.status === 204 || response.headers.get('content-length') === '0') {
+          return true;
+        }
         const data = await response.json();
         return data;
 
@@ -124,6 +127,45 @@ class ApiClient {
       console.error(`API POST error for ${endpoint}:`, error);
       return null;
     }
+  }
+
+  async put(endpoint, data = null) {
+    try {
+      const options = { method: 'PUT' };
+      if (data) {
+        options.body = JSON.stringify(data);
+      }
+      return await this._makeRequest(endpoint, options);
+    } catch (error) {
+      console.error(`API PUT error for ${endpoint}:`, error);
+      return null;
+    }
+  }
+
+  async patch(endpoint, data = null) {
+    try {
+      const options = { method: 'PATCH' };
+      if (data) {
+        options.body = JSON.stringify(data);
+      }
+      return await this._makeRequest(endpoint, options);
+    } catch (error) {
+      console.error(`API PATCH error for ${endpoint}:`, error);
+      return null;
+    }
+  }
+
+  async delete(endpoint) {
+    try {
+      return await this._makeRequest(endpoint, { method: 'DELETE' });
+    } catch (error) {
+      console.error(`API DELETE error for ${endpoint}:`, error);
+      return null;
+    }
+  }
+
+  async getMe() {
+    return await this._makeRequest('/auth/me', { method: 'GET' });
   }
 }
 
@@ -588,6 +630,25 @@ export const dataApi = {
       return [];
     }
   }
+};
+
+// Admin: Branch API
+export const branchApi = {
+  getAll:         ()           => apiClient.get('/grmu_branch/'),
+  create:         (data)       => apiClient.post('/grmu_branch/', data),
+  update:         (id, data)   => apiClient.patch(`/grmu_branch/${id}`, data),
+  delete:         (id)         => apiClient.delete(`/grmu_branch/${id}`),
+};
+
+// Admin: Lumg API
+export const lumgApi = {
+  getAll:         ()           => apiClient.get('/lumgs/'),
+  create:         (data)       => apiClient.post('/lumgs/', data),
+  update:         (id, data)   => apiClient.patch(`/lumgs/${id}`, data),
+  delete:         (id)         => apiClient.delete(`/lumgs/${id}`),
+  getDataPath:    (id)         => apiClient.get(`/lumgs/${id}/data-path`),
+  setDataPath:    (id, data)   => apiClient.put(`/lumgs/${id}/data-path`, data),
+  deleteDataPath: (id)         => apiClient.delete(`/lumgs/${id}/data-path`),
 };
 
 export default apiClient;
