@@ -3,11 +3,17 @@ import './AdminPanel.css';
 import BranchesTab from './BranchesTab';
 import LumgsTab from './LumgsTab';
 import DataPathsTab from './DataPathsTab';
+import UpdateTab from './UpdateTab';
+import LinesConfigTab from './LinesConfigTab';
+import VirtualLinesTab from './VirtualLinesTab';
 
 const TABS = [
-  { id: 'branches', label: 'Філіали' },
-  { id: 'lumgs',    label: 'ЛУМГ' },
-  { id: 'paths',    label: 'Шляхи даних' },
+  { id: 'branches',      label: 'Філіали' },
+  { id: 'lumgs',         label: 'ЛУМГ' },
+  { id: 'paths',         label: 'Шляхи даних' },
+  { id: 'lines_config',  label: 'Лінії' },
+  { id: 'virtual_lines', label: 'Кільця' },
+  { id: 'update',        label: 'Оновлення' },
 ];
 
 export default function AdminPanel() {
@@ -28,9 +34,12 @@ export default function AdminPanel() {
         ))}
       </div>
       <div className="admin-tab-content">
-        {activeTab === 'branches' && <BranchesTab />}
-        {activeTab === 'lumgs'    && <LumgsTab />}
-        {activeTab === 'paths'    && <DataPathsTab />}
+        {activeTab === 'branches'      && <BranchesTab />}
+        {activeTab === 'lumgs'         && <LumgsTab />}
+        {activeTab === 'paths'         && <DataPathsTab />}
+        {activeTab === 'lines_config'  && <LinesConfigTab />}
+        {activeTab === 'virtual_lines' && <VirtualLinesTab />}
+        {activeTab === 'update'        && <UpdateTab />}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './TreeView.css';
-import { dataApi, lineApi, virtualLinesApi, virtualLinesHelper } from '../services/api';
+import { branchApi, lumgApi, lineApi, dataApi, virtualLinesApi, virtualLinesHelper } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // SVG Icon Components
@@ -14,6 +14,25 @@ const FolderOpenIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M3 8L3 18C3 19.1046 3.89543 20 5 20L19 20C20.1046 20 21 19.1046 21 18L21 10C21 8.89543 20.1046 8 19 8L13 8L11 6L5 6C3.89543 6 3 6.89543 3 8Z" fill="#FFD54F" stroke="#FFC107" strokeWidth="1"/>
     <path d="M3 12L21 12" stroke="#FFC107" strokeWidth="1" strokeLinecap="round"/>
+  </svg>
+);
+
+const BranchIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="6" width="18" height="13" rx="2" fill="#7986CB" stroke="#5C6BC0" strokeWidth="1"/>
+    <rect x="7" y="3" width="10" height="5" rx="1" fill="#9FA8DA" stroke="#7986CB" strokeWidth="1"/>
+    <rect x="6" y="12" width="3" height="4" fill="#fff" opacity="0.7"/>
+    <rect x="10.5" y="12" width="3" height="4" fill="#fff" opacity="0.7"/>
+    <rect x="15" y="12" width="3" height="4" fill="#fff" opacity="0.7"/>
+  </svg>
+);
+
+const LumgIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="4" y="4" width="16" height="16" rx="2" fill="#4DB6AC" stroke="#26A69A" strokeWidth="1"/>
+    <circle cx="12" cy="10" r="3" fill="#fff" opacity="0.8"/>
+    <rect x="9" y="14" width="6" height="2" rx="1" fill="#fff" opacity="0.6"/>
+    <rect x="10" y="17" width="4" height="1.5" rx="0.5" fill="#fff" opacity="0.5"/>
   </svg>
 );
 
@@ -40,9 +59,7 @@ const LineIcon = ({ selected = false }) => (
 const VirtualLineIcon = ({ selected = false }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle
-      cx="12"
-      cy="12"
-      r="9"
+      cx="12" cy="12" r="9"
       fill="none"
       stroke={selected ? "#ffffff" : "#9C27B0"}
       strokeWidth="1.5"
@@ -64,121 +81,115 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
   const [hasInitialized, setHasInitialized] = useState(false);
   const treeDataRef = useRef([]);
 
-  // Transform flat data into hierarchical structure
-  const buildTreeStructure = (flatData) => {
-    if (!flatData || flatData.length === 0) {
-      return [];
-    }
-
-
-    // Group data by gas_volume_calc_id
-    const groups = {};
-    const lines = [];
-
-    flatData.forEach(item => {
-
-      if (item.name_gas_volume && item.gas_volume_calc_id) {
-        // This is a gas volume calculation group
-        if (!groups[item.gas_volume_calc_id]) {
-          groups[item.gas_volume_calc_id] = {
-            id: item.gas_volume_calc_id,
-            name_gas_volume: item.name_gas_volume,
-            gas_volume_calc_id: item.gas_volume_calc_id,
-            children: []
-          };
-        }
-      }
-
-      // This is always a line
-      const lineData = {
-        id: item.id,
-        name: item.name,
-        gas_volume_calc_id: item.gas_volume_calc_id,
-        address: item.address,
-        line: item.line
-      };
-      lines.push(lineData);
-    });
-
-    // Assign lines to their groups
-    lines.forEach(line => {
-      if (line.gas_volume_calc_id && groups[line.gas_volume_calc_id]) {
-        groups[line.gas_volume_calc_id].children.push(line);
-      } else {
-      }
-    });
-
-    // Convert to array and filter out empty groups
-    const treeStructure = Object.values(groups).filter(group => group.children.length > 0);
-
-    return treeStructure;
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        // Загрузить данные параллельно
-        const [gasVolumeGroups, physicalLines, virtualLines] = await Promise.all([
+        const [branches, lumgs, gvcs, allLines, virtualLines] = await Promise.all([
+          branchApi.getAll(),
+          lumgApi.getAll(),
           dataApi.getGasVolumeCalcs(),
-          lineApi.getLinesByLumg(),
-          virtualLinesApi.getVisibleLines()
+          lineApi.getAll(),
+          virtualLinesApi.getVisibleLines(),
         ]);
 
-        // Построить дерево
+        // Group virtual lines by lumg_id; null-lumg_id entries by branch_id
+        const virtualByLumg = {};
+        const virtualByBranchForNull = {};
+        (virtualLines || [])
+          .filter(l => virtualLinesHelper.isVirtualLineObject(l))
+          .forEach(vl => {
+            if (vl.lumg_id) {
+              if (!virtualByLumg[vl.lumg_id]) virtualByLumg[vl.lumg_id] = [];
+              virtualByLumg[vl.lumg_id].push(vl);
+            } else {
+              const bKey = vl.branch_id || 0;
+              if (!virtualByBranchForNull[bKey]) virtualByBranchForNull[bKey] = [];
+              virtualByBranchForNull[bKey].push(vl);
+            }
+          });
+
         const treeStructure = [];
 
-        // 1. ВИРТУАЛЬНЫЕ ЛИНИИ (отдельная группа в начале)
-        if (virtualLines && virtualLines.length > 0) {
-          // Отфильтровать только виртуальные линии (id >= 1000)
-          const onlyVirtualLines = virtualLines.filter(line =>
-            virtualLinesHelper.isVirtualLineObject(line)
-          );
+        // Build Branch → LUMG → GVC → Line hierarchy
+        const lumgsByBranch = {};
+        (lumgs || []).forEach(lumg => {
+          const bid = lumg.branch_id;
+          if (!lumgsByBranch[bid]) lumgsByBranch[bid] = [];
+          lumgsByBranch[bid].push(lumg);
+        });
 
-          if (onlyVirtualLines.length > 0) {
+        const gvcsByLumg = {};
+        (gvcs || []).forEach(gvc => {
+          const lid = gvc.lumg_id;
+          if (!gvcsByLumg[lid]) gvcsByLumg[lid] = [];
+          gvcsByLumg[lid].push(gvc);
+        });
+
+        const linesByGvc = {};
+        (allLines || []).forEach(line => {
+          const gid = line.gas_volume_calc_id;
+          if (!linesByGvc[gid]) linesByGvc[gid] = [];
+          linesByGvc[gid].push(line);
+        });
+
+        (branches || []).forEach(branch => {
+          const branchLumgs = lumgsByBranch[branch.id] || [];
+          let isFirstLumg = true;
+
+          const lumgNodes = branchLumgs.map(lumg => {
+            const lumgGvcs = gvcsByLumg[lumg.id] || [];
+
+            const gvcNodes = lumgGvcs.map(gvc => {
+              const gvcLines = linesByGvc[gvc.id] || [];
+              return {
+                type: 'gvc',
+                id: `gvc-${gvc.id}`,
+                gvcId: gvc.id,
+                name: gvc.name,
+                children: gvcLines.map(line => ({
+                  id: line.id,
+                  name: line.name,
+                  gas_volume_calc_id: line.gas_volume_calc_id,
+                  is_virtual: false,
+                  address: line.address,
+                  line: line.line,
+                  meter: line.meter,
+                })),
+              };
+            }).filter(g => g.children.length > 0);
+
+            // Collect virtual lines for this LUMG + fallback for first LUMG
+            const lumgVirtuals = [
+              ...(virtualByLumg[lumg.id] || []),
+              ...(isFirstLumg ? (virtualByBranchForNull[branch.id] || []) : []),
+            ];
+            isFirstLumg = false;
+
+            return {
+              type: 'lumg',
+              id: `lumg-${lumg.id}`,
+              lumgId: lumg.id,
+              name: lumg.name,
+              children: gvcNodes,
+              virtualLines: lumgVirtuals,
+            };
+          }).filter(l => l.children.length > 0 || l.virtualLines.length > 0);
+
+          if (lumgNodes.length > 0) {
             treeStructure.push({
-              id: 'virtual-group',
-              name_gas_volume: t('virtualLines') || 'Виртуальные линии',
-              gas_volume_calc_id: 'virtual-group',
-              is_virtual_group: true,
-              children: onlyVirtualLines.map(line => ({
-                id: line.id,
-                name: line.name,
-                is_virtual: true,
-                physical_line_ids: line.physical_line_ids || []
-              }))
+              type: 'branch',
+              id: `branch-${branch.id}`,
+              branchId: branch.id,
+              name: branch.name,
+              children: lumgNodes,
             });
           }
-        }
+        });
 
-        // 2. ФИЗИЧЕСКИЕ ЛИНИИ (оригинальная логика)
-        const physicalGroups = gasVolumeGroups.map(group => {
-          // Найти линии, принадлежащие этой группе
-          const groupLines = physicalLines.filter(line => line.gas_volume_calc_id === group.id);
-
-          return {
-            id: group.id,
-            name_gas_volume: group.name,
-            gas_volume_calc_id: group.id,
-            is_virtual_group: false,
-            children: groupLines.map(line => ({
-              id: line.id,
-              name: line.name,
-              gas_volume_calc_id: line.gas_volume_calc_id,
-              is_virtual: false,
-              address: line.address,
-              line: line.line,
-              meter: line.meter
-            }))
-          };
-        }).filter(group => group.children.length > 0); // Только группы с линиями
-
-        // Добавить физические группы к дереву
-        treeStructure.push(...physicalGroups);
-
-        if (!treeStructure || treeStructure.length === 0) {
+        if (treeStructure.length === 0) {
           setError(t('noDataToDisplay'));
           setTreeData([]);
           return;
@@ -188,8 +199,8 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         treeDataRef.current = treeStructure;
         setExpandedGroups(new Set());
 
-      } catch (error) {
-        setError(`${t('loadingError')}: ${error.message}`);
+      } catch (err) {
+        setError(`${t('loadingError')}: ${err.message}`);
         setTreeData([]);
       } finally {
         setLoading(false);
@@ -199,79 +210,152 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
     fetchData();
   }, []);
 
-  const toggleGroup = (groupId) => {
+  const toggleGroup = (id) => {
     setExpandedGroups(prev => {
-      const newExpanded = new Set(prev);
-      if (newExpanded.has(groupId)) {
-        newExpanded.delete(groupId);
-      } else {
-        newExpanded.add(groupId);
-      }
-      return newExpanded;
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
     });
   };
 
-  const toggleLineSelection = (lineId) => {
-    setSelectedItem(prev => {
-      const newSelection = prev === lineId ? null : lineId;
-      return newSelection;
-    });
-  };
-
-  // Use useEffect to notify parent when selection changes
+  // Notify parent on selection change
   useEffect(() => {
-    if (onLinesSelected) {
-      // Найти метаданные выбранной линии из ref (актуальные данные)
-      let lineMetadata = null;
-      if (selectedItem) {
-        for (const group of treeDataRef.current) {
-          const line = group.children?.find(child => child.id === selectedItem);
-          if (line) {
-            lineMetadata = { is_virtual: line.is_virtual };
-            break;
+    if (!onLinesSelected) return;
+    let lineMetadata = null;
+    if (selectedItem) {
+      outer: for (const node of treeDataRef.current) {
+        if (node.type === 'branch') {
+          for (const lumg of node.children || []) {
+            const vline = lumg.virtualLines?.find(c => c.id === selectedItem);
+            if (vline) { lineMetadata = { is_virtual: true }; break outer; }
+            for (const gvc of lumg.children || []) {
+              const line = gvc.children?.find(c => c.id === selectedItem);
+              if (line) { lineMetadata = { is_virtual: false }; break outer; }
+            }
           }
         }
       }
-
-      onLinesSelected(selectedItem ? [selectedItem] : [], lineMetadata);
     }
+    onLinesSelected(selectedItem ? [selectedItem] : [], lineMetadata);
   }, [selectedItem, onLinesSelected]);
 
-  // Auto-select line from URL parameter after data loads
+  // Auto-select line from URL parameter
   useEffect(() => {
-    if (initialLineId && treeData.length > 0 && !hasInitialized && !loading) {
-      // Find the line in tree data
-      let lineFound = false;
-      for (const group of treeData) {
-        const line = group.children?.find(child => child.id === initialLineId);
-        if (line) {
-          // Expand the group containing this line
-          setExpandedGroups(prev => {
-            const newExpanded = new Set(prev);
-            newExpanded.add(group.id);
-            return newExpanded;
-          });
+    if (!initialLineId || treeData.length === 0 || hasInitialized || loading) return;
 
-          // Select the line
-          setSelectedItem(initialLineId);
-          lineFound = true;
-          break;
+    for (const node of treeData) {
+      if (node.type === 'branch') {
+        for (const lumg of node.children || []) {
+          const vline = lumg.virtualLines?.find(c => c.id === initialLineId);
+          if (vline) {
+            setExpandedGroups(prev => {
+              const n = new Set(prev);
+              n.add(node.id); n.add(lumg.id);
+              return n;
+            });
+            setSelectedItem(initialLineId);
+            setHasInitialized(true);
+            return;
+          }
+          for (const gvc of lumg.children || []) {
+            const line = gvc.children?.find(c => c.id === initialLineId);
+            if (line) {
+              setExpandedGroups(prev => {
+                const n = new Set(prev);
+                n.add(node.id); n.add(lumg.id); n.add(gvc.id);
+                return n;
+              });
+              setSelectedItem(initialLineId);
+              setHasInitialized(true);
+              return;
+            }
+          }
         }
       }
-
-      setHasInitialized(true);
     }
+
+    setHasInitialized(true);
   }, [initialLineId, treeData, hasInitialized, loading]);
 
-  const isGroupExpanded = (groupId) => expandedGroups.has(groupId);
-  const isLineSelected = (lineId) => selectedItem === lineId;
+  const isExpanded = (id) => expandedGroups.has(id);
+  const isSelected = (id) => selectedItem === id;
+
+  const renderLines = (lines) => lines.map((line, i) => (
+    <div
+      key={`line-${line.id}-${i}`}
+      className={`tree-line ${isSelected(line.id) ? 'selected' : ''} ${line.is_virtual ? 'virtual-line' : ''}`}
+      onClick={() => setSelectedItem(prev => prev === line.id ? null : line.id)}
+      title={line.is_virtual ? t('virtualLineTooltip') : line.name}
+    >
+      <span className="line-icon">
+        {line.is_virtual
+          ? <VirtualLineIcon selected={isSelected(line.id)} />
+          : <LineIcon selected={isSelected(line.id)} />}
+      </span>
+      <span className="line-name">{line.name}</span>
+      {line.is_virtual && <span className="virtual-badge">V</span>}
+    </div>
+  ));
+
+  const renderGvc = (gvc) => (
+    <div key={gvc.id} className="tree-group" style={{ paddingLeft: 8 }}>
+      <div className="group-header" onClick={() => toggleGroup(gvc.id)}>
+        <span className={`expand-icon ${isExpanded(gvc.id) ? 'expanded' : ''}`}>
+          {isExpanded(gvc.id) ? <FolderOpenIcon /> : <FolderClosedIcon />}
+        </span>
+        <span className="group-icon"><GasCalculatorIcon /></span>
+        <span className="group-name">{gvc.name}</span>
+      </div>
+      {isExpanded(gvc.id) && gvc.children.length > 0 && (
+        <div className="group-children">
+          {renderLines(gvc.children)}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderLumg = (lumg) => {
+    const hasContent = lumg.children.length > 0 || (lumg.virtualLines || []).length > 0;
+    return (
+      <div key={lumg.id} className="tree-group" style={{ paddingLeft: 8 }}>
+        <div className="group-header" onClick={() => toggleGroup(lumg.id)}>
+          <span className={`expand-icon ${isExpanded(lumg.id) ? 'expanded' : ''}`}>
+            {isExpanded(lumg.id) ? <FolderOpenIcon /> : <FolderClosedIcon />}
+          </span>
+          <span className="group-icon"><LumgIcon /></span>
+          <span className="group-name">{lumg.name}</span>
+        </div>
+        {isExpanded(lumg.id) && hasContent && (
+          <div className="group-children">
+            {lumg.children.map(gvc => renderGvc(gvc))}
+            {renderLines(lumg.virtualLines || [])}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderBranch = (branch) => (
+    <div key={branch.id} className="tree-group">
+      <div className="group-header" onClick={() => toggleGroup(branch.id)}>
+        <span className={`expand-icon ${isExpanded(branch.id) ? 'expanded' : ''}`}>
+          {isExpanded(branch.id) ? <FolderOpenIcon /> : <FolderClosedIcon />}
+        </span>
+        <span className="group-icon"><BranchIcon /></span>
+        <span className="group-name">{branch.name}</span>
+      </div>
+      {isExpanded(branch.id) && branch.children.length > 0 && (
+        <div className="group-children">
+          {branch.children.map(lumg => renderLumg(lumg))}
+        </div>
+      )}
+    </div>
+  );
 
   if (loading) {
     return (
       <div className="tree-view">
-        <div className="tree-header">
-          <h6>{t('nodeListTitle')}</h6>
-        </div>
+        <div className="tree-header"><h6>{t('nodeListTitle')}</h6></div>
         <div className="loading">{t('loading')}</div>
       </div>
     );
@@ -280,9 +364,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
   if (error) {
     return (
       <div className="tree-view">
-        <div className="tree-header">
-          <h6>{t('nodeListTitle')}</h6>
-        </div>
+        <div className="tree-header"><h6>{t('nodeListTitle')}</h6></div>
         <div className="error">{error}</div>
       </div>
     );
@@ -294,45 +376,11 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         <h6>{t('nodeListTitle')}</h6>
       </div>
       <div className="tree-content">
-        {treeData.map((group, groupIndex) => (
-          <div key={`group-${group.id}-${groupIndex}`} className="tree-group">
-            <div
-              className="group-header"
-              onClick={() => toggleGroup(group.id)}
-            >
-              <span className={`expand-icon ${isGroupExpanded(group.id) ? 'expanded' : ''}`}>
-                {isGroupExpanded(group.id) ? <FolderOpenIcon /> : <FolderClosedIcon />}
-              </span>
-              <span className="group-icon"><GasCalculatorIcon /></span>
-              <span className="group-name">{group.name_gas_volume}</span>
-            </div>
-
-            {isGroupExpanded(group.id) && group.children && group.children.length > 0 && (
-              <div className="group-children">
-                {group.children.map((line, lineIndex) => (
-                  <div
-                    key={`line-${line.id}-${lineIndex}`}
-                    className={`tree-line ${isLineSelected(line.id) ? 'selected' : ''} ${line.is_virtual ? 'virtual-line' : ''}`}
-                    onClick={() => toggleLineSelection(line.id)}
-                    title={line.is_virtual ? t('virtualLineTooltip') : line.name}
-                  >
-                    <span className="line-icon">
-                      {line.is_virtual ? (
-                        <VirtualLineIcon selected={isLineSelected(line.id)} />
-                      ) : (
-                        <LineIcon selected={isLineSelected(line.id)} />
-                      )}
-                    </span>
-                    <span className="line-name">{line.name}</span>
-                    {line.is_virtual && <span className="virtual-badge">V</span>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+        {treeData.map(node => {
+          if (node.type === 'branch') return renderBranch(node);
+          return null;
+        })}
       </div>
-
       {selectedItem && (
         <div className="selection-info">
           {t('selectedLine')} ID {selectedItem}

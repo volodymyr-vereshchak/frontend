@@ -176,7 +176,15 @@ const apiClient = new ApiClient();
 export const lineApi = {
   async getLinesByLumg(lumgId = 1) {
     return await apiClient.get('/lines/', { lumg_id: lumgId });
-  }
+  },
+  getAll:    ()           => apiClient.get('/lines/'),
+  update:    (id, data)   => apiClient.patch(`/lines/${id}`, data),
+};
+
+// Update API methods
+export const updateApi = {
+  updateAll:  ()   => apiClient.post('/update_data/'),
+  updateLumg: (id) => apiClient.post(`/update_data/${id}`),
 };
 
 // Gas Volume Calculation API methods
@@ -405,6 +413,13 @@ export const enterprisePollApi = {
 // Virtual Lines API (with virtual lines support)
 // ========================================
 
+export const virtualLineApi = {
+  getAll:   ()           => apiClient.get('/virtual_lines/'),
+  create:   (data)       => apiClient.post('/virtual_lines/', data),
+  update:   (id, data)   => apiClient.patch(`/virtual_lines/${id}`, data),
+  delete:   (id)         => apiClient.delete(`/virtual_lines/${id}`),
+};
+
 export const virtualLinesApi = {
   async getVisibleLines() {
     return await apiClient.get('/virtual_lines/visible');
@@ -446,11 +461,12 @@ export const enterpriseVirtualApi = {
 // Virtual lines helper utilities
 export const virtualLinesHelper = {
   isVirtualLine(lineId) {
-    return lineId >= 1000;
+    // No longer reliable without the numeric convention; use lineMetadata.is_virtual instead
+    return false;
   },
 
   isVirtualLineObject(line) {
-    return line && (line.is_virtual === true || line.id >= 1000);
+    return line && line.is_virtual === true;
   }
 };
 
