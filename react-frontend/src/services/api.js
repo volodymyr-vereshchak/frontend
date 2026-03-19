@@ -277,7 +277,7 @@ export const archiveDataApi = {
     return await apiClient.get('/hourly/', params);
   },
 
-  async getHourlyDataLast24h() {
+  async getHourlyDataLast24h(lineIds = grsConfig.LINES_IDS) {
     try {
       // Get hourly data for last 24 hours (replicate Python logic)
       // Python: end = get_last_period(), start = end - timedelta(hours=23)
@@ -290,8 +290,8 @@ export const archiveDataApi = {
       const endDate = tomorrow.toISOString().split('T')[0]; // Tomorrow (2025-09-18)
       const startDate = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 5 days ago
 
-      // Get data for all configured GRS lines
-      const result = await this.getHourlyData(grsConfig.LINES_IDS, startDate, endDate);
+      // Get data for specified lines
+      const result = await this.getHourlyData(lineIds, startDate, endDate);
 
       if (!result || result.length === 0) {
         return [];
@@ -654,6 +654,13 @@ export const branchApi = {
   create:         (data)       => apiClient.post('/grmu_branch/', data),
   update:         (id, data)   => apiClient.patch(`/grmu_branch/${id}`, data),
   delete:         (id)         => apiClient.delete(`/grmu_branch/${id}`),
+  getConfigPath:      (id)         => apiClient.get(`/grmu_branch/${id}/data-path`),
+  setConfigPath:      (id, data)   => apiClient.put(`/grmu_branch/${id}/data-path`, data),
+  deleteConfigPath:   (id)         => apiClient.delete(`/grmu_branch/${id}/data-path`),
+  previewConfig:      (id)         => apiClient.get(`/grmu_branch/${id}/config-preview`),
+  getConfigMappings:  (id)         => apiClient.get(`/grmu_branch/${id}/config-mappings`),
+  setConfigMappings:  (id, data)   => apiClient.put(`/grmu_branch/${id}/config-mappings`, data),
+  updateNames:        (id)         => apiClient.post(`/grmu_branch/${id}/update-names`),
 };
 
 // Admin: Lumg API

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './OverviewTab.css';
 import { useLanguage } from '../contexts/LanguageContext';
-import { lineApi, archiveDataApi, paramArchiveApi } from '../services/api';
-import { grsConfig } from '../config/grsConfig';
+import { lineApi, archiveDataApi, paramArchiveApi, branchApi, lumgApi } from '../services/api';
 import { OverviewCalculator } from '../utils/overviewCalculator';
 import OverviewMetrics from './OverviewMetrics';
 import PressureGaugesGrid from './PressureGaugesGrid';
@@ -15,37 +14,98 @@ import PressureGaugesGrid from './PressureGaugesGrid';
 const OverviewTab = () => {
   const { t } = useLanguage();
 
-  // State
+  // Branch selection
+  const [branches, setBranches] = useState([]);
+  const [allLumgs, setAllLumgs] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState(null);
+  const [selectorLoading, setSelectorLoading] = useState(true);
+
+  // Data state
   const [data, setData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [countdown, setCountdown] = useState(300); // 5 minutes in seconds
+  const [countdown, setCountdown] = useState(300);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
 
   /**
-   * Load data from API
+   * Load branches and lumgs on mount, auto-select first
+   */
+  useEffect(() => {
+    const loadSelectors = async () => {
+      setSelectorLoading(true);
+      try {
+        const [branchesRes, lumgsRes] = await Promise.all([
+          branchApi.getAll(),
+          lumgApi.getAll(),
+        ]);
+        const branchList = Array.isArray(branchesRes) ? branchesRes : branchesRes?.data || [];
+        const lumgList = Array.isArray(lumgsRes) ? lumgsRes : lumgsRes?.data || [];
+
+        setBranches(branchList);
+        setAllLumgs(lumgList);
+
+        if (branchList.length > 0) {
+          setSelectedBranchId(branchList[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to load branches/lumgs:', err);
+      } finally {
+        setSelectorLoading(false);
+      }
+    };
+    loadSelectors();
+  }, []);
+
+  /**
+   * Handle branch selection change
+   */
+  const handleBranchChange = (e) => {
+    setSelectedBranchId(Number(e.target.value));
+    setData(null);
+  };
+
+  /**
+   * Load overview data for all LUMGs of the selected branch
    */
   const loadData = useCallback(async () => {
+    if (!selectedBranchId) return;
+
     setIsLoading(true);
     setError(null);
 
     try {
-      // Fetch line metadata
-      const linesResponse = await lineApi.getLinesByLumg(1);
-      let lines = Array.isArray(linesResponse) ? linesResponse : linesResponse?.data || [];
+      // Get all LUMGs for the selected branch
+      const branchLumgIds = allLumgs
+        .filter(l => l.branch_id === selectedBranchId)
+        .map(l => l.id);
 
-      if (!Array.isArray(lines) || lines.length === 0) {
-        throw new Error('Не удалось получить данные линий');
+      if (branchLumgIds.length === 0) {
+        throw new Error('Немає ЛУМГів для обраної філії');
       }
 
-      // Filter only GRS lines
-      lines = lines.filter(line => grsConfig.LINES_IDS.includes(line.id));
+      // Fetch lines for all LUMGs in parallel
+      const linesResponses = await Promise.all(
+        branchLumgIds.map(lumgId => lineApi.getLinesByLumg(lumgId))
+      );
+      let lines = linesResponses.flatMap(r => Array.isArray(r) ? r : r?.data || []);
 
-      // Fetch parameters for all GRS lines
+      if (!Array.isArray(lines) || lines.length === 0) {
+        throw new Error('Не вдалося отримати дані ліній');
+      }
+
+      // Filter only lines included in report
+      lines = lines.filter(line => line.include_in_report);
+      const reportLineIds = lines.map(line => line.id);
+
+      if (reportLineIds.length === 0) {
+        throw new Error('Немає ліній з прапором include_in_report для обраної філії');
+      }
+
+      // Fetch parameters for all report lines
       let paramsMap = {};
       try {
-        const paramsResponse = await paramArchiveApi.getParamsForLines(grsConfig.LINES_IDS);
+        const paramsResponse = await paramArchiveApi.getParamsForLines(reportLineIds);
         const paramsData = Array.isArray(paramsResponse) ? paramsResponse : paramsResponse?.data || [];
 
         paramsData.forEach(param => {
@@ -61,15 +121,14 @@ const OverviewTab = () => {
       }
 
       // Fetch last 24h hourly data
-      const last24hResponse = await archiveDataApi.getHourlyDataLast24h();
+      const last24hResponse = await archiveDataApi.getHourlyDataLast24h(reportLineIds);
       let last24hData = Array.isArray(last24hResponse) ? last24hResponse : last24hResponse?.data || [];
 
       if (!Array.isArray(last24hData) || last24hData.length === 0) {
         throw new Error('Нет данных за последние 24 часа');
       }
 
-      // Calculate previous 24h period
-      // Find earliest and latest periods in last24hData
+      // Determine previous 24h period
       const periods = last24hData
         .map(r => r.period ? new Date(r.period) : null)
         .filter(d => d && !isNaN(d.getTime()))
@@ -82,61 +141,44 @@ const OverviewTab = () => {
       const currentStart = periods[0];
       const currentEnd = periods[periods.length - 1];
 
-      // Previous period: 24 hours before current start
       const previousEnd = new Date(currentStart);
       previousEnd.setHours(previousEnd.getHours() - 1);
-
       const previousStart = new Date(previousEnd);
       previousStart.setHours(previousStart.getHours() - 23);
 
-      // Format dates for API
       const previousStartStr = OverviewCalculator.formatDateForAPI(previousStart);
       const previousEndStr = OverviewCalculator.formatDateForAPI(previousEnd);
 
       // Fetch previous 24h data
       const previous24hResponse = await archiveDataApi.getHourlyData(
-        grsConfig.LINES_IDS,
+        reportLineIds,
         previousStartStr,
         previousEndStr
       );
       let previous24hData = Array.isArray(previous24hResponse) ? previous24hResponse : previous24hResponse?.data || [];
 
-      // Calculate metrics - only for GRS lines
+      // Calculate metrics
       const lineNames = {};
       lines.forEach(line => {
-        if (grsConfig.LINES_IDS.includes(line.id)) {
-          lineNames[line.id] = line.name || `Линия ${line.id}`;
-        }
+        lineNames[line.id] = line.name || `Линия ${line.id}`;
       });
 
-      // Total 24h volumes
-      const currentTotal = OverviewCalculator.calculate24hTotal(last24hData, grsConfig.LINES_IDS);
-      const previousTotal = OverviewCalculator.calculate24hTotal(previous24hData, grsConfig.LINES_IDS);
+      const currentTotal = OverviewCalculator.calculate24hTotal(last24hData, reportLineIds);
+      const previousTotal = OverviewCalculator.calculate24hTotal(previous24hData, reportLineIds);
       const volumeComparison = OverviewCalculator.calculateComparison(currentTotal, previousTotal);
-
-      // Last hour flow comparisons
-      const flowComparisons = OverviewCalculator.calculateLastHourFlow(last24hData, grsConfig.LINES_IDS);
-
-      // 24h volume comparisons by line
+      const flowComparisons = OverviewCalculator.calculateLastHourFlow(last24hData, reportLineIds);
       const volumeComparisons = OverviewCalculator.calculate24hVolumeByLine(
         last24hData,
         previous24hData,
-        grsConfig.LINES_IDS
+        reportLineIds
       );
+      const pressures = OverviewCalculator.getLastPressures(last24hData, reportLineIds, lines, paramsMap);
 
-      // Pressure readings
-      const pressures = OverviewCalculator.getLastPressures(last24hData, grsConfig.LINES_IDS, lines, paramsMap);
-
-      // Pressure timestamps
       const pressureTimestamps = {};
       Object.keys(pressures).forEach(lineId => {
         pressureTimestamps[lineId] = pressures[lineId].timestamp;
       });
 
-      // Active lines count
-      const activeLines = Object.keys(pressures).length;
-
-      // Update state
       setData({
         totalVolume24h: currentTotal,
         volumeComparison,
@@ -145,40 +187,37 @@ const OverviewTab = () => {
         pressures,
         lineNames,
         pressureTimestamps,
-        activeLines,
-        totalLines: grsConfig.LINES_IDS.length,
+        activeLines: Object.keys(pressures).length,
+        totalLines: reportLineIds.length,
         currentPeriod: { start: currentStart, end: currentEnd },
         previousPeriod: { start: previousStart, end: previousEnd }
       });
 
       setLastUpdateTime(new Date());
-      setIsLoading(false);
-      setCountdown(300); // Reset countdown
-
+      setCountdown(300);
     } catch (err) {
       console.error('Error loading overview data:', err);
       setError(err.message || 'Ошибка загрузки данных');
+    } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedBranchId, allLumgs]);
 
   /**
-   * Initial load
+   * Load data when branch is selected or changes
    */
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (selectedBranchId) {
+      loadData();
+    }
+  }, [loadData, selectedBranchId]);
 
   /**
    * Auto-refresh timer
    */
   useEffect(() => {
     if (!autoRefresh) return;
-
-    const interval = setInterval(() => {
-      loadData();
-    }, 300000); // 5 minutes
-
+    const interval = setInterval(() => { loadData(); }, 300000);
     return () => clearInterval(interval);
   }, [autoRefresh, loadData]);
 
@@ -187,43 +226,42 @@ const OverviewTab = () => {
    */
   useEffect(() => {
     if (!autoRefresh) return;
-
     const timer = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          return 300; // Reset when reaches 0
-        }
-        return prev - 1;
-      });
+      setCountdown(prev => prev <= 1 ? 300 : prev - 1);
     }, 1000);
-
     return () => clearInterval(timer);
   }, [autoRefresh]);
-
-  /**
-   * Handle manual refresh
-   */
-  const handleRefresh = () => {
-    loadData();
-  };
-
-  /**
-   * Handle auto-refresh toggle
-   */
-  const handleAutoRefreshToggle = () => {
-    setAutoRefresh(prev => !prev);
-  };
 
   return (
     <div className="overview-tab">
       {/* Header */}
       <div className="overview-header">
-        <h2 className="overview-title">{t('grsOverviewTitle')}</h2>
+        <div className="overview-title-row">
+          <h2 className="overview-title">{t('grsOverviewTitle')}</h2>
+
+          {/* Branch selector */}
+          <div className="overview-selectors">
+            <div className="selector-group">
+              <label className="selector-label">Філія</label>
+              <select
+                className="overview-select"
+                value={selectedBranchId ?? ''}
+                onChange={handleBranchChange}
+                disabled={selectorLoading || branches.length === 0}
+              >
+                {branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name || `Філія ${b.id}`}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div className="overview-controls">
           <button
             className="refresh-button"
-            onClick={handleRefresh}
-            disabled={isLoading}
+            onClick={loadData}
+            disabled={isLoading || !selectedBranchId}
             title={t('refreshNow')}
           >
             <span className="refresh-icon">{isLoading ? '⏳' : '🔄'}</span>
@@ -233,15 +271,30 @@ const OverviewTab = () => {
             <input
               type="checkbox"
               checked={autoRefresh}
-              onChange={handleAutoRefreshToggle}
+              onChange={() => setAutoRefresh(prev => !prev)}
             />
             <span className="toggle-text">{t('autoRefresh')}</span>
           </label>
         </div>
       </div>
 
-      {/* Loading State */}
-      {isLoading && !data && (
+      {/* Selector loading */}
+      {selectorLoading && (
+        <div className="overview-loading">
+          <div className="loading-spinner"></div>
+          <p>{t('loading')}</p>
+        </div>
+      )}
+
+      {/* No branch selected */}
+      {!selectorLoading && !selectedBranchId && (
+        <div className="overview-error">
+          <p className="error-message">Виберіть філію для відображення даних</p>
+        </div>
+      )}
+
+      {/* Data loading */}
+      {!selectorLoading && selectedBranchId && isLoading && !data && (
         <div className="overview-loading">
           <div className="loading-spinner"></div>
           <p>{t('loading')}</p>
@@ -249,11 +302,11 @@ const OverviewTab = () => {
       )}
 
       {/* Error State */}
-      {error && !data && (
+      {!selectorLoading && error && !data && (
         <div className="overview-error">
           <p className="error-icon">⚠️</p>
           <p className="error-message">{error}</p>
-          <button className="retry-button" onClick={handleRefresh}>
+          <button className="retry-button" onClick={loadData}>
             {t('refreshNow')}
           </button>
         </div>
@@ -262,7 +315,6 @@ const OverviewTab = () => {
       {/* Content */}
       {data && (
         <>
-          {/* Metrics Cards */}
           <OverviewMetrics
             totalVolume24h={data.totalVolume24h}
             volumeComparison={data.volumeComparison}
@@ -272,7 +324,6 @@ const OverviewTab = () => {
             nextRefreshIn={autoRefresh ? countdown : null}
           />
 
-          {/* Pressure Gauges with Flow and Volume Data */}
           <section className="overview-section">
             <h3 className="section-title">{t('linePressures')}</h3>
             <PressureGaugesGrid

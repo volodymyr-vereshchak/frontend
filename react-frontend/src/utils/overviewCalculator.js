@@ -1,5 +1,3 @@
-import { grsConfig } from '../config/grsConfig';
-
 /**
  * Overview Calculator
  * Utility functions for calculating GRS overview metrics
@@ -157,15 +155,15 @@ export class OverviewCalculator {
       const lastRecord = lineRecords[0];
       const line = lines.find(l => l.id === lineId);
 
-      // Check if this is a high pressure line
-      const isHighPressure = grsConfig.HIGH_P_LINES_IDS.includes(lineId);
+      // Check if this is a high pressure line (from DB field, fallback to false)
+      const isHighPressure = line ? (line.is_high_pressure || false) : false;
 
       // Calculate pressure with differential adjustment for low pressure non-meter lines
       let pressure = lastRecord.pressure || 0;
       const wVolumeDp = lastRecord.w_volume_dp || 0;
 
       if (!isHighPressure && line && !line.meter) {
-        pressure = pressure - (wVolumeDp / grsConfig.PRESSURE_DIVISOR);
+        pressure = pressure - (wVolumeDp / 10000);
       }
 
       // Round to 3 decimal places

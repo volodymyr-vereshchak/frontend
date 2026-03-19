@@ -1,7 +1,6 @@
 import React from 'react';
 import './PressureGaugesGrid.css';
 import PressureGauge from './PressureGauge';
-import { grsConfig } from '../config/grsConfig';
 
 /**
  * Pressure Gauges Grid Component
@@ -41,13 +40,12 @@ const PressureGaugesGrid = ({
 
   return (
     <div className="gauges-grid">
-      {grsConfig.LINES_IDS.map(lineId => {
+      {Object.keys(pressures).map(lineIdStr => {
+        const lineId = Number(lineIdStr);
         const pressureData = pressures[lineId];
         const lineName = lineNames ? lineNames[lineId] : `Линия ${lineId}`;
         const timestamp = timestamps ? timestamps[lineId] : null;
-
-        // Determine if this is a high pressure line
-        const isHighPressure = grsConfig.HIGH_P_LINES_IDS.includes(lineId);
+        const isHighPressure = pressureData?.isHighPressure || false;
 
         return (
           <PressureGauge
