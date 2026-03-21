@@ -9,13 +9,28 @@ import GRSReport from './components/GRSReport'
 import OverviewTab from './components/OverviewTab'
 import EnterprisePollAnalysis from './components/EnterprisePollAnalysis'
 import AdminPanel from './components/AdminPanel/AdminPanel'
+import LoginPage from './components/LoginPage/LoginPage'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { UserProvider } from './contexts/UserContext'
 import { useUser } from './contexts/UserContext'
 import { virtualLinesHelper } from './services/api'
 
 function AppInner() {
-  const { user } = useUser();
+  const { user, loading } = useUser();
+
+  if (loading) {
+    return (
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center',
+                    height:'100vh', color:'#888', fontSize:16 }}>
+        Завантаження...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return <AppContent user={user} />;
 }
 

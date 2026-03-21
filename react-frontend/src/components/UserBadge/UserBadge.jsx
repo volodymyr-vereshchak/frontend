@@ -3,7 +3,7 @@ import './UserBadge.css';
 import { useUser } from '../../contexts/UserContext';
 
 const UserBadge = () => {
-  const { user, loading } = useUser();
+  const { user, loading, logout } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -25,7 +25,7 @@ const UserBadge = () => {
     return null;
   }
 
-  const displayName = user.display_name || user.windows_username;
+  const displayName = user.display_name || user.username;
   const isAdmin = user.role === 'admin';
 
   return (
@@ -43,11 +43,17 @@ const UserBadge = () => {
       {isOpen && (
         <div className="user-badge-dropdown">
           <div className="user-badge-dropdown__header">
-            <span className="user-badge-dropdown__username">{user.windows_username}</span>
+            <span className="user-badge-dropdown__username">{user.username}</span>
             <span className={`user-badge-dropdown__role user-badge-dropdown__role--${isAdmin ? 'admin' : 'viewer'}`}>
               {user.role}
             </span>
           </div>
+          <button
+            className="user-badge-dropdown__logout"
+            onClick={logout}
+          >
+            Вийти
+          </button>
         </div>
       )}
     </div>

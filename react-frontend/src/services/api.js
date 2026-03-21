@@ -710,4 +710,12 @@ export const lumgApi = {
   deleteDataPath: (id)         => apiClient.delete(`/lumgs/${id}/data-path`),
 };
 
+// Admin: User management API
+export const userManagementApi = {
+  getAll:        ()              => apiClient.get('/auth/users'),
+  create:        (data)          => apiClient.post('/auth/users', data),
+  update:        (id, data)      => apiClient.patch(`/auth/users/${id}`, data),
+  resetPassword: (id)            => apiClient.post(`/auth/users/${id}/reset-password`),
+};
+
 export default apiClient;

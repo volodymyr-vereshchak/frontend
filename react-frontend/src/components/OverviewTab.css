@@ -6,11 +6,59 @@
 
 .overview-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
   margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 2px solid #3E3E3E;
+}
+
+.overview-title-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.overview-selectors {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.selector-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selector-label {
+  font-size: 13px;
+  color: #aaaaaa;
+  white-space: nowrap;
+}
+
+.overview-select {
+  background: #2a2a2a;
+  border: 1px solid #3E3E3E;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 14px;
+  padding: 6px 10px;
+  cursor: pointer;
+  min-width: 140px;
+  transition: border-color 0.2s;
+}
+
+.overview-select:hover,
+.overview-select:focus {
+  border-color: #B9E42B;
+  outline: none;
+}
+
+.overview-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .overview-title {

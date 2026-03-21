@@ -8,8 +8,10 @@ import LinesConfigTab from './LinesConfigTab';
 import VirtualLinesTab from './VirtualLinesTab';
 import EnterprisesTab from './EnterprisesTab';
 import DeviceMappingsTab from './DeviceMappingsTab';
+import UsersTab from './UsersTab';
 
 const TABS = [
+  { id: 'users',          label: 'Користувачі' },
   { id: 'branches',       label: 'Філіали' },
   { id: 'lumgs',          label: 'ЛУМГ' },
   { id: 'paths',          label: 'Шляхи даних' },
@@ -21,7 +23,7 @@ const TABS = [
 ];
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState('branches');
+  const [activeTab, setActiveTab] = useState('users');
 
   return (
     <div className="admin-panel">
@@ -38,6 +40,7 @@ export default function AdminPanel() {
         ))}
       </div>
       <div className="admin-tab-content">
+        {activeTab === 'users'         && <UsersTab />}
         {activeTab === 'branches'      && <BranchesTab />}
         {activeTab === 'lumgs'         && <LumgsTab />}
         {activeTab === 'paths'         && <DataPathsTab />}

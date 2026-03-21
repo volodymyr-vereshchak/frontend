@@ -7,6 +7,9 @@ export const grsConfig = (() => {
 
   // Fallback to default values if runtime config is not available
   return {
+    // LUMG ID to use in Overview tab
+    LUMG_ID: 2,
+
     // Line IDs to include in GRS report (physical lines only)
     LINES_IDS: [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11],
 
