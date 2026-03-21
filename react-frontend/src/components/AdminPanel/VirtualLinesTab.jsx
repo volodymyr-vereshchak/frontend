@@ -176,8 +176,6 @@ export default function VirtualLinesTab() {
       branch_id:          parseInt(form.branch_id),
       lumg_id:            parseInt(form.lumg_id),
       active:             existing ? existing.active             : true,
-      include_in_report:  existing ? existing.include_in_report  : false,
-      is_high_pressure:   existing ? existing.is_high_pressure   : false,
       physical_line_ids:  form.physical_line_ids,
     };
 
@@ -205,8 +203,6 @@ export default function VirtualLinesTab() {
       branch_id:         vl.branch_id,
       lumg_id:           vl.lumg_id,
       active:            vl.active,
-      include_in_report: vl.include_in_report,
-      is_high_pressure:  vl.is_high_pressure,
       physical_line_ids: vl.physical_line_ids || [],
       [field]:           !vl[field],
     };
@@ -373,8 +369,6 @@ export default function VirtualLinesTab() {
             <th>ЛУМГ</th>
             <th style={{ textAlign: 'center' }}>Ліній</th>
             <th style={{ textAlign: 'center' }}>Активне</th>
-            <th style={{ textAlign: 'center' }}>У звіт</th>
-            <th style={{ textAlign: 'center' }}>Вис. тиск</th>
             <th></th>
           </tr>
         </thead>
@@ -399,20 +393,6 @@ export default function VirtualLinesTab() {
                   onClick={() => handleFlagToggle(vl, 'active')}
                 />
               </td>
-              <td style={{ textAlign: 'center' }}>
-                <FlagToggle
-                  active={vl.include_in_report}
-                  busy={saving[`${vl.id}_include_in_report`]}
-                  onClick={() => handleFlagToggle(vl, 'include_in_report')}
-                />
-              </td>
-              <td style={{ textAlign: 'center' }}>
-                <FlagToggle
-                  active={vl.is_high_pressure}
-                  busy={saving[`${vl.id}_is_high_pressure`]}
-                  onClick={() => handleFlagToggle(vl, 'is_high_pressure')}
-                />
-              </td>
               <td style={{ whiteSpace: 'nowrap' }}>
                 <button className="btn-edit" onClick={() => handleEdit(vl)}>Ред.</button>
                 <button className="btn-danger" onClick={() => handleDelete(vl.id)}>Видалити</button>
@@ -421,7 +401,7 @@ export default function VirtualLinesTab() {
           ))}
           {vlines.length === 0 && (
             <tr>
-              <td colSpan={7} style={{ textAlign: 'center', color: '#555', padding: 20 }}>
+              <td colSpan={5} style={{ textAlign: 'center', color: '#555', padding: 20 }}>
                 Немає кілець — створіть перше вище
               </td>
             </tr>
