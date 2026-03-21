@@ -1,23 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { lumgApi, updateApi } from '../../services/api';
 
-// status per lumg: null | 'loading' | 'ok' | 'error'
 export default function UpdateTab() {
   const [lumgs, setLumgs] = useState([]);
   const [statuses, setStatuses] = useState({});
   const [timestamps, setTimestamps] = useState({});
-  const [allStatus, setAllStatus] = useState(null);
-  const [allTimestamp, setAllTimestamp] = useState(null);
+  const [allJob, setAllJob] = useState({ status: 'idle', started_at: null, finished_at: null, error: null });
+  const pollRef = useRef(null);
 
   useEffect(() => {
     lumgApi.getAll().then(data => { if (data) setLumgs(data); });
+    // Sync status on mount (in case a job was running before)
+    updateApi.getStatus().then(s => { if (s) setAllJob(s); });
   }, []);
 
-  const setStatus = (key, value) =>
-    setStatuses(prev => ({ ...prev, [key]: value }));
+  const startPolling = () => {
+    if (pollRef.current) return;
+    pollRef.current = setInterval(async () => {
+      const s = await updateApi.getStatus();
+      if (!s) return;
+      setAllJob(s);
+      if (s.status !== 'running') {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    }, 2000);
+  };
 
-  const setTimestamp = (key, value) =>
-    setTimestamps(prev => ({ ...prev, [key]: value }));
+  useEffect(() => {
+    // If we restored a running job on mount, start polling
+    if (allJob.status === 'running') startPolling();
+  }, []); // eslint-disable-line
+
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  const setStatus = (key, value) => setStatuses(prev => ({ ...prev, [key]: value }));
+  const setTimestamp = (key, value) => setTimestamps(prev => ({ ...prev, [key]: value }));
 
   const formatTs = (isoStr) => {
     if (!isoStr) return null;
@@ -27,15 +45,9 @@ export default function UpdateTab() {
   };
 
   const handleUpdateAll = async () => {
-    setAllStatus('loading');
-    setAllTimestamp(null);
-    const result = await updateApi.updateAll();
-    if (result) {
-      setAllStatus('ok');
-      setAllTimestamp(result.last_updated || null);
-    } else {
-      setAllStatus('error');
-    }
+    setAllJob({ status: 'running', started_at: new Date().toISOString(), finished_at: null, error: null });
+    await updateApi.updateAll();
+    startPolling();
   };
 
   const handleUpdateLumg = async (id) => {
@@ -48,6 +60,22 @@ export default function UpdateTab() {
     } else {
       setStatus(id, 'error');
     }
+  };
+
+  const allStatusLabel = () => {
+    const { status, started_at, finished_at, error } = allJob;
+    if (status === 'idle') return null;
+    if (status === 'running') {
+      const ts = started_at ? ` (з ${formatTs(started_at)})` : '';
+      return <span style={{ color: '#aaa' }}>⏳ Оновлення…{ts}</span>;
+    }
+    if (status === 'done') {
+      return <span style={{ color: '#4CAF50' }}>✓ Готово ({formatTs(finished_at)})</span>;
+    }
+    if (status === 'error') {
+      return <span style={{ color: '#f44336' }}>✗ Помилка: {error}</span>;
+    }
+    return null;
   };
 
   const statusLabel = (s, ts) => {
@@ -64,11 +92,11 @@ export default function UpdateTab() {
         <button
           className="btn-primary"
           onClick={handleUpdateAll}
-          disabled={allStatus === 'loading'}
+          disabled={allJob.status === 'running'}
         >
           Оновити всі
         </button>
-        {statusLabel(allStatus, allTimestamp)}
+        {allStatusLabel()}
       </div>
 
       <table className="admin-table">
@@ -85,7 +113,7 @@ export default function UpdateTab() {
                 <button
                   className="btn-edit"
                   onClick={() => handleUpdateLumg(l.id)}
-                  disabled={statuses[l.id] === 'loading'}
+                  disabled={statuses[l.id] === 'loading' || allJob.status === 'running'}
                 >
                   Оновити
                 </button>
