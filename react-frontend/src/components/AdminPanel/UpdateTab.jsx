@@ -1,18 +1,31 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { lumgApi, updateApi } from '../../services/api';
 
+const LUMG_STATUS_LABEL = {
+  pending: { icon: '⏸', text: 'В черзі',      color: '#888' },
+  queued:  { icon: '⏳', text: 'Очікує',        color: '#aaa' },
+  running: { icon: '🔄', text: 'Виконується',   color: '#2196F3' },
+  done:    { icon: '✓',  text: 'Готово',         color: '#4CAF50' },
+  error:   { icon: '✗',  text: 'Помилка',        color: '#f44336' },
+};
+
 export default function UpdateTab() {
   const [lumgs, setLumgs] = useState([]);
-  const [statuses, setStatuses] = useState({});
-  const [timestamps, setTimestamps] = useState({});
-  const [allJob, setAllJob] = useState({ status: 'idle', started_at: null, finished_at: null, error: null });
+  const [allJob, setAllJob] = useState({ status: 'idle', started_at: null, finished_at: null, error: null, lumgs: {} });
+  const [blockedMsg, setBlockedMsg] = useState(null);
   const pollRef = useRef(null);
 
   useEffect(() => {
     lumgApi.getAll().then(data => { if (data) setLumgs(data); });
-    // Sync status on mount (in case a job was running before)
-    updateApi.getStatus().then(s => { if (s) setAllJob(s); });
+    updateApi.getStatus().then(s => {
+      if (s) {
+        setAllJob(s);
+        if (s.status === 'running') startPolling();
+      }
+    });
   }, []);
+
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   const startPolling = () => {
     if (pollRef.current) return;
@@ -27,16 +40,6 @@ export default function UpdateTab() {
     }, 2000);
   };
 
-  useEffect(() => {
-    // If we restored a running job on mount, start polling
-    if (allJob.status === 'running') startPolling();
-  }, []); // eslint-disable-line
-
-  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
-
-  const setStatus = (key, value) => setStatuses(prev => ({ ...prev, [key]: value }));
-  const setTimestamp = (key, value) => setTimestamps(prev => ({ ...prev, [key]: value }));
-
   const formatTs = (isoStr) => {
     if (!isoStr) return null;
     const d = new Date(isoStr);
@@ -45,20 +48,33 @@ export default function UpdateTab() {
   };
 
   const handleUpdateAll = async () => {
-    setAllJob({ status: 'running', started_at: new Date().toISOString(), finished_at: null, error: null });
-    await updateApi.updateAll();
-    startPolling();
+    setBlockedMsg(null);
+    try {
+      await updateApi.updateAll();
+      setAllJob({ status: 'running', started_at: new Date().toISOString(), finished_at: null, error: null, lumgs: {} });
+      startPolling();
+    } catch (err) {
+      if (err.status === 429) {
+        setBlockedMsg('Оновлення вже запущено іншим адміністратором');
+        // Sync actual state from backend
+        const s = await updateApi.getStatus();
+        if (s) { setAllJob(s); startPolling(); }
+      }
+    }
   };
 
   const handleUpdateLumg = async (id) => {
-    setStatus(id, 'loading');
-    setTimestamp(id, null);
-    const result = await updateApi.updateLumg(id);
-    if (result) {
-      setStatus(id, 'ok');
-      setTimestamp(id, result.last_updated || null);
-    } else {
-      setStatus(id, 'error');
+    setBlockedMsg(null);
+    try {
+      await updateApi.updateLumg(id);
+      setAllJob(prev => ({ ...prev, status: 'running', lumgs: { ...prev.lumgs, [id]: 'running' } }));
+      startPolling();
+    } catch (err) {
+      if (err.status === 429) {
+        setBlockedMsg('Оновлення вже запущено іншим адміністратором');
+        const s = await updateApi.getStatus();
+        if (s) { setAllJob(s); startPolling(); }
+      }
     }
   };
 
@@ -69,31 +85,34 @@ export default function UpdateTab() {
       const ts = started_at ? ` (з ${formatTs(started_at)})` : '';
       return <span style={{ color: '#aaa' }}>⏳ Оновлення…{ts}</span>;
     }
-    if (status === 'done') {
+    if (status === 'done')
       return <span style={{ color: '#4CAF50' }}>✓ Готово ({formatTs(finished_at)})</span>;
-    }
-    if (status === 'error') {
+    if (status === 'error')
       return <span style={{ color: '#f44336' }}>✗ Помилка: {error}</span>;
-    }
     return null;
   };
 
-  const statusLabel = (s, ts) => {
-    const tsStr = ts ? ` (${formatTs(ts)})` : '';
-    if (s === 'loading') return <span style={{ color: '#aaa' }}>⏳ Оновлення…</span>;
-    if (s === 'ok')      return <span style={{ color: '#4CAF50' }}>✓ Готово{tsStr}</span>;
-    if (s === 'error')   return <span style={{ color: '#f44336' }}>✗ Помилка</span>;
-    return null;
+  const lumgStatusCell = (lumgId) => {
+    const jobActive = allJob.status === 'running' || allJob.status === 'done';
+    const s = jobActive ? allJob.lumgs?.[lumgId] : null;
+    if (!s) return null;
+    const cfg = LUMG_STATUS_LABEL[s];
+    if (!cfg) return null;
+    return <span style={{ color: cfg.color }}>{cfg.icon} {cfg.text}</span>;
   };
+
+  const isRunning = allJob.status === 'running';
 
   return (
     <div>
+      {blockedMsg && (
+        <div style={{ marginBottom: 12, padding: '8px 12px', background: '#fff3cd', border: '1px solid #ffc107', borderRadius: 4, color: '#856404' }}>
+          ⚠️ {blockedMsg}
+        </div>
+      )}
+
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button
-          className="btn-primary"
-          onClick={handleUpdateAll}
-          disabled={allJob.status === 'running'}
-        >
+        <button className="btn-primary" onClick={handleUpdateAll} disabled={isRunning}>
           Оновити всі
         </button>
         {allStatusLabel()}
@@ -108,12 +127,12 @@ export default function UpdateTab() {
             <tr key={l.id}>
               <td>{l.id}</td>
               <td>{l.name}</td>
-              <td>{statusLabel(statuses[l.id], timestamps[l.id])}</td>
+              <td>{lumgStatusCell(l.id)}</td>
               <td>
                 <button
                   className="btn-edit"
                   onClick={() => handleUpdateLumg(l.id)}
-                  disabled={statuses[l.id] === 'loading' || allJob.status === 'running'}
+                  disabled={isRunning}
                 >
                   Оновити
                 </button>
