@@ -115,3 +115,25 @@
   background-color: rgba(108, 117, 125, 0.2);
   color: #adb5bd;
 }
+
+.user-badge-dropdown__logout {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 15px;
+  border: none;
+  border-top: 1px solid #3E3E3E;
+  background: none;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  transition: all 0.2s ease;
+  border-radius: 0 0 4px 4px;
+}
+
+.user-badge-dropdown__logout:hover {
+  background-color: #3a3a3a;
+  color: #B9E42B;
+}
