@@ -6,14 +6,18 @@ import DataPathsTab from './DataPathsTab';
 import UpdateTab from './UpdateTab';
 import LinesConfigTab from './LinesConfigTab';
 import VirtualLinesTab from './VirtualLinesTab';
+import EnterprisesTab from './EnterprisesTab';
+import DeviceMappingsTab from './DeviceMappingsTab';
 
 const TABS = [
-  { id: 'branches',      label: 'Філіали' },
-  { id: 'lumgs',         label: 'ЛУМГ' },
-  { id: 'paths',         label: 'Шляхи даних' },
-  { id: 'lines_config',  label: 'Лінії' },
-  { id: 'virtual_lines', label: 'Кільця' },
-  { id: 'update',        label: 'Оновлення' },
+  { id: 'branches',       label: 'Філіали' },
+  { id: 'lumgs',          label: 'ЛУМГ' },
+  { id: 'paths',          label: 'Шляхи даних' },
+  { id: 'lines_config',   label: 'Лінії' },
+  { id: 'virtual_lines',  label: 'Кільця' },
+  { id: 'enterprises',    label: 'Промисловість' },
+  { id: 'device_catalog', label: 'Обладнання' },
+  { id: 'update',         label: 'Оновлення' },
 ];
 
 export default function AdminPanel() {
@@ -39,7 +43,9 @@ export default function AdminPanel() {
         {activeTab === 'paths'         && <DataPathsTab />}
         {activeTab === 'lines_config'  && <LinesConfigTab />}
         {activeTab === 'virtual_lines' && <VirtualLinesTab />}
-        {activeTab === 'update'        && <UpdateTab />}
+        {activeTab === 'enterprises'    && <EnterprisesTab />}
+        {activeTab === 'device_catalog' && <DeviceMappingsTab />}
+        {activeTab === 'update'         && <UpdateTab />}
       </div>
     </div>
   );

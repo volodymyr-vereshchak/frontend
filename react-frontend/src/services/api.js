@@ -42,11 +42,15 @@ class ApiClient {
         const response = await fetch(url, requestOptions);
 
         if (!response.ok) {
-          throw new APIError(
-            `HTTP ${response.status}: ${response.statusText}`,
-            response.status,
-            url
-          );
+          let detail = response.statusText;
+          try {
+            const body = await response.json();
+            if (body.detail) detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+          } catch (_) {}
+          const err = new APIError(detail, response.status, url);
+          // Don't retry client errors (4xx)
+          if (response.status >= 400 && response.status < 500) throw err;
+          throw err;
         }
 
         if (response.status === 204 || response.headers.get('content-length') === '0') {
@@ -56,30 +60,25 @@ class ApiClient {
         return data;
 
       } catch (error) {
+        // Never retry client errors (4xx) — re-throw immediately
+        if (error instanceof APIError && error.status >= 400 && error.status < 500) {
+          throw error;
+        }
+
         console.error(`Request attempt ${attempt} failed:`, error);
-        console.error(`Error details:`, {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        });
 
         if (attempt === this.maxRetries) {
-          if (error instanceof APIError) {
-            throw error;
-          }
-
+          if (error instanceof APIError) throw error;
           if (error.name === 'TypeError' && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
             throw new APIError(`Connection failed - check if backend is running: ${error.message}`, null, url);
           }
-
           if (error.message.includes('CORS')) {
             throw new APIError(`CORS error - check backend CORS settings: ${error.message}`, null, url);
           }
-
           throw new APIError(`Request failed after ${this.maxRetries} attempts: ${error.message}`, null, url);
         }
 
-        // Wait before retry with exponential backoff
+        // Wait before retry with exponential backoff (only for network/5xx errors)
         await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
       }
     }
@@ -113,20 +112,9 @@ class ApiClient {
   }
 
   async post(endpoint, data = null) {
-    try {
-      const options = {
-        method: 'POST'
-      };
-
-      if (data) {
-        options.body = JSON.stringify(data);
-      }
-
-      return await this._makeRequest(endpoint, options);
-    } catch (error) {
-      console.error(`API POST error for ${endpoint}:`, error);
-      return null;
-    }
+    const options = { method: 'POST' };
+    if (data) options.body = JSON.stringify(data);
+    return await this._makeRequest(endpoint, options);
   }
 
   async put(endpoint, data = null) {
@@ -143,16 +131,9 @@ class ApiClient {
   }
 
   async patch(endpoint, data = null) {
-    try {
-      const options = { method: 'PATCH' };
-      if (data) {
-        options.body = JSON.stringify(data);
-      }
-      return await this._makeRequest(endpoint, options);
-    } catch (error) {
-      console.error(`API PATCH error for ${endpoint}:`, error);
-      return null;
-    }
+    const options = { method: 'PATCH' };
+    if (data) options.body = JSON.stringify(data);
+    return await this._makeRequest(endpoint, options);
   }
 
   async delete(endpoint) {
@@ -191,7 +172,10 @@ export const updateApi = {
 export const gasVolumeApi = {
   async getGasVolumesByLumg(lumgId = 1) {
     return await apiClient.get('/gas-volume-calcs/', { lumg_id: lumgId });
-  }
+  },
+  async getGasVolumeCalcs() {
+    return await apiClient.get('/gas-volume-calcs/');
+  },
 };
 
 // Archive counts API methods (И - changes, А - alarms)
@@ -376,7 +360,58 @@ export const enterpriseApi = {
 
   async getAllEnterprises() {
     return await apiClient.get('/enterprise/mappings/');
-  }
+  },
+
+  // DB CRUD
+  getAll:   ()           => apiClient.get('/enterprise-mappings/'),
+  create:   (data)       => apiClient.post('/enterprise-mappings/', data),
+  update:   (id, data)   => apiClient.patch(`/enterprise-mappings/${id}`, data),
+  delete:   (id)         => apiClient.delete(`/enterprise-mappings/${id}`),
+
+  // Excel template download
+  downloadTemplate() {
+    const base = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || import.meta.env.VITE_API_URL || '';
+    window.open(`${base}/enterprise-mappings/template`, '_blank');
+  },
+
+  // Export current DB data to Excel
+  downloadExport() {
+    const base = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || import.meta.env.VITE_API_URL || '';
+    window.open(`${base}/enterprise-mappings/export`, '_blank');
+  },
+
+  // Excel upload (multipart)
+  async uploadExcel(file, branchId) {
+    const base = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || import.meta.env.VITE_API_URL || '';
+    const formData = new FormData();
+    formData.append('file', file);
+    const url = branchId
+      ? `${base}/enterprise-mappings/upload?branch_id=${branchId}`
+      : `${base}/enterprise-mappings/upload`;
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+    }
+    return response.json();
+  },
+};
+
+// Device catalog API (manufacturers + corrector types)
+export const deviceCatalogApi = {
+  // Manufacturers
+  getManufacturers:      ()           => apiClient.get('/device-catalog/manufacturers/'),
+  createManufacturer:    (data)       => apiClient.post('/device-catalog/manufacturers/', data),
+  updateManufacturer:    (id, data)   => apiClient.patch(`/device-catalog/manufacturers/${id}`, data),
+  deleteManufacturer:    (id)         => apiClient.delete(`/device-catalog/manufacturers/${id}`),
+  // Corrector types
+  getCorectorTypes:      (mfr_id)     => apiClient.get('/device-catalog/corector-types/', mfr_id ? { manufacturer_id: mfr_id } : {}),
+  createCorectorType:    (data)       => apiClient.post('/device-catalog/corector-types/', data),
+  updateCorectorType:    (id, data)   => apiClient.patch(`/device-catalog/corector-types/${id}`, data),
+  deleteCorectorType:    (id)         => apiClient.delete(`/device-catalog/corector-types/${id}`),
 };
 
 // Enterprise Poll Analysis API methods
