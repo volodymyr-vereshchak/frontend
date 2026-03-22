@@ -720,6 +720,19 @@ export const branchApi = {
   updateNames:        (id)         => apiClient.post(`/grmu_branch/${id}/update-names`),
 };
 
+// Admin: DPD Global Config API (api_base_url, auth_url, timeout_sec — same for all branches)
+export const dpdGlobalConfigApi = {
+  get:    ()     => apiClient.get('/grmu_branch/dpd-config'),
+  upsert: (data) => apiClient.put('/grmu_branch/dpd-config', data),
+};
+
+// Admin: DPD Credentials API (username/password — per branch)
+export const dpdCredentialApi = {
+  get:    (branchId)       => apiClient.get(`/grmu_branch/${branchId}/dpd-credential`),
+  upsert: (branchId, data) => apiClient.put(`/grmu_branch/${branchId}/dpd-credential`, data),
+  delete: (branchId)       => apiClient.delete(`/grmu_branch/${branchId}/dpd-credential`),
+};
+
 // Admin: Lumg API
 export const lumgApi = {
   getAll:         ()           => apiClient.get('/lumgs/'),

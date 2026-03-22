@@ -55,6 +55,17 @@ export default defineConfig({
   build: {
     commonjsOptions: {
       include: [/xlsx/, /node_modules/]
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react':      ['react', 'react-dom'],
+          'vendor-aggrid':     ['ag-grid-community', 'ag-grid-react'],
+          'vendor-charts':     ['recharts'],
+          'vendor-xlsx':       ['xlsx'],
+          'vendor-datepicker': ['react-datepicker', 'date-fns'],
+        }
+      }
     }
   }
 })

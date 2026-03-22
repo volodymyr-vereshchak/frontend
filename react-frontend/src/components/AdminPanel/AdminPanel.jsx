@@ -11,6 +11,7 @@ import DeviceMappingsTab from './DeviceMappingsTab';
 import CalcTypesTab from './CalcTypesTab';
 import EventTypesTab from './EventTypesTab';
 import UsersTab from './UsersTab';
+import DpdCredentialsTab from './DpdCredentialsTab';
 
 const GROUPS = [
   {
@@ -26,10 +27,11 @@ const GROUPS = [
     label: 'Мережа',
     icon: '🗺',
     items: [
-      { id: 'branches',      label: 'Філіали' },
-      { id: 'lumgs',         label: 'ЛУМГ' },
-      { id: 'paths',         label: 'Шляхи даних' },
-      { id: 'update',        label: 'Оновлення' },
+      { id: 'branches',        label: 'Філіали' },
+      { id: 'lumgs',           label: 'ЛУМГ' },
+      { id: 'paths',           label: 'Шляхи даних' },
+      { id: 'dpd_credentials', label: 'DPD Креденшали' },
+      { id: 'update',          label: 'Оновлення' },
     ],
   },
   {
@@ -62,6 +64,7 @@ const CONTENT_MAP = {
   paths:          <DataPathsTab />,
   lines_config:   <LinesConfigTab />,
   virtual_lines:  <VirtualLinesTab />,
+  dpd_credentials: <DpdCredentialsTab />,
   enterprises:    <EnterprisesTab />,
   device_catalog: <DeviceMappingsTab />,
   calc_types:     <CalcTypesTab />,
