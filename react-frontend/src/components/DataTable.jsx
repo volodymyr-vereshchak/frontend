@@ -274,6 +274,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const fetchData = async (abortController) => {
     if (!selectedLines || selectedLines.length === 0) {
       setRowData([]);
+      setLoading(false);
       if (onDataChange) {
         onDataChange([]);
       }
@@ -282,6 +283,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
     if (!isDateFilterEnabled) {
       setRowData([]);
+      setLoading(false);
       if (onDataChange) {
         onDataChange([]);
       }
@@ -478,7 +480,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   // Clear stale data immediately when archive type changes (before 50ms debounce fires)
   useEffect(() => {
     setRowData([]);
-    setLoading(true);
+    setLoading(isDateFilterEnabled && selectedLines && selectedLines.length > 0);
     setError(null);
   }, [archiveType]);
 
