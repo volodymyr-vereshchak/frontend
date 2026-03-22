@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { reportsApi } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { reportsApi, branchApi, lumgApi, lineApi, archiveDataApi } from '../services/api';
 import { GRSCalculator } from '../utils/grsCalculator';
 import { useLanguage } from '../contexts/LanguageContext';
 import './GRSReport.css';
@@ -10,34 +10,90 @@ const GRSReport = ({ isOpen, onClose }) => {
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
 
+  // Branch selector state
+  const [branches, setBranches] = useState([]);
+  const [allLumgs, setAllLumgs] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState(null);
+  const [selectorLoading, setSelectorLoading] = useState(false);
+
+  // Load branches and lumgs when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    const loadSelectors = async () => {
+      setSelectorLoading(true);
+      try {
+        const [branchesRes, lumgsRes] = await Promise.all([
+          branchApi.getAll(),
+          lumgApi.getAll(),
+        ]);
+        const branchList = Array.isArray(branchesRes) ? branchesRes : [];
+        const lumgList = Array.isArray(lumgsRes) ? lumgsRes : [];
+        setBranches(branchList);
+        setAllLumgs(lumgList);
+        if (branchList.length > 0) {
+          setSelectedBranchId(branchList[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to load branches:', err);
+      } finally {
+        setSelectorLoading(false);
+      }
+    };
+    loadSelectors();
+  }, [isOpen]);
+
+  const handleBranchChange = (e) => {
+    setSelectedBranchId(Number(e.target.value));
+    setReportData(null);
+    setError(null);
+  };
+
   const fetchReport = async () => {
+    if (!selectedBranchId) return;
     setIsLoading(true);
     setError(null);
 
     try {
-      // Try to get structured data and calculate report
-      const structuredResponse = await reportsApi.getGRSReportData();
+      // Get LUMGs for selected branch
+      const branchLumgIds = allLumgs
+        .filter(l => l.branch_id === selectedBranchId)
+        .map(l => l.id);
 
-      if (structuredResponse && structuredResponse.success) {
-        // Calculate report using our frontend logic
-        const calculatedReport = GRSCalculator.calculateGRSReport(
-          structuredResponse.lines,
-          structuredResponse.hourlyData
-        );
+      if (branchLumgIds.length === 0) {
+        setError('Немає ЛУМГів для обраної філії');
+        return;
+      }
 
-        if (calculatedReport.success) {
-          setReportData(calculatedReport.data);
-        } else {
-          setError(calculatedReport.error || t('calculationError'));
-        }
+      // Fetch lines for all LUMGs in parallel, filter by include_in_report
+      const linesArr = await Promise.all(
+        branchLumgIds.map(lid => lineApi.getLinesByLumg(lid))
+      );
+      const lines = linesArr.flat().filter(l => l && l.include_in_report);
+
+      if (lines.length === 0) {
+        setError('Немає ліній з прапором include_in_report для обраної філії');
+        return;
+      }
+
+      const lineIds = lines.map(l => l.id);
+      const hourlyData = await archiveDataApi.getHourlyDataLast24h(lineIds);
+
+      if (!hourlyData || hourlyData.length === 0) {
+        setError('Немає даних за останні 24 години');
+        return;
+      }
+
+      const calculatedReport = GRSCalculator.calculateGRSReport(lines, hourlyData);
+
+      if (calculatedReport.success) {
+        setReportData(calculatedReport.data);
       } else {
-        // Fallback to old text-based report
+        // Fallback to text report
         const textResponse = await reportsApi.getGRSReport();
         if (textResponse && textResponse.success) {
-          // Parse the old text format (keep existing parsing logic as fallback)
           setReportData({ fallback: true, message: textResponse.message });
         } else {
-          setError(textResponse?.message || t('unknownReportError'));
+          setError(calculatedReport.error || t('calculationError'));
         }
       }
     } catch (err) {
@@ -57,12 +113,10 @@ const GRSReport = ({ isOpen, onClose }) => {
       return <div className="no-data">{t('noData')}</div>;
     }
 
-    // Handle fallback text format
     if (data.fallback && data.message) {
       return formatReportMessage(data.message);
     }
 
-    // Handle new structured format
     if (data.lineReports) {
       return (
         <div className="report-content-structured">
@@ -78,7 +132,7 @@ const GRSReport = ({ isOpen, onClose }) => {
             {t('grsTotalVolume')}: {data.totalVolume?.toLocaleString('ru')} {t('volumeUnit')}
           </h5>
 
-          {data.lineReports.map((report, index) => (
+          {data.lineReports.map((report) => (
             <div key={report.lineId} className={`line-data ${report.hasIncompleteData ? 'warning' : 'normal'}`}>
               {report.hasIncompleteData && <span className="warning-icon">⚠️</span>}
               <span className="line-name">{report.lineName}:</span>
@@ -113,24 +167,12 @@ const GRSReport = ({ isOpen, onClose }) => {
       }
 
       if (line.startsWith('Объем по ГРС')) {
-        formattedLines.push(
-          <h4 key={index} className="report-title">
-            {line}
-          </h4>
-        );
+        formattedLines.push(<h4 key={index} className="report-title">{line}</h4>);
       } else if (line.includes(' - ') && line.includes(':') && (line.includes('202') || line.includes('203'))) {
-        formattedLines.push(
-          <p key={index} className="date-range">
-            {line}
-          </p>
-        );
+        formattedLines.push(<p key={index} className="date-range">{line}</p>);
       } else if (line.includes('всего:') && line.includes('ГРС')) {
         const cleanLine = line.replace(/<b>/g, '').replace(/<\/b>/g, '');
-        formattedLines.push(
-          <h5 key={index} className="total-volume">
-            {cleanLine}
-          </h5>
-        );
+        formattedLines.push(<h5 key={index} className="total-volume">{cleanLine}</h5>);
       } else if (line.includes('<b>') && line.includes('</b>') && (line.includes('м³') || line.includes('кг/см²') || line.includes('Pвых'))) {
         const cleanLine = line.replace(/<b>/g, '').replace(/<\/b>/g, '');
         const hasWarning = line.includes('🔴');
@@ -140,20 +182,11 @@ const GRSReport = ({ isOpen, onClose }) => {
           const lineName = parts[0].trim();
           const lineData = parts[1]?.trim() || '';
 
-          // Parse volume and pressure from line data
           let volume = '', pressure = '';
-
-          // Extract volume (м³)
           const volumeMatch = lineData.match(/([\d\s.,]+)\s*м³/);
-          if (volumeMatch) {
-            volume = volumeMatch[1].replace(/\s+/g, ' ').trim();
-          }
-
-          // Extract pressure after Pвых (currently missing from API response)
+          if (volumeMatch) volume = volumeMatch[1].replace(/\s+/g, ' ').trim();
           const pressureMatch = lineData.match(/Pвых\s+([\d\s.,]+)(?:\s*кг\/см²)?/);
-          if (pressureMatch) {
-            pressure = pressureMatch[1].replace(/\s+/g, ' ').trim();
-          }
+          if (pressureMatch) pressure = pressureMatch[1].replace(/\s+/g, ' ').trim();
 
           formattedLines.push(
             <div key={index} className={`line-data ${hasWarning ? 'warning' : 'normal'}`}>
@@ -169,26 +202,12 @@ const GRSReport = ({ isOpen, onClose }) => {
             </div>
           );
         } else {
-          formattedLines.push(
-            <p key={index} className="data-line monospace">
-              {cleanLine}
-            </p>
-          );
+          formattedLines.push(<p key={index} className="data-line monospace">{cleanLine}</p>);
         }
       } else if (line.trim() && (line.includes('м³') || line.includes('кг/см²') || line.includes('Pвых'))) {
-        // Handle lines that contain data but may not have bold tags
-        const cleanLine = line.replace(/<\/?b>/g, '').trim();
-        formattedLines.push(
-          <p key={index} className="data-line monospace">
-            {cleanLine}
-          </p>
-        );
+        formattedLines.push(<p key={index} className="data-line monospace">{line.replace(/<\/?b>/g, '').trim()}</p>);
       } else if (line.trim()) {
-        formattedLines.push(
-          <p key={index} className="other-line">
-            {line}
-          </p>
-        );
+        formattedLines.push(<p key={index} className="other-line">{line}</p>);
       }
     });
 
@@ -202,12 +221,24 @@ const GRSReport = ({ isOpen, onClose }) => {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title">Отчет по объемам газа за последние 24 часа</h3>
-          <button className="close-button" onClick={onClose}>
-            ×
-          </button>
+          <button className="close-button" onClick={onClose}>×</button>
         </div>
 
         <div className="grs-modal-body">
+          {/* Branch selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>Філія:</label>
+            <select
+              style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
+              value={selectedBranchId || ''}
+              onChange={handleBranchChange}
+              disabled={selectorLoading}
+            >
+              {selectorLoading && <option>Завантаження...</option>}
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+
           {isLoading && (
             <div className="loading-container">
               <div className="loading-spinner"></div>
@@ -239,7 +270,7 @@ const GRSReport = ({ isOpen, onClose }) => {
           <button
             className="btn btn-primary"
             onClick={isLoading ? undefined : (reportData ? handleRefresh : fetchReport)}
-            disabled={isLoading}
+            disabled={isLoading || !selectedBranchId}
           >
             {isLoading ? 'Загрузка...' : (reportData ? 'Обновить' : 'Получить отчет')}
           </button>

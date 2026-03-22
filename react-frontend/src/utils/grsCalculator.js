@@ -43,10 +43,12 @@ export class GRSCalculator {
 
 
     try {
+      // Use passed lines array IDs (from branch + include_in_report filtering)
+      const lineIds = lines.map(l => l.id);
+
       // Data is already filtered to last 24 hours by the API
-      // Just filter by configured GRS lines
       const filteredHourlyData = hourly.filter(record =>
-        grsConfig.LINES_IDS.includes(record.line_id)
+        lineIds.includes(record.line_id)
       );
 
 
@@ -75,7 +77,7 @@ export class GRSCalculator {
       // Create line reports
       const lineReports = [];
 
-      for (const lineId of grsConfig.LINES_IDS) {
+      for (const lineId of lineIds) {
         // Get line info
         const line = lines.find(l => l.id === lineId);
         if (!line) {
@@ -129,9 +131,9 @@ export class GRSCalculator {
         });
       }
 
-      // Sort by line order in configuration
+      // Sort by line order as passed in (branch-filtered order)
       lineReports.sort((a, b) =>
-        grsConfig.LINES_IDS.indexOf(a.lineId) - grsConfig.LINES_IDS.indexOf(b.lineId)
+        lineIds.indexOf(a.lineId) - lineIds.indexOf(b.lineId)
       );
 
       return {

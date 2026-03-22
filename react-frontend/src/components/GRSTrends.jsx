@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   virtualLinesApi,
   archiveDataVirtualApi,
-  enterpriseVirtualApi
+  enterpriseVirtualApi,
+  branchApi,
 } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
@@ -16,6 +17,10 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [chartData, setChartData] = useState([]);
   const [visibleLines, setVisibleLines] = useState([]);
   const [linesLoading, setLinesLoading] = useState(false);
+
+  // Branch selector
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState(null);
 
   // Get initial date range (first day of current month to today)
   const getInitialDateRange = () => {
@@ -39,6 +44,16 @@ const GRSTrends = ({ isOpen, onClose }) => {
   };
 
   const [dateRange, setDateRange] = useState(getInitialDateRange);
+
+  // Load branches on open
+  useEffect(() => {
+    if (!isOpen) return;
+    branchApi.getAll().then(data => {
+      const list = Array.isArray(data) ? data : [];
+      setBranches(list);
+      if (list.length > 0) setSelectedBranchId(list[0].id);
+    }).catch(err => console.error('Failed to load branches:', err));
+  }, [isOpen]);
 
   // Load visible lines on component mount
   useEffect(() => {
@@ -96,10 +111,12 @@ const GRSTrends = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // Extract line IDs from visible lines
+  // Extract line IDs filtered by selected branch
   const grsLines = useMemo(() => {
-    return visibleLines.map(line => line.id);
-  }, [visibleLines]);
+    return visibleLines
+      .filter(line => !selectedBranchId || line.branch_id === selectedBranchId)
+      .map(line => line.id);
+  }, [visibleLines, selectedBranchId]);
 
   const calculateTrends = async () => {
     console.log('VIRTUAL_LINES_TEST_12345'); // DEBUG: test if new code is loaded
@@ -231,12 +248,12 @@ const GRSTrends = ({ isOpen, onClose }) => {
     calculateTrends();
   };
 
-  // Auto-calculate when date range changes
+  // Auto-calculate when date range or branch changes
   useEffect(() => {
-    if (isOpen && dateRange.fromDate && dateRange.toDate) {
+    if (isOpen && dateRange.fromDate && dateRange.toDate && selectedBranchId) {
       calculateTrends();
     }
-  }, [dateRange, isOpen]);
+  }, [dateRange, isOpen, selectedBranchId]);
 
   if (!isOpen) return null;
 
@@ -251,6 +268,18 @@ const GRSTrends = ({ isOpen, onClose }) => {
         </div>
 
         <div className="grs-trends-modal-body">
+          {/* Branch selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>Філія:</label>
+            <select
+              style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
+              value={selectedBranchId || ''}
+              onChange={e => { setSelectedBranchId(Number(e.target.value)); setChartData([]); }}
+            >
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+
           {/* Date Range Picker */}
           <div className="date-picker-section">
             <h4>{t('selectPeriod')}</h4>

@@ -5,7 +5,8 @@ import {
   virtualLinesApi,
   archiveDataVirtualApi,
   enterpriseVirtualApi,
-  virtualLinesHelper
+  virtualLinesHelper,
+  branchApi,
 } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
@@ -29,6 +30,10 @@ const NightConsumption = ({ isOpen, onClose }) => {
   const [visibleLines, setVisibleLines] = useState([]);
   const [linesLoading, setLinesLoading] = useState(false);
 
+  // Branch selector
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState(null);
+
   // Get initial date range (first day of current month to today)
   const getInitialDateRange = () => {
     const today = new Date();
@@ -48,6 +53,16 @@ const NightConsumption = ({ isOpen, onClose }) => {
   };
 
   const [dateRange, setDateRange] = useState(getInitialDateRange);
+
+  // Load branches on open
+  useEffect(() => {
+    if (!isOpen) return;
+    branchApi.getAll().then(data => {
+      const list = Array.isArray(data) ? data : [];
+      setBranches(list);
+      if (list.length > 0) setSelectedBranchId(list[0].id);
+    }).catch(err => console.error('Failed to load branches:', err));
+  }, [isOpen]);
 
   // Load visible lines on component mount
   useEffect(() => {
@@ -148,10 +163,12 @@ const NightConsumption = ({ isOpen, onClose }) => {
     loadVisibleLines();
   }, [isOpen]);
 
-  // Extract line IDs from visible lines
+  // Extract line IDs filtered by selected branch
   const grsLines = useMemo(() => {
-    return visibleLines.map(line => line.id);
-  }, [visibleLines]);
+    return visibleLines
+      .filter(line => !selectedBranchId || line.branch_id === selectedBranchId)
+      .map(line => line.id);
+  }, [visibleLines, selectedBranchId]);
 
   const calculateNightConsumption = async () => {
     if (grsLines.length === 0) {
@@ -353,7 +370,8 @@ const NightConsumption = ({ isOpen, onClose }) => {
       XLSX.utils.book_append_sheet(workbook, worksheet, t('nightConsumption'));
 
       // Generate filename
-      const filename = `${t('nightConsumption')}_${dateRange.fromDate}_${dateRange.toDate}.xlsx`;
+      const branchName = branches.find(b => b.id === selectedBranchId)?.name || '';
+      const filename = `${t('nightConsumption')}${branchName ? '_' + branchName : ''}_${dateRange.fromDate}_${dateRange.toDate}.xlsx`;
 
       // Save file
       XLSX.writeFile(workbook, filename);
@@ -363,12 +381,12 @@ const NightConsumption = ({ isOpen, onClose }) => {
     }
   };
 
-  // Auto-calculate when date range changes
+  // Auto-calculate when date range or branch changes
   useEffect(() => {
-    if (isOpen && dateRange.fromDate && dateRange.toDate) {
+    if (isOpen && dateRange.fromDate && dateRange.toDate && selectedBranchId) {
       calculateNightConsumption();
     }
-  }, [dateRange, isOpen]);
+  }, [dateRange, isOpen, selectedBranchId]);
 
   if (!isOpen) return null;
 
@@ -383,6 +401,18 @@ const NightConsumption = ({ isOpen, onClose }) => {
         </div>
 
         <div className="night-consumption-modal-body">
+          {/* Branch selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>Філія:</label>
+            <select
+              style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
+              value={selectedBranchId || ''}
+              onChange={e => { setSelectedBranchId(Number(e.target.value)); setTableData([]); }}
+            >
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+
           {/* Date Range Picker */}
           <div className="date-picker-section">
             <DateTimePickers
