@@ -85,30 +85,24 @@ class ApiClient {
   }
 
   async get(endpoint, params = null) {
-    try {
-      let url = endpoint;
-      if (params) {
-        const searchParams = new URLSearchParams();
-        Object.entries(params).forEach(([key, value]) => {
-          if (value !== null && value !== undefined) {
-            if (Array.isArray(value)) {
-              value.forEach(v => searchParams.append(key, v));
-            } else {
-              searchParams.append(key, value);
-            }
+    let url = endpoint;
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          if (Array.isArray(value)) {
+            value.forEach(v => searchParams.append(key, v));
+          } else {
+            searchParams.append(key, value);
           }
-        });
-        const queryString = searchParams.toString();
-        if (queryString) {
-          url += `?${queryString}`;
         }
+      });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
       }
-
-      return await this._makeRequest(url, { method: 'GET' });
-    } catch (error) {
-      console.error(`API GET error for ${endpoint}:`, error);
-      return null;
     }
+    return await this._makeRequest(url, { method: 'GET' });
   }
 
   async post(endpoint, data = null) {

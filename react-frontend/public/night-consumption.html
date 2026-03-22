@@ -602,28 +602,29 @@
             }
         }
 
-        async function fetchHourlyData(fromDate, toDate) {
-            const params = new URLSearchParams();
-            GRS_LINES.forEach(lineId => params.append('line_id', lineId));
-            params.append('from_date', fromDate);
-            params.append('to_date', toDate);
+        async function checkResponse(r) {
+            if (!r.ok) {
+                let detail = r.statusText;
+                try { const body = await r.json(); if (body.detail) detail = body.detail; } catch (_) {}
+                throw new Error(detail);
+            }
+            return r.json();
+        }
 
+        async function fetchHourlyData(fromDate, toDate) {
             const results = [];
             if (GRS_PHYSICAL_LINES.length > 0) {
                 const p = new URLSearchParams();
                 GRS_PHYSICAL_LINES.forEach(id => p.append('line_id', id));
                 p.append('from_date', fromDate); p.append('to_date', toDate);
-                const r = await fetch(`${API_BASE_URL}/hourly/?${p}`);
-                if (r.ok) results.push(...await r.json());
+                results.push(...await checkResponse(await fetch(`${API_BASE_URL}/hourly/?${p}`)));
             }
             if (GRS_VIRTUAL_LINES.length > 0) {
                 const p = new URLSearchParams();
                 GRS_VIRTUAL_LINES.forEach(id => p.append('line_id', id));
                 p.append('from_date', fromDate); p.append('to_date', toDate);
-                const r = await fetch(`${API_BASE_URL}/hourly_virtual/?${p}`);
-                if (r.ok) results.push(...await r.json());
+                results.push(...await checkResponse(await fetch(`${API_BASE_URL}/hourly_virtual/?${p}`)));
             }
-            if (results.length === 0) throw new Error('No data returned');
             return results;
         }
 
