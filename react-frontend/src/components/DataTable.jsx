@@ -475,6 +475,13 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     }
   };
 
+  // Clear stale data immediately when archive type changes (before 50ms debounce fires)
+  useEffect(() => {
+    setRowData([]);
+    setLoading(true);
+    setError(null);
+  }, [archiveType]);
+
   useEffect(() => {
     const abortController = new AbortController();
 
