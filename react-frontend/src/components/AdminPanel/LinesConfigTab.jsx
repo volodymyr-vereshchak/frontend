@@ -1,20 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { lumgApi, lineApi } from '../../services/api';
+import { branchApi, lumgApi, lineApi } from '../../services/api';
 
 export default function LinesConfigTab() {
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState('');
   const [lumgs, setLumgs] = useState([]);
+  const [allLumgs, setAllLumgs] = useState([]);
   const [selectedLumgId, setSelectedLumgId] = useState('');
   const [lines, setLines] = useState([]);
   const [saving, setSaving] = useState({});
 
   useEffect(() => {
-    lumgApi.getAll().then(data => {
-      if (data) {
-        setLumgs(data);
-        if (data.length > 0) setSelectedLumgId(String(data[0].id));
-      }
+    Promise.all([branchApi.getAll(), lumgApi.getAll()]).then(([branchData, lumgData]) => {
+      if (branchData) setBranches(branchData);
+      if (lumgData) setAllLumgs(lumgData);
+      if (branchData && branchData.length > 0) setSelectedBranchId(String(branchData[0].id));
     });
   }, []);
+
+  useEffect(() => {
+    if (!selectedBranchId || allLumgs.length === 0) return;
+    const filtered = allLumgs.filter(l => String(l.branch_id) === selectedBranchId);
+    setLumgs(filtered);
+    setSelectedLumgId(filtered.length > 0 ? String(filtered[0].id) : '');
+  }, [selectedBranchId, allLumgs]);
 
   useEffect(() => {
     if (!selectedLumgId) return;
@@ -61,6 +70,16 @@ export default function LinesConfigTab() {
   return (
     <div>
       <div className="admin-form" style={{ marginBottom: 8 }}>
+        <div className="admin-form-group">
+          <label>Філія</label>
+          <select
+            className="admin-select"
+            value={selectedBranchId}
+            onChange={e => setSelectedBranchId(e.target.value)}
+          >
+            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
+        </div>
         <div className="admin-form-group">
           <label>ЛУМГ</label>
           <select
