@@ -708,6 +708,10 @@ export const lumgApi = {
   getDataPath:    (id)         => apiClient.get(`/lumgs/${id}/data-path`),
   setDataPath:    (id, data)   => apiClient.put(`/lumgs/${id}/data-path`, data),
   deleteDataPath: (id)         => apiClient.delete(`/lumgs/${id}/data-path`),
+  getEisCodes:    (id)         => apiClient.get(`/lumgs/${id}/eis-codes`),
+  addEisCode:     (id, data)   => apiClient.post(`/lumgs/${id}/eis-codes`, data),
+  deleteEisCode:  (id, code)   => apiClient.delete(`/lumgs/${id}/eis-codes/${encodeURIComponent(code)}`),
+  scanEis:        (id)         => apiClient.get(`/lumgs/${id}/scan-eis`),
 };
 
 // Admin: User management API

@@ -263,19 +263,32 @@ function LumgDataPaths() {
   const [paths, setPaths] = useState({});
   const [editing, setEditing] = useState({});
   const [status, setStatus] = useState({});
+  // EIS codes state
+  const [eisCodes, setEisCodes] = useState({});       // lumg_id → [{id, eis_code}]
+  const [eisExpanded, setEisExpanded] = useState({}); // lumg_id → bool
+  const [eisInput, setEisInput] = useState({});       // lumg_id → string
+  const [scanResults, setScanResults] = useState({});  // lumg_id → string[] | 'loading'
+  const [scanSelected, setScanSelected] = useState({}); // lumg_id → Set<string>
+  const [eisStatus, setEisStatus] = useState({});     // lumg_id → {ok, msg}
 
   const load = async () => {
     const data = await lumgApi.getAll();
     if (!data) return;
     setLumgs(data);
     const pathMap = {};
+    const eisMap = {};
     await Promise.all(
       data.map(async (lumg) => {
-        const dp = await lumgApi.getDataPath(lumg.id);
+        const [dp, eis] = await Promise.all([
+          lumgApi.getDataPath(lumg.id),
+          lumgApi.getEisCodes(lumg.id),
+        ]);
         pathMap[lumg.id] = dp || null;
+        eisMap[lumg.id] = eis || [];
       })
     );
     setPaths(pathMap);
+    setEisCodes(eisMap);
   };
 
   useEffect(() => { load(); }, []);
@@ -312,68 +325,200 @@ function LumgDataPaths() {
     setStatus(prev => ({ ...prev, [lumgId]: { ok: true, msg: 'Видалено' } }));
   };
 
+  // EIS handlers
+  const toggleEis = (lumgId) =>
+    setEisExpanded(prev => ({ ...prev, [lumgId]: !prev[lumgId] }));
+
+  const handleAddEis = async (lumgId) => {
+    const code = (eisInput[lumgId] || '').trim();
+    if (!code) return;
+    const result = await lumgApi.addEisCode(lumgId, { eis_code: code });
+    if (result?.id) {
+      setEisCodes(prev => ({ ...prev, [lumgId]: [...(prev[lumgId] || []), result] }));
+      setEisInput(prev => ({ ...prev, [lumgId]: '' }));
+      setEisStatus(prev => ({ ...prev, [lumgId]: { ok: true, msg: 'Додано' } }));
+    } else {
+      setEisStatus(prev => ({ ...prev, [lumgId]: { ok: false, msg: result?.detail || 'Помилка' } }));
+    }
+  };
+
+  const handleDeleteEis = async (lumgId, code) => {
+    await lumgApi.deleteEisCode(lumgId, code);
+    setEisCodes(prev => ({ ...prev, [lumgId]: (prev[lumgId] || []).filter(e => e.eis_code !== code) }));
+  };
+
+  const handleScan = async (lumgId) => {
+    setScanResults(prev => ({ ...prev, [lumgId]: 'loading' }));
+    const result = await lumgApi.scanEis(lumgId);
+    if (Array.isArray(result)) {
+      const existing = new Set((eisCodes[lumgId] || []).map(e => e.eis_code));
+      const newOnes = result.filter(r => !existing.has(r));
+      setScanResults(prev => ({ ...prev, [lumgId]: newOnes }));
+      setScanSelected(prev => ({ ...prev, [lumgId]: new Set(newOnes) }));
+    } else {
+      setScanResults(prev => ({ ...prev, [lumgId]: [] }));
+      setEisStatus(prev => ({ ...prev, [lumgId]: { ok: false, msg: 'Помилка сканування' } }));
+    }
+  };
+
+  const handleAddSelected = async (lumgId) => {
+    const sel = scanSelected[lumgId] || new Set();
+    for (const code of sel) {
+      const result = await lumgApi.addEisCode(lumgId, { eis_code: code });
+      if (result?.id) {
+        setEisCodes(prev => ({ ...prev, [lumgId]: [...(prev[lumgId] || []), result] }));
+      }
+    }
+    setScanResults(prev => { const n = { ...prev }; delete n[lumgId]; return n; });
+    setEisStatus(prev => ({ ...prev, [lumgId]: { ok: true, msg: `Додано ${sel.size} кодів` } }));
+  };
+
   return (
     <div>
       <h3 style={{ color: '#fff', marginBottom: 12, fontSize: 16 }}>Шляхи архівних даних — ЛУМГ</h3>
-      <table className="admin-table">
-        <thead>
-          <tr><th>ID</th><th>ЛУМГ</th><th>Шлях</th><th>Активний</th><th></th></tr>
-        </thead>
-        <tbody>
-          {lumgs.map(lumg => {
-            const dp = paths[lumg.id];
-            const isEditing = lumg.id in editing;
-            const ed = editing[lumg.id] || {};
-            const st = status[lumg.id];
-            return (
-              <tr key={lumg.id}>
-                <td>{lumg.id}</td>
-                <td>{lumg.name}</td>
-                <td>
-                  {isEditing ? (
+
+      {lumgs.map(lumg => {
+        const dp = paths[lumg.id];
+        const isEditing = lumg.id in editing;
+        const ed = editing[lumg.id] || {};
+        const st = status[lumg.id];
+        const eis = eisCodes[lumg.id] || [];
+        const isEisOpen = eisExpanded[lumg.id];
+        const scan = scanResults[lumg.id];
+        const selSet = scanSelected[lumg.id] || new Set();
+        const eisSt = eisStatus[lumg.id];
+
+        return (
+          <div key={lumg.id} style={{ marginBottom: 16, padding: 16, background: '#2a2a2a', borderRadius: 8, border: '1px solid #3E3E3E' }}>
+            {/* Path row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ color: '#fff', fontWeight: 600, minWidth: 120 }}>{lumg.name}</span>
+              {isEditing ? (
+                <>
+                  <input
+                    className="admin-input"
+                    style={{ flex: 1, minWidth: 280 }}
+                    value={ed.path}
+                    onChange={e => setEditing(prev => ({ ...prev, [lumg.id]: { ...prev[lumg.id], path: e.target.value } }))}
+                    placeholder="/data/archive.zip"
+                  />
+                  <input
+                    type="checkbox"
+                    checked={ed.active}
+                    onChange={e => setEditing(prev => ({ ...prev, [lumg.id]: { ...prev[lumg.id], active: e.target.checked } }))}
+                    title="Активний"
+                  />
+                  <button className="btn-primary" onClick={() => handleSave(lumg.id)}>Зберегти</button>
+                  <button className="btn-secondary" onClick={() => cancelEdit(lumg.id)}>Скасувати</button>
+                </>
+              ) : (
+                <>
+                  {dp
+                    ? <code style={{ color: '#B9E42B', fontSize: 12, flex: 1 }}>{dp.path}</code>
+                    : <span style={{ color: '#666', flex: 1 }}>Шлях не вказано</span>
+                  }
+                  <button className="btn-edit" onClick={() => startEdit(lumg)}>{dp ? 'Ред.' : 'Додати шлях'}</button>
+                  {dp && <button className="btn-danger" onClick={() => handleDelete(lumg.id)}>Видалити</button>}
+                </>
+              )}
+            </div>
+            {st && <div className={`admin-status ${st.ok ? 'ok' : 'error'}`} style={{ marginTop: 4 }}>{st.msg}</div>}
+
+            {/* EIS codes section */}
+            <div style={{ marginTop: 10 }}>
+              <button
+                className="btn-secondary"
+                style={{ fontSize: 12, padding: '3px 10px' }}
+                onClick={() => toggleEis(lumg.id)}
+              >
+                {isEisOpen ? '▲' : '▾'} ЄІС коди ({eis.length})
+              </button>
+
+              {isEisOpen && (
+                <div style={{ marginTop: 8, paddingLeft: 4 }}>
+                  {/* Current EIS codes */}
+                  {eis.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                      {eis.map(e => (
+                        <span key={e.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#1e2e08', color: '#B9E42B', padding: '2px 8px', borderRadius: 12, fontSize: 12 }}>
+                          {e.eis_code}
+                          <button
+                            onClick={() => handleDeleteEis(lumg.id, e.eis_code)}
+                            style={{ background: 'none', border: 'none', color: '#e05252', cursor: 'pointer', padding: '0 2px', fontSize: 13, lineHeight: 1 }}
+                            title="Видалити"
+                          >✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {eis.length === 0 && (
+                    <div style={{ color: '#666', fontSize: 12, marginBottom: 8 }}>ЄІС коди не додано</div>
+                  )}
+
+                  {/* Add manually */}
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
                     <input
                       className="admin-input"
-                      style={{ minWidth: 300 }}
-                      value={ed.path}
-                      onChange={e => setEditing(prev => ({ ...prev, [lumg.id]: { ...prev[lumg.id], path: e.target.value } }))}
-                      placeholder="/data/archive.zip"
+                      style={{ minWidth: 220, fontSize: 12 }}
+                      placeholder="Ввести ЄІС код вручну"
+                      value={eisInput[lumg.id] || ''}
+                      onChange={e => setEisInput(prev => ({ ...prev, [lumg.id]: e.target.value }))}
+                      onKeyDown={e => e.key === 'Enter' && handleAddEis(lumg.id)}
                     />
-                  ) : (
-                    dp ? <code style={{ color: '#B9E42B', fontSize: 12 }}>{dp.path}</code> : <span style={{ color: '#666' }}>—</span>
+                    <button className="btn-primary" style={{ fontSize: 12 }} onClick={() => handleAddEis(lumg.id)}>Додати</button>
+                    {dp && (
+                      <button
+                        className="btn-secondary"
+                        style={{ fontSize: 12 }}
+                        onClick={() => handleScan(lumg.id)}
+                        disabled={scan === 'loading'}
+                      >
+                        {scan === 'loading' ? 'Сканування…' : '🔍 Сканувати архів'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Scan results */}
+                  {Array.isArray(scan) && scan.length > 0 && (
+                    <div style={{ background: '#222', borderRadius: 6, padding: 10, marginBottom: 8 }}>
+                      <div style={{ fontSize: 12, color: '#aaa', marginBottom: 6 }}>Знайдено нових папок ({scan.length}). Вибери для додавання:</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                        {scan.map(code => (
+                          <label key={code} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12, color: '#ccc' }}>
+                            <input
+                              type="checkbox"
+                              checked={selSet.has(code)}
+                              onChange={() => setScanSelected(prev => {
+                                const s = new Set(prev[lumg.id] || []);
+                                s.has(code) ? s.delete(code) : s.add(code);
+                                return { ...prev, [lumg.id]: s };
+                              })}
+                            />
+                            {code}
+                          </label>
+                        ))}
+                      </div>
+                      <button
+                        className="btn-primary"
+                        style={{ fontSize: 12 }}
+                        disabled={selSet.size === 0}
+                        onClick={() => handleAddSelected(lumg.id)}
+                      >
+                        Додати вибрані ({selSet.size})
+                      </button>
+                    </div>
                   )}
-                </td>
-                <td>
-                  {isEditing ? (
-                    <input
-                      type="checkbox"
-                      checked={ed.active}
-                      onChange={e => setEditing(prev => ({ ...prev, [lumg.id]: { ...prev[lumg.id], active: e.target.checked } }))}
-                    />
-                  ) : (
-                    dp
-                      ? <span className={dp.active ? 'badge-active' : 'badge-inactive'}>{dp.active ? 'Так' : 'Ні'}</span>
-                      : null
+                  {Array.isArray(scan) && scan.length === 0 && (
+                    <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>Нових папок не знайдено</div>
                   )}
-                </td>
-                <td style={{ whiteSpace: 'nowrap' }}>
-                  {isEditing ? (
-                    <>
-                      <button className="btn-primary" style={{ marginRight: 4 }} onClick={() => handleSave(lumg.id)}>Зберегти</button>
-                      <button className="btn-secondary" onClick={() => cancelEdit(lumg.id)}>Скасувати</button>
-                    </>
-                  ) : (
-                    <>
-                      <button className="btn-edit" onClick={() => startEdit(lumg)}>{dp ? 'Ред.' : 'Додати'}</button>
-                      {dp && <button className="btn-danger" onClick={() => handleDelete(lumg.id)}>Видалити</button>}
-                    </>
-                  )}
-                  {st && <div className={`admin-status ${st.ok ? 'ok' : 'error'}`}>{st.msg}</div>}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+
+                  {eisSt && <div className={`admin-status ${eisSt.ok ? 'ok' : 'error'}`}>{eisSt.msg}</div>}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
