@@ -169,13 +169,57 @@
   padding: 8px;
 }
 
+.branch-group {
+  margin-bottom: 6px;
+}
+
+.branch-header {
+  padding: 8px 12px;
+  background-color: #1a2e1a;
+  border-left: 3px solid #4CAF50;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #4CAF50;
+  margin-bottom: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.branch-header:hover {
+  background-color: #213521;
+}
+
+.branch-header .collapse-icon {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+}
+
+.branch-header .collapse-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.branch-header .branch-name {
+  flex: 1;
+}
+
+.branch-header .enterprise-count {
+  color: #6a9e6a;
+  font-weight: normal;
+  font-size: 12px;
+}
+
 .line-group {
-  margin-bottom: 8px;
+  margin-bottom: 2px;
+  padding-left: 10px;
 }
 
 .line-header {
-  padding: 8px 12px;
-  background-color: #333;
+  padding: 6px 12px;
+  background-color: #2d2d2d;
   border-radius: 4px;
   font-weight: 600;
   font-size: 12px;

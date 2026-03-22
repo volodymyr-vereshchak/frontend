@@ -15,7 +15,7 @@ import {
 import * as XLSX from 'xlsx';
 import './EnterprisePollAnalysis.css';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { enterprisePollApi, enterpriseApi, lineApi } from '../../services/api';
+import { enterprisePollApi, enterpriseApi, lineApi, branchApi } from '../../services/api';
 
 // Register locales
 registerLocale('ru', ru);
@@ -46,6 +46,15 @@ const getDeviceTypeName = (mfDev, typeDev) => {
   return DEVICE_TYPE_NAMES[`${mfDev}_${typeDev}`] || `${mfDev}-${typeDev}`;
 };
 
+// Normalize DB (snake_case) fields to camelCase used throughout this component
+const normalizeEnt = (e) => ({
+  ...e,
+  serNum:  e.ser_num  ?? e.serNum,
+  mfDev:   e.mf_dev   ?? e.mfDev,
+  typeDev: e.type_dev ?? e.typeDev,
+  chNum:   e.ch_num   ?? e.chNum,
+});
+
 /**
  * Enterprise Poll Analysis Component
  * Allows viewing unpolled enterprises and polling specific enterprises
@@ -55,7 +64,9 @@ const EnterprisePollAnalysis = () => {
 
   // State
   const [enterprises, setEnterprises] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [lineNames, setLineNames] = useState({});
+  const [collapsedBranches, setCollapsedBranches] = useState({});
   const [collapsedLines, setCollapsedLines] = useState({});
   const [unpolledEnterprises, setUnpolledEnterprises] = useState([]);
   const [selectedEnterprise, setSelectedEnterprise] = useState(null);
@@ -114,10 +125,11 @@ const EnterprisePollAnalysis = () => {
     setError(null);
 
     try {
-      // Load enterprises and lines in parallel
-      const [enterprisesData, linesData] = await Promise.all([
-        enterprisePollApi.getAllEnterprises(),
-        lineApi.getLinesByLumg(1)
+      // Load enterprises, lines and branches in parallel
+      const [enterprisesData, linesData, branchesData] = await Promise.all([
+        enterpriseApi.getAll(),
+        lineApi.getAll(),
+        branchApi.getAll(),
       ]);
 
       // Build line names map
@@ -128,9 +140,10 @@ const EnterprisePollAnalysis = () => {
         });
       }
       setLineNames(namesMap);
+      setBranches(Array.isArray(branchesData) ? branchesData : []);
 
       if (enterprisesData && Array.isArray(enterprisesData)) {
-        setEnterprises(enterprisesData);
+        setEnterprises(enterprisesData.map(normalizeEnt));
       } else {
         setEnterprises([]);
       }
@@ -259,41 +272,47 @@ const EnterprisePollAnalysis = () => {
    */
   const filteredEnterprises = useMemo(() => {
     if (!searchQuery.trim()) return enterprises;
-
     const query = searchQuery.toLowerCase();
-    return enterprises.filter(e =>
-      e.enterprise_name.toLowerCase().includes(query)
-    );
+    return enterprises.filter(e => e.enterprise_name.toLowerCase().includes(query));
   }, [enterprises, searchQuery]);
 
   /**
-   * Group enterprises by line_id for better display
-   * Enterprises without line_id are grouped under special '__no_line__' key
+   * Group enterprises: branch → line → enterprises
    */
-  const enterprisesByLine = useMemo(() => {
+  const enterprisesByBranchAndLine = useMemo(() => {
     const NO_LINE_KEY = '__no_line__';
-    const grouped = {};
+    const NO_BRANCH_KEY = '__no_branch__';
+
+    const byBranch = {};
     filteredEnterprises.forEach(e => {
-      const key = (e.line_id != null) ? e.line_id : NO_LINE_KEY;
-      if (!grouped[key]) {
-        grouped[key] = [];
-      }
-      grouped[key].push(e);
+      const bKey = e.branch_id != null ? String(e.branch_id) : NO_BRANCH_KEY;
+      const lKey = e.line_id  != null ? String(e.line_id)  : NO_LINE_KEY;
+      if (!byBranch[bKey]) byBranch[bKey] = {};
+      if (!byBranch[bKey][lKey]) byBranch[bKey][lKey] = [];
+      byBranch[bKey][lKey].push(e);
     });
 
-    // Sort: lines with actual IDs first (sorted numerically), then no-line group at the end
-    const sortedEntries = Object.entries(grouped).sort(([a], [b]) => {
-      if (a === NO_LINE_KEY) return 1;
-      if (b === NO_LINE_KEY) return -1;
-      return Number(a) - Number(b);
+    // Sort branches: known branches first (by branch order), unknown last
+    const branchOrder = branches.map(b => String(b.id));
+    const sortedBranches = Object.keys(byBranch).sort((a, b) => {
+      if (a === NO_BRANCH_KEY) return 1;
+      if (b === NO_BRANCH_KEY) return -1;
+      return branchOrder.indexOf(a) - branchOrder.indexOf(b);
     });
 
-    const sortedGrouped = {};
-    sortedEntries.forEach(([key, value]) => {
-      sortedGrouped[key] = value;
+    const result = {};
+    sortedBranches.forEach(bKey => {
+      const lines = byBranch[bKey];
+      const sortedLines = Object.keys(lines).sort((a, b) => {
+        if (a === NO_LINE_KEY) return 1;
+        if (b === NO_LINE_KEY) return -1;
+        return Number(a) - Number(b);
+      });
+      result[bKey] = {};
+      sortedLines.forEach(lKey => { result[bKey][lKey] = lines[lKey]; });
     });
-    return sortedGrouped;
-  }, [filteredEnterprises]);
+    return result;
+  }, [filteredEnterprises, branches]);
 
   /**
    * Format period for display
@@ -363,14 +382,21 @@ const EnterprisePollAnalysis = () => {
     };
   }, [pollResults]);
 
+  const toggleBranchCollapse = (branchId) => {
+    setCollapsedBranches(prev => ({ ...prev, [branchId]: !prev[branchId] }));
+  };
+
   /**
    * Toggle line collapse state
    */
   const toggleLineCollapse = (lineId) => {
-    setCollapsedLines(prev => ({
-      ...prev,
-      [lineId]: !prev[lineId]
-    }));
+    setCollapsedLines(prev => ({ ...prev, [lineId]: !prev[lineId] }));
+  };
+
+  const getBranchName = (branchKey) => {
+    if (branchKey === '__no_branch__') return 'Без відділення';
+    const branch = branches.find(b => String(b.id) === branchKey);
+    return branch ? branch.name : `Відділення ${branchKey}`;
   };
 
   /**
@@ -625,39 +651,50 @@ const EnterprisePollAnalysis = () => {
             {isLoading ? (
               <div className="loading-message">{t('loadingEnterprises')}</div>
             ) : (
-              Object.entries(enterprisesByLine).map(([lineId, lineEnterprises]) => (
-                <div key={`line-group-${lineId}`} className="line-group">
-                  <div
-                    className="line-header"
-                    onClick={() => toggleLineCollapse(lineId)}
-                  >
-                    <span className={`collapse-icon ${collapsedLines[lineId] ? 'collapsed' : ''}`}>
-                      ▼
-                    </span>
-                    <span className="line-name">
-                      {getLineName(lineId === '__no_line__' ? lineId : parseInt(lineId))}
-                    </span>
-                    <span className="enterprise-count">({lineEnterprises.length})</span>
-                  </div>
-                  {!collapsedLines[lineId] && lineEnterprises.map((enterprise, idx) => (
-                    <div
-                      key={`${enterprise.line_id}_${enterprise.serNum}_${enterprise.chNum}_${idx}`}
-                      className={`enterprise-item ${
-                        selectedEnterprise?.serNum === enterprise.serNum &&
-                        selectedEnterprise?.chNum === enterprise.chNum &&
-                        selectedEnterprise?.line_id === enterprise.line_id &&
-                        selectedEnterprise?.enterprise_name === enterprise.enterprise_name
-                          ? 'selected'
-                          : ''
-                      } ${!enterprise.active ? 'inactive' : ''}`}
-                      onClick={() => setSelectedEnterprise(enterprise)}
-                    >
-                      <span className="enterprise-name">{enterprise.enterprise_name}</span>
-                      {!enterprise.active && <span className="inactive-badge">inactive</span>}
+              Object.entries(enterprisesByBranchAndLine).map(([branchKey, lineGroups]) => {
+                const isBranchCollapsed = collapsedBranches[branchKey];
+                const totalCount = Object.values(lineGroups).reduce((s, arr) => s + arr.length, 0);
+                return (
+                  <div key={`branch-${branchKey}`} className="branch-group">
+                    <div className="branch-header" onClick={() => toggleBranchCollapse(branchKey)}>
+                      <span className={`collapse-icon ${isBranchCollapsed ? 'collapsed' : ''}`}>▼</span>
+                      <span className="branch-name">{getBranchName(branchKey)}</span>
+                      <span className="enterprise-count">({totalCount})</span>
                     </div>
-                  ))}
-                </div>
-              ))
+                    {!isBranchCollapsed && Object.entries(lineGroups).map(([lineKey, lineEnterprises]) => {
+                      const lineCollapseKey = `${branchKey}_${lineKey}`;
+                      const isLineCollapsed = collapsedLines[lineCollapseKey];
+                      return (
+                        <div key={`line-${lineKey}`} className="line-group">
+                          <div className="line-header" onClick={() => toggleLineCollapse(lineCollapseKey)}>
+                            <span className={`collapse-icon ${isLineCollapsed ? 'collapsed' : ''}`}>▼</span>
+                            <span className="line-name">
+                              {getLineName(lineKey === '__no_line__' ? lineKey : parseInt(lineKey))}
+                            </span>
+                            <span className="enterprise-count">({lineEnterprises.length})</span>
+                          </div>
+                          {!isLineCollapsed && lineEnterprises.map((enterprise, idx) => (
+                            <div
+                              key={`${enterprise.line_id}_${enterprise.serNum}_${enterprise.chNum}_${idx}`}
+                              className={`enterprise-item ${
+                                selectedEnterprise?.serNum === enterprise.serNum &&
+                                selectedEnterprise?.chNum === enterprise.chNum &&
+                                selectedEnterprise?.line_id === enterprise.line_id &&
+                                selectedEnterprise?.enterprise_name === enterprise.enterprise_name
+                                  ? 'selected' : ''
+                              } ${!enterprise.active ? 'inactive' : ''}`}
+                              onClick={() => setSelectedEnterprise(enterprise)}
+                            >
+                              <span className="enterprise-name">{enterprise.enterprise_name}</span>
+                              {!enterprise.active && <span className="inactive-badge">inactive</span>}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })
             )}
           </div>
 
