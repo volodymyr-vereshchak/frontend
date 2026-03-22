@@ -414,6 +414,32 @@ export const deviceCatalogApi = {
   createCorectorType:    (data)       => apiClient.post('/device-catalog/corector-types/', data),
   updateCorectorType:    (id, data)   => apiClient.patch(`/device-catalog/corector-types/${id}`, data),
   deleteCorectorType:    (id)         => apiClient.delete(`/device-catalog/corector-types/${id}`),
+  // Preload
+  preload:               (force = false) => apiClient.post(`/device-catalog/preload?force=${force}`),
+};
+
+// Admin: Calc types API
+export const calcTypeApi = {
+  getAll:  ()           => apiClient.get('/gas-volume-calc-types/'),
+  create:  (data)       => apiClient.post('/gas-volume-calc-types/', data),
+  update:  (id, data)   => apiClient.patch(`/gas-volume-calc-types/${id}`, data),
+  delete:  (id)         => apiClient.delete(`/gas-volume-calc-types/${id}`),
+};
+
+// Admin: SysType API
+export const sysTypeApi = {
+  getAll:  (calcTypeId) => apiClient.get(calcTypeId ? `/sys-types/?calc_type_id=${calcTypeId}` : '/sys-types/'),
+  create:  (data)       => apiClient.post('/sys-types/', data),
+  update:  (id, data)   => apiClient.patch(`/sys-types/${id}`, data),
+  delete:  (id)         => apiClient.delete(`/sys-types/${id}`),
+};
+
+// Admin: EditType API
+export const editTypeApi = {
+  getAll:  (calcTypeId) => apiClient.get(calcTypeId ? `/edit-types/?calc_type_id=${calcTypeId}` : '/edit-types/'),
+  create:  (data)       => apiClient.post('/edit-types/', data),
+  update:  (id, data)   => apiClient.patch(`/edit-types/${id}`, data),
+  delete:  (id)         => apiClient.delete(`/edit-types/${id}`),
 };
 
 // Enterprise Poll Analysis API methods

@@ -1,0 +1,141 @@
+import React, { useEffect, useState } from 'react';
+import { calcTypeApi } from '../../services/api';
+
+export default function CalcTypesTab() {
+  const [items, setItems] = useState([]);
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState({});
+  const [form, setForm] = useState({ type_id: '', type_name: '' });
+  const [status, setStatus] = useState(null);
+
+  const load = async () => {
+    const data = await calcTypeApi.getAll();
+    setItems(Array.isArray(data) ? data : []);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const showStatus = (ok, msg) => { setStatus({ ok, msg }); setTimeout(() => setStatus(null), 3000); };
+
+  const filtered = items.filter(i =>
+    !search ||
+    String(i.type_id).includes(search) ||
+    i.type_name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    try {
+      const result = await calcTypeApi.create({ type_id: Number(form.type_id), type_name: form.type_name.trim() });
+      if (result?.id) { setForm({ type_id: '', type_name: '' }); load(); showStatus(true, 'Додано'); }
+    } catch (err) { showStatus(false, err.message || 'Помилка'); }
+  };
+
+  const startEdit = (item) =>
+    setEditing(prev => ({ ...prev, [item.id]: { type_id: item.type_id, type_name: item.type_name } }));
+
+  const cancelEdit = (id) =>
+    setEditing(prev => { const n = { ...prev }; delete n[id]; return n; });
+
+  const handleSave = async (id) => {
+    const ed = editing[id];
+    try {
+      const result = await calcTypeApi.update(id, { type_id: Number(ed.type_id), type_name: ed.type_name.trim() });
+      if (result?.id) { cancelEdit(id); load(); showStatus(true, 'Збережено'); }
+    } catch (err) { showStatus(false, err.message || 'Помилка'); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Видалити тип вичислювача?')) return;
+    await calcTypeApi.delete(id);
+    load();
+    showStatus(true, 'Видалено');
+  };
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'center' }}>
+        <input
+          className="admin-input"
+          placeholder="Пошук за ID або назвою…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ minWidth: 240 }}
+        />
+        <span style={{ color: '#555', fontSize: 12 }}>{filtered.length} / {items.length}</span>
+      </div>
+
+      {/* Add form */}
+      <form className="admin-form" onSubmit={handleCreate} style={{ marginBottom: 14 }}>
+        <div className="admin-form-group">
+          <label>ID типу</label>
+          <input
+            className="admin-input" type="number" required
+            value={form.type_id} onChange={e => setForm(f => ({ ...f, type_id: e.target.value }))}
+            placeholder="1" style={{ minWidth: 80 }}
+          />
+        </div>
+        <div className="admin-form-group">
+          <label>Назва</label>
+          <input
+            className="admin-input" required
+            value={form.type_name} onChange={e => setForm(f => ({ ...f, type_name: e.target.value }))}
+            placeholder="ВЕГА-1" style={{ minWidth: 220 }}
+          />
+        </div>
+        <button className="btn-primary" type="submit">Додати</button>
+      </form>
+
+      {status && <div className={`admin-status ${status.ok ? 'ok' : 'error'}`} style={{ marginBottom: 8 }}>{status.msg}</div>}
+
+      <table className="admin-table">
+        <thead>
+          <tr><th>ID</th><th>ID типу</th><th>Назва</th><th></th></tr>
+        </thead>
+        <tbody>
+          {filtered.length === 0 && (
+            <tr><td colSpan={4} style={{ color: '#555', textAlign: 'center', padding: 16 }}>
+              {search ? 'Нічого не знайдено' : 'Немає типів'}
+            </td></tr>
+          )}
+          {filtered.map(item => {
+            const ed = editing[item.id];
+            if (ed) return (
+              <tr key={item.id} style={{ background: '#1e2e08' }}>
+                <td>{item.id}</td>
+                <td>
+                  <input className="admin-input" type="number" style={{ minWidth: 70 }}
+                    value={ed.type_id}
+                    onChange={e => setEditing(prev => ({ ...prev, [item.id]: { ...prev[item.id], type_id: e.target.value } }))}
+                  />
+                </td>
+                <td>
+                  <input className="admin-input" style={{ minWidth: 200 }}
+                    value={ed.type_name}
+                    onChange={e => setEditing(prev => ({ ...prev, [item.id]: { ...prev[item.id], type_name: e.target.value } }))}
+                  />
+                </td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <button className="btn-primary" style={{ fontSize: 11 }} onClick={() => handleSave(item.id)}>Зберегти</button>
+                  <button className="btn-secondary" style={{ fontSize: 11, marginLeft: 4 }} onClick={() => cancelEdit(item.id)}>Скасувати</button>
+                </td>
+              </tr>
+            );
+            return (
+              <tr key={item.id}>
+                <td style={{ color: '#555', fontSize: 11 }}>{item.id}</td>
+                <td><span style={{ fontFamily: 'monospace', color: '#B9E42B' }}>{item.type_id}</span></td>
+                <td>{item.type_name}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <button className="btn-edit" onClick={() => startEdit(item)}>Ред.</button>
+                  <button className="btn-danger" onClick={() => handleDelete(item.id)}>Видалити</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}

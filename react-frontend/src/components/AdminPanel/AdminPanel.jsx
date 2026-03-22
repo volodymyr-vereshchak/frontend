@@ -8,6 +8,8 @@ import LinesConfigTab from './LinesConfigTab';
 import VirtualLinesTab from './VirtualLinesTab';
 import EnterprisesTab from './EnterprisesTab';
 import DeviceMappingsTab from './DeviceMappingsTab';
+import CalcTypesTab from './CalcTypesTab';
+import EventTypesTab from './EventTypesTab';
 import UsersTab from './UsersTab';
 
 const GROUPS = [
@@ -46,6 +48,8 @@ const GROUPS = [
     items: [
       { id: 'enterprises',    label: 'Промисловість' },
       { id: 'device_catalog', label: 'Обладнання' },
+      { id: 'calc_types',     label: 'Типи вичислювачів' },
+      { id: 'event_types',    label: 'Аварії та зміни' },
     ],
   },
 ];
@@ -60,6 +64,8 @@ const CONTENT_MAP = {
   virtual_lines:  <VirtualLinesTab />,
   enterprises:    <EnterprisesTab />,
   device_catalog: <DeviceMappingsTab />,
+  calc_types:     <CalcTypesTab />,
+  event_types:    <EventTypesTab />,
 };
 
 const TAB_LABELS = GROUPS.flatMap(g => g.items).reduce((acc, item) => {

@@ -208,10 +208,13 @@ function CorectorTypesSection({ manufacturers }) {
   );
 }
 
+
 // ─── Main tab ─────────────────────────────────────────────────────────────────
 
 export default function DeviceMappingsTab() {
   const [manufacturers, setManufacturers] = useState([]);
+  const [preloadStatus, setPreloadStatus] = useState(null);
+  const [preloadForce, setPreloadForce] = useState(false);
 
   const loadManufacturers = async () => {
     const data = await deviceCatalogApi.getManufacturers();
@@ -220,8 +223,30 @@ export default function DeviceMappingsTab() {
 
   useEffect(() => { loadManufacturers(); }, []);
 
+  const handlePreload = async () => {
+    setPreloadStatus(null);
+    try {
+      const result = await deviceCatalogApi.preload(preloadForce);
+      setPreloadStatus({ ok: true, msg: result?.message || 'Готово' });
+      loadManufacturers();
+    } catch (err) {
+      setPreloadStatus({ ok: false, msg: err.message || 'Помилка' });
+    }
+  };
+
   return (
     <div>
+      {/* Preload button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, padding: '10px 14px', background: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: 6 }}>
+        <span style={{ color: '#888', fontSize: 13 }}>Передзавантаження каталогу виробників і коректорів:</span>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 12, color: '#a0a0a0' }}>
+          <input type="checkbox" checked={preloadForce} onChange={e => setPreloadForce(e.target.checked)} />
+          Перезаписати
+        </label>
+        <button className="btn-secondary" onClick={handlePreload}>Передзавантажити</button>
+        {preloadStatus && <span className={`admin-status ${preloadStatus.ok ? 'ok' : 'error'}`}>{preloadStatus.msg}</span>}
+      </div>
+
       <ManufacturersSection manufacturers={manufacturers} onManufacturersChanged={loadManufacturers} />
       <CorectorTypesSection manufacturers={manufacturers} />
     </div>
