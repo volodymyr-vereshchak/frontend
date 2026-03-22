@@ -79,6 +79,7 @@ export default function LinesConfigTab() {
             <th>ID</th>
             <th>Назва</th>
             <th>В звіт</th>
+            <th>В тренди</th>
             <th>Висок. тиск</th>
           </tr>
         </thead>
@@ -88,6 +89,7 @@ export default function LinesConfigTab() {
               <td>{l.id}</td>
               <td>{l.name}</td>
               <td><Toggle line={l} field="include_in_report" /></td>
+              <td><Toggle line={l} field="include_in_trends" /></td>
               <td><Toggle line={l} field="is_high_pressure" /></td>
             </tr>
           ))}

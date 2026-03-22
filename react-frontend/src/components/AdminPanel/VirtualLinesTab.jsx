@@ -176,6 +176,7 @@ export default function VirtualLinesTab() {
       branch_id:          parseInt(form.branch_id),
       lumg_id:            parseInt(form.lumg_id),
       active:             existing ? existing.active             : true,
+      include_in_trends:  existing ? existing.include_in_trends  : false,
       physical_line_ids:  form.physical_line_ids,
     };
 
@@ -203,6 +204,7 @@ export default function VirtualLinesTab() {
       branch_id:         vl.branch_id,
       lumg_id:           vl.lumg_id,
       active:            vl.active,
+      include_in_trends: vl.include_in_trends,
       physical_line_ids: vl.physical_line_ids || [],
       [field]:           !vl[field],
     };
@@ -368,6 +370,7 @@ export default function VirtualLinesTab() {
             <th>Назва</th>
             <th>ЛУМГ</th>
             <th style={{ textAlign: 'center' }}>Ліній</th>
+            <th style={{ textAlign: 'center' }}>В тренди</th>
             <th style={{ textAlign: 'center' }}>Активне</th>
             <th></th>
           </tr>
@@ -385,6 +388,13 @@ export default function VirtualLinesTab() {
               <td style={{ color: '#888', fontSize: 12 }}>{lumgName(vl.lumg_id)}</td>
               <td style={{ textAlign: 'center', color: '#888', fontSize: 12 }}>
                 {(vl.physical_line_ids || []).length}
+              </td>
+              <td style={{ textAlign: 'center' }}>
+                <FlagToggle
+                  active={vl.include_in_trends}
+                  busy={saving[`${vl.id}_include_in_trends`]}
+                  onClick={() => handleFlagToggle(vl, 'include_in_trends')}
+                />
               </td>
               <td style={{ textAlign: 'center' }}>
                 <FlagToggle
