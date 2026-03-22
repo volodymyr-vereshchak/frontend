@@ -164,9 +164,10 @@ export const lineApi = {
 
 // Update API methods
 export const updateApi = {
-  updateAll:   ()   => apiClient.post('/update_data/'),
-  updateLumg:  (id) => apiClient.post(`/update_data/${id}`),
-  getStatus:   ()   => apiClient.get('/update_data/status'),
+  updateAll:    ()              => apiClient.post('/update_data/'),
+  updateLumg:   (id)            => apiClient.post(`/update_data/${id}`),
+  updateDirect: (lumg_id, path) => apiClient.post('/update_data/direct', { lumg_id, path }),
+  getStatus:    ()              => apiClient.get('/update_data/status'),
 };
 
 // Gas Volume Calculation API methods

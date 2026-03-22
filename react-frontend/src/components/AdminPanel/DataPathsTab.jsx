@@ -393,6 +393,10 @@ function LumgDataPaths() {
             {/* Path row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ color: '#fff', fontWeight: 600, minWidth: 120 }}>{lumg.name}</span>
+              {eis.length > 0
+                ? <span style={{ background: '#1e2e08', color: '#B9E42B', padding: '1px 8px', borderRadius: 10, fontSize: 11 }}>EIS ({eis.length})</span>
+                : <span style={{ background: '#2a2a2a', color: '#888', padding: '1px 8px', borderRadius: 10, fontSize: 11 }}>Прямий</span>
+              }
               {isEditing ? (
                 <>
                   <input

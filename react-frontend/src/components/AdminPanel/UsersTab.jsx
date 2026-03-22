@@ -13,6 +13,9 @@ export default function UsersTab() {
   const [form, setForm] = useState({ username: '', display_name: '', role: 'viewer', branch_ids: [] });
   const [creating, setCreating] = useState(false);
 
+  // Edit state: userId → { display_name, role, branch_ids }
+  const [editingUser, setEditingUser] = useState({});
+
   const load = async () => {
     const [usersData, branchesData] = await Promise.all([
       userManagementApi.getAll(),
@@ -80,6 +83,44 @@ export default function UsersTab() {
   };
 
   const getBranchName = (id) => branches.find(b => b.id === id)?.name || `branch ${id}`;
+
+  const startEditUser = (u) => {
+    setEditingUser(prev => ({
+      ...prev,
+      [u.id]: {
+        display_name: u.display_name || '',
+        role: u.role,
+        branch_ids: u.allowed_branch_ids || [],
+      },
+    }));
+  };
+
+  const cancelEditUser = (id) =>
+    setEditingUser(prev => { const n = { ...prev }; delete n[id]; return n; });
+
+  const handleSaveUser = async (u) => {
+    const ed = editingUser[u.id];
+    const result = await userManagementApi.update(u.id, {
+      display_name: ed.display_name || null,
+      role: ed.role,
+      branch_ids: ed.role === 'admin' ? [] : ed.branch_ids,
+    });
+    if (result) {
+      load();
+      cancelEditUser(u.id);
+      showStatus(true, 'Збережено');
+    } else {
+      showStatus(false, 'Помилка збереження');
+    }
+  };
+
+  const toggleEditBranch = (userId, bid) => {
+    setEditingUser(prev => {
+      const cur = prev[userId];
+      const has = cur.branch_ids.includes(bid);
+      return { ...prev, [userId]: { ...cur, branch_ids: has ? cur.branch_ids.filter(b => b !== bid) : [...cur.branch_ids, bid] } };
+    });
+  };
 
   return (
     <div>
@@ -198,48 +239,95 @@ export default function UsersTab() {
           </tr>
         </thead>
         <tbody>
-          {users.map(u => (
-            <tr key={u.id}>
-              <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{u.username}</td>
-              <td>{u.display_name || '—'}</td>
-              <td>
-                <span style={{
-                  background: u.role === 'admin' ? '#2a1a3a' : '#1a2a3a',
-                  color: u.role === 'admin' ? '#c090e0' : '#60a0d0',
-                  padding: '1px 8px', borderRadius: 10, fontSize: 11
-                }}>
-                  {u.role}
-                </span>
-              </td>
-              <td style={{ fontSize: 11, color: '#888', maxWidth: 200 }}>
-                {u.allowed_branch_ids?.length > 0
-                  ? u.allowed_branch_ids.map(id => getBranchName(id)).join(', ')
-                  : '—'}
-              </td>
-              <td>
-                <span className={u.active ? 'badge-active' : 'badge-inactive'}>
-                  {u.active ? 'Активний' : 'Неактивний'}
-                </span>
-              </td>
-              <td style={{ whiteSpace: 'nowrap' }}>
-                <button
-                  className="btn-edit"
-                  style={{ fontSize: 11 }}
-                  onClick={() => handleResetPassword(u)}
-                  title="Згенерувати новий пароль"
-                >
-                  Новий пароль
-                </button>
-                <button
-                  className={u.active ? 'btn-danger' : 'btn-edit'}
-                  style={{ fontSize: 11 }}
-                  onClick={() => handleToggleActive(u)}
-                >
-                  {u.active ? 'Деактив.' : 'Активув.'}
-                </button>
-              </td>
-            </tr>
-          ))}
+          {users.map(u => {
+            const ed = editingUser[u.id];
+            if (ed) {
+              return (
+                <React.Fragment key={u.id}>
+                  <tr style={{ background: '#1e2e08' }}>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{u.username}</td>
+                    <td>
+                      <input
+                        className="admin-input"
+                        style={{ minWidth: 140, fontSize: 12 }}
+                        value={ed.display_name}
+                        onChange={e => setEditingUser(prev => ({ ...prev, [u.id]: { ...prev[u.id], display_name: e.target.value } }))}
+                        placeholder="Ім'я Прізвище"
+                      />
+                    </td>
+                    <td>
+                      <select
+                        className="admin-select"
+                        style={{ minWidth: 90, fontSize: 12 }}
+                        value={ed.role}
+                        onChange={e => setEditingUser(prev => ({ ...prev, [u.id]: { ...prev[u.id], role: e.target.value } }))}
+                      >
+                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </td>
+                    <td colSpan={2}>
+                      {ed.role === 'viewer' && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {branches.map(b => (
+                            <label key={b.id} style={{
+                              display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                              background: ed.branch_ids.includes(b.id) ? '#2a3a10' : '#252525',
+                              border: `1px solid ${ed.branch_ids.includes(b.id) ? '#B9E42B' : '#444'}`,
+                              borderRadius: 4, padding: '2px 8px', fontSize: 11,
+                              color: ed.branch_ids.includes(b.id) ? '#B9E42B' : '#a0a0a0',
+                            }}>
+                              <input type="checkbox" style={{ display: 'none' }}
+                                checked={ed.branch_ids.includes(b.id)}
+                                onChange={() => toggleEditBranch(u.id, b.id)}
+                              />
+                              {b.short_name || b.name}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      {ed.role === 'admin' && <span style={{ color: '#888', fontSize: 12 }}>Доступ до всіх філій</span>}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <button className="btn-primary" style={{ fontSize: 11 }} onClick={() => handleSaveUser(u)}>Зберегти</button>
+                      <button className="btn-secondary" style={{ fontSize: 11, marginLeft: 4 }} onClick={() => cancelEditUser(u.id)}>Скасувати</button>
+                    </td>
+                  </tr>
+                </React.Fragment>
+              );
+            }
+            return (
+              <tr key={u.id}>
+                <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{u.username}</td>
+                <td>{u.display_name || '—'}</td>
+                <td>
+                  <span style={{
+                    background: u.role === 'admin' ? '#2a1a3a' : '#1a2a3a',
+                    color: u.role === 'admin' ? '#c090e0' : '#60a0d0',
+                    padding: '1px 8px', borderRadius: 10, fontSize: 11
+                  }}>
+                    {u.role}
+                  </span>
+                </td>
+                <td style={{ fontSize: 11, color: '#888', maxWidth: 200 }}>
+                  {u.allowed_branch_ids?.length > 0
+                    ? u.allowed_branch_ids.map(id => getBranchName(id)).join(', ')
+                    : '—'}
+                </td>
+                <td>
+                  <span className={u.active ? 'badge-active' : 'badge-inactive'}>
+                    {u.active ? 'Активний' : 'Неактивний'}
+                  </span>
+                </td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <button className="btn-edit" style={{ fontSize: 11 }} onClick={() => startEditUser(u)}>Ред.</button>
+                  <button className="btn-edit" style={{ fontSize: 11 }} onClick={() => handleResetPassword(u)} title="Згенерувати новий пароль">Новий пароль</button>
+                  <button className={u.active ? 'btn-danger' : 'btn-edit'} style={{ fontSize: 11 }} onClick={() => handleToggleActive(u)}>
+                    {u.active ? 'Деактив.' : 'Активув.'}
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

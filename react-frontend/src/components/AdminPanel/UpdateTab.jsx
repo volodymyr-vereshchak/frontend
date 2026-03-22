@@ -1,6 +1,58 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { lumgApi, updateApi } from '../../services/api';
 
+// ─── Direct update section ────────────────────────────────────────────────────
+function DirectUpdateSection({ lumgs, isRunning, onStart }) {
+  const [lumgId, setLumgId] = useState('');
+  const [path, setPath] = useState('');
+  const [err, setErr] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErr(null);
+    if (!lumgId || !path.trim()) { setErr('Виберіть ЛУМГ і вкажіть шлях'); return; }
+    try {
+      await onStart(Number(lumgId), path.trim());
+    } catch (ex) {
+      setErr(ex.message || 'Помилка');
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 28, borderTop: '1px solid #2a2a2a', paddingTop: 20 }}>
+      <div style={{ color: '#B9E42B', fontWeight: 600, marginBottom: 10, fontSize: 14 }}>
+        Пряме оновлення (режим 2)
+      </div>
+      <div style={{ color: '#888', fontSize: 12, marginBottom: 12 }}>
+        Читає всі файли з вказаного шляху напряму до одного ЛУМГ, ігноруючи EIS-коди. Використовується для завантаження архівних даних.
+      </div>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div className="admin-form-group">
+          <label>ЛУМГ</label>
+          <select className="admin-select" value={lumgId} onChange={e => setLumgId(e.target.value)} style={{ minWidth: 160 }}>
+            <option value="">— вибрати —</option>
+            {lumgs.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+        </div>
+        <div className="admin-form-group" style={{ flex: 1 }}>
+          <label>Шлях до архіву</label>
+          <input
+            className="admin-input"
+            style={{ width: '100%', minWidth: 300 }}
+            value={path}
+            onChange={e => setPath(e.target.value)}
+            placeholder="/data/archive.zip або /data/folder"
+          />
+        </div>
+        <button className="btn-primary" type="submit" disabled={isRunning}>
+          {isRunning ? '...' : 'Запустити'}
+        </button>
+      </form>
+      {err && <div className="admin-status error" style={{ marginTop: 6 }}>{err}</div>}
+    </div>
+  );
+}
+
 const LUMG_STATUS_LABEL = {
   pending: { icon: '⏸', text: 'В черзі',      color: '#888' },
   queued:  { icon: '⏳', text: 'Очікує',        color: '#aaa' },
@@ -78,6 +130,22 @@ export default function UpdateTab() {
     }
   };
 
+  const handleDirectUpdate = async (lumgId, path) => {
+    setBlockedMsg(null);
+    try {
+      await updateApi.updateDirect(lumgId, path);
+      setAllJob(prev => ({ ...prev, status: 'running', lumgs: { ...prev.lumgs, [lumgId]: 'running' } }));
+      startPolling();
+    } catch (err) {
+      if (err.status === 429) {
+        setBlockedMsg('Оновлення вже запущено іншим адміністратором');
+        const s = await updateApi.getStatus();
+        if (s) { setAllJob(s); startPolling(); }
+      }
+      throw err;
+    }
+  };
+
   const allStatusLabel = () => {
     const { status, started_at, finished_at, error } = allJob;
     if (status === 'idle') return null;
@@ -141,6 +209,8 @@ export default function UpdateTab() {
           ))}
         </tbody>
       </table>
+
+      <DirectUpdateSection lumgs={lumgs} isRunning={isRunning} onStart={handleDirectUpdate} />
     </div>
   );
 }
