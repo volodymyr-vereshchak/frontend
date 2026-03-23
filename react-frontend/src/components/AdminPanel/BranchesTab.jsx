@@ -7,6 +7,7 @@ export default function BranchesTab() {
   const [shortName, setShortName] = useState('');
   const [editId, setEditId] = useState(null);
   const [status, setStatus] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const load = async () => {
     const data = await branchApi.getAll();
@@ -42,9 +43,17 @@ export default function BranchesTab() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Видалити філіал?')) return;
+    if (!window.confirm('Видалити філіал та всі пов\'язані дані?')) return;
+    setBranches(prev => prev.filter(b => b.id !== id));
+    setDeletingId(id);
     const ok = await branchApi.delete(id);
-    if (ok) await load();
+    setDeletingId(null);
+    if (ok) {
+      await load();
+    } else {
+      await load(); // restore on failure too
+      setStatus({ ok: false, msg: 'Помилка видалення' });
+    }
   };
 
   const handleCancel = () => {
@@ -79,7 +88,9 @@ export default function BranchesTab() {
               <td>{b.short_name || '—'}</td>
               <td>
                 <button className="btn-edit" onClick={() => handleEdit(b)}>Ред.</button>
-                <button className="btn-danger" onClick={() => handleDelete(b.id)}>Видалити</button>
+                <button className="btn-danger" onClick={() => handleDelete(b.id)} disabled={deletingId !== null}>
+                  {deletingId === b.id ? 'Видалення...' : 'Видалити'}
+                </button>
               </td>
             </tr>
           ))}

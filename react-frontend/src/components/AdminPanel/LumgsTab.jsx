@@ -9,6 +9,7 @@ export default function LumgsTab() {
   const [filterBranchId, setFilterBranchId] = useState('');
   const [editId, setEditId] = useState(null);
   const [status, setStatus] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const load = async () => {
     const [lumgData, branchData] = await Promise.all([lumgApi.getAll(), branchApi.getAll()]);
@@ -45,9 +46,15 @@ export default function LumgsTab() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Видалити ЛУМГ?')) return;
+    if (!window.confirm('Видалити ЛУМГ та всі пов\'язані дані?')) return;
+    setLumgs(prev => prev.filter(l => l.id !== id));
+    setDeletingId(id);
     const ok = await lumgApi.delete(id);
-    if (ok) await load();
+    setDeletingId(null);
+    if (!ok) {
+      await load();
+      setStatus({ ok: false, msg: 'Помилка видалення' });
+    }
   };
 
   const handleCancel = () => {
@@ -101,7 +108,9 @@ export default function LumgsTab() {
               <td>{branchName(l.branch_id)}</td>
               <td>
                 <button className="btn-edit" onClick={() => handleEdit(l)}>Ред.</button>
-                <button className="btn-danger" onClick={() => handleDelete(l.id)}>Видалити</button>
+                <button className="btn-danger" onClick={() => handleDelete(l.id)} disabled={deletingId !== null}>
+                  {deletingId === l.id ? 'Видалення...' : 'Видалити'}
+                </button>
               </td>
             </tr>
           ))}
