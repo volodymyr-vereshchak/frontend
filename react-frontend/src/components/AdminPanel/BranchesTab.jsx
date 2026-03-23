@@ -28,7 +28,7 @@ export default function BranchesTab() {
     if (result) {
       setStatus({ ok: true, msg: editId ? 'Оновлено' : 'Створено' });
       setName(''); setShortName(''); setEditId(null);
-      load();
+      await load();
     } else {
       setStatus({ ok: false, msg: 'Помилка' });
     }
@@ -43,8 +43,8 @@ export default function BranchesTab() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Видалити філіал?')) return;
-    await branchApi.delete(id);
-    load();
+    const ok = await branchApi.delete(id);
+    if (ok) await load();
   };
 
   const handleCancel = () => {

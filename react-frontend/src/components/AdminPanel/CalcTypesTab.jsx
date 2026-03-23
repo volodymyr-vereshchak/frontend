@@ -41,15 +41,14 @@ export default function CalcTypesTab() {
     const ed = editing[id];
     try {
       const result = await calcTypeApi.update(id, { type_id: Number(ed.type_id), type_name: ed.type_name.trim() });
-      if (result?.id) { cancelEdit(id); load(); showStatus(true, 'Збережено'); }
+      if (result?.id) { cancelEdit(id); await load(); showStatus(true, 'Збережено'); }
     } catch (err) { showStatus(false, err.message || 'Помилка'); }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Видалити тип вичислювача?')) return;
-    await calcTypeApi.delete(id);
-    load();
-    showStatus(true, 'Видалено');
+    const ok = await calcTypeApi.delete(id);
+    if (ok) { await load(); showStatus(true, 'Видалено'); }
   };
 
   return (

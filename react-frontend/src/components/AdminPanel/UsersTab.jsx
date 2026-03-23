@@ -45,7 +45,7 @@ export default function UsersTab() {
       if (result) {
         setShownPassword({ userId: result.user.id, username: result.user.username, password: result.password });
         setForm({ username: '', display_name: '', role: 'viewer', branch_ids: [] });
-        load();
+        await load();
         showStatus(true, 'Користувача створено');
       }
     } catch (err) {
@@ -57,7 +57,7 @@ export default function UsersTab() {
   const handleToggleActive = async (user) => {
     const result = await userManagementApi.update(user.id, { active: !user.active });
     if (result) {
-      load();
+      await load();
       showStatus(true, user.active ? 'Деактивовано' : 'Активовано');
     }
   };
@@ -106,7 +106,7 @@ export default function UsersTab() {
       branch_ids: ed.role === 'admin' ? [] : ed.branch_ids,
     });
     if (result) {
-      load();
+      await load();
       cancelEditUser(u.id);
       showStatus(true, 'Збережено');
     } else {

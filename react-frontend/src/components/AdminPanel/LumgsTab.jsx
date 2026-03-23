@@ -31,7 +31,7 @@ export default function LumgsTab() {
     if (result) {
       setStatus({ ok: true, msg: editId ? 'Оновлено' : 'Створено' });
       setName(''); setBranchId(''); setEditId(null);
-      load();
+      await load();
     } else {
       setStatus({ ok: false, msg: 'Помилка' });
     }
@@ -46,8 +46,8 @@ export default function LumgsTab() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Видалити ЛУМГ?')) return;
-    await lumgApi.delete(id);
-    load();
+    const ok = await lumgApi.delete(id);
+    if (ok) await load();
   };
 
   const handleCancel = () => {

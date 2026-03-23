@@ -187,7 +187,7 @@ export default function VirtualLinesTab() {
     if (result) {
       setStatus({ ok: true, msg: editId ? 'Оновлено' : 'Кільце створено' });
       resetForm();
-      load();
+      await load();
     } else {
       setStatus({ ok: false, msg: 'Помилка збереження' });
     }
@@ -234,8 +234,8 @@ export default function VirtualLinesTab() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Видалити кільце?')) return;
-    await virtualLineApi.delete(id);
-    load();
+    const ok = await virtualLineApi.delete(id);
+    if (ok) await load();
   };
 
   // ── Render ────────────────────────────────────────────────────────────────

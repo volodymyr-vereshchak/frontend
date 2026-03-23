@@ -122,7 +122,7 @@ function CorectorTypesSection({ manufacturers }) {
       if (result) {
         setStatus({ ok: true, msg: editId ? 'Оновлено' : 'Додано' });
         setMfrId(''); setModelName(''); setTypeDev(''); setEditId(null);
-        load();
+        await load();
       } else {
         setStatus({ ok: false, msg: 'Помилка' });
       }
@@ -138,8 +138,8 @@ function CorectorTypesSection({ manufacturers }) {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Видалити модель коректора?')) return;
-    await deviceCatalogApi.deleteCorectorType(id);
-    load();
+    const ok = await deviceCatalogApi.deleteCorectorType(id);
+    if (ok) await load();
   };
 
   const handleCancel = () => {
