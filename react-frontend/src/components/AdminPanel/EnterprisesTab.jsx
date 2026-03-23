@@ -240,10 +240,13 @@ export default function EnterprisesTab() {
   const confirmDelete = async () => {
     if (!deleteConfirm) return;
     setSaving(true);
-    await enterpriseApi.delete(deleteConfirm);
-    setSaving(false);
     setEnterprises(prev => prev.filter(e => e.id !== deleteConfirm));
+    const ok = await enterpriseApi.delete(deleteConfirm);
+    setSaving(false);
     setDeleteConfirm(null);
+    if (!ok) {
+      loadData();
+    }
   };
 
   // ─── Upload ────────────────────────────────────────────────────────────────
