@@ -6,7 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
  * Overview Metrics Component
  * Displays summary cards with key GRS metrics
  */
-const OverviewMetrics = ({ totalVolume24h, volumeComparison, lastUpdate, activeLines, totalLines, nextRefreshIn }) => {
+const OverviewMetrics = ({ totalVolume24h, volumeComparison, lastUpdate, activeLines, totalLines }) => {
   const { t } = useLanguage();
 
   const formatNumber = (num) => {
@@ -21,13 +21,6 @@ const OverviewMetrics = ({ totalVolume24h, volumeComparison, lastUpdate, activeL
       minute: '2-digit',
       second: '2-digit'
     });
-  };
-
-  const formatCountdown = (seconds) => {
-    if (!seconds || seconds < 0) return '—';
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}:${String(secs).padStart(2, '0')}`;
   };
 
   // Determine arrow icon and color for volume comparison
@@ -83,11 +76,6 @@ const OverviewMetrics = ({ totalVolume24h, volumeComparison, lastUpdate, activeL
           <div className="card-value-small">
             {formatTime(lastUpdate)}
           </div>
-          {nextRefreshIn !== null && nextRefreshIn !== undefined && (
-            <div className="card-subtitle">
-              {t('nextRefreshIn')}: {formatCountdown(nextRefreshIn)}
-            </div>
-          )}
         </div>
       </div>
 

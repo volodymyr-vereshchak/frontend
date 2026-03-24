@@ -24,8 +24,6 @@ const OverviewTab = () => {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [countdown, setCountdown] = useState(300);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
 
   /**
@@ -213,24 +211,22 @@ const OverviewTab = () => {
   }, [loadData, selectedBranchId]);
 
   /**
-   * Auto-refresh timer
+   * Sync refresh: fires at :32 of each hour (2 min after scheduler at :30), then hourly
    */
   useEffect(() => {
-    if (!autoRefresh) return;
-    const interval = setInterval(() => { loadData(); }, 300000);
-    return () => clearInterval(interval);
-  }, [autoRefresh, loadData]);
-
-  /**
-   * Countdown timer
-   */
-  useEffect(() => {
-    if (!autoRefresh) return;
-    const timer = setInterval(() => {
-      setCountdown(prev => prev <= 1 ? 300 : prev - 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [autoRefresh]);
+    if (!selectedBranchId) return;
+    let timeoutId, intervalId;
+    const now = new Date();
+    const next = new Date(now);
+    next.setSeconds(0, 0);
+    next.setMinutes(32);
+    if (next <= now) next.setHours(next.getHours() + 1);
+    timeoutId = setTimeout(() => {
+      loadData();
+      intervalId = setInterval(loadData, 60 * 60 * 1000);
+    }, next - now);
+    return () => { clearTimeout(timeoutId); clearInterval(intervalId); };
+  }, [selectedBranchId, loadData]);
 
   return (
     <div className="overview-tab">
@@ -258,23 +254,6 @@ const OverviewTab = () => {
         </div>
 
         <div className="overview-controls">
-          <button
-            className="refresh-button"
-            onClick={loadData}
-            disabled={isLoading || !selectedBranchId}
-            title={t('refreshNow')}
-          >
-            <span className="refresh-icon">{isLoading ? '⏳' : '🔄'}</span>
-            <span className="refresh-text">{t('refreshNow')}</span>
-          </button>
-          <label className="auto-refresh-toggle">
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={() => setAutoRefresh(prev => !prev)}
-            />
-            <span className="toggle-text">{t('autoRefresh')}</span>
-          </label>
         </div>
       </div>
 
@@ -321,7 +300,6 @@ const OverviewTab = () => {
             lastUpdate={lastUpdateTime}
             activeLines={data.activeLines}
             totalLines={data.totalLines}
-            nextRefreshIn={autoRefresh ? countdown : null}
           />
 
           <section className="overview-section">

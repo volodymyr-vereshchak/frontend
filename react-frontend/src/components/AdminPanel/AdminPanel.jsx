@@ -5,6 +5,7 @@ import LumgsTab from './LumgsTab';
 import DataPathsTab from './DataPathsTab';
 import UpdateTab from './UpdateTab';
 import LinesConfigTab from './LinesConfigTab';
+import CalcsTab from './CalcsTab';
 import VirtualLinesTab from './VirtualLinesTab';
 import EnterprisesTab from './EnterprisesTab';
 import DeviceMappingsTab from './DeviceMappingsTab';
@@ -40,6 +41,7 @@ const GROUPS = [
     icon: '〰',
     items: [
       { id: 'lines_config',  label: 'Конфігурація' },
+      { id: 'calcs',         label: 'Вичислювачі' },
       { id: 'virtual_lines', label: 'Кільця' },
     ],
   },
@@ -63,6 +65,7 @@ const CONTENT_MAP = {
   lumgs:          <LumgsTab />,
   paths:          <DataPathsTab />,
   lines_config:   <LinesConfigTab />,
+  calcs:          <CalcsTab />,
   virtual_lines:  <VirtualLinesTab />,
   dpd_credentials: <DpdCredentialsTab />,
   enterprises:    <EnterprisesTab />,

@@ -153,7 +153,9 @@ export const lineApi = {
     return await apiClient.get('/lines/', { lumg_id: lumgId });
   },
   getAll:    ()           => apiClient.get('/lines/'),
+  create:    (data)       => apiClient.post('/lines/', data),
   update:    (id, data)   => apiClient.patch(`/lines/${id}`, data),
+  delete:    (id)         => apiClient.delete(`/lines/${id}`),
 };
 
 // Update API methods
@@ -172,6 +174,9 @@ export const gasVolumeApi = {
   async getGasVolumeCalcs() {
     return await apiClient.get('/gas-volume-calcs/');
   },
+  create: (data)     => apiClient.post('/gas-volume-calcs/', data),
+  update: (id, data) => apiClient.patch(`/gas-volume-calcs/${id}`, data),
+  delete: (id)       => apiClient.delete(`/gas-volume-calcs/${id}`),
 };
 
 // Archive counts API methods (И - changes, А - alarms)
