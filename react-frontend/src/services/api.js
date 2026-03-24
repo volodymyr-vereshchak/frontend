@@ -264,55 +264,14 @@ export const archiveDataApi = {
 
   async getHourlyDataLast24h(lineIds = grsConfig.LINES_IDS) {
     try {
-      // Get hourly data for last 24 hours (replicate Python logic)
-      // Python: end = get_last_period(), start = end - timedelta(hours=23)
-
       const now = new Date();
-
-      // Get broader range to ensure we have data - last 5 days to be safe
-      // Use tomorrow as end date to include all of today's data
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const endDate = tomorrow.toISOString().split('T')[0]; // Tomorrow (2025-09-18)
-      const startDate = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 5 days ago
+      const endDate = tomorrow.toISOString().split('T')[0];
+      // 3 days covers current 24h + previous 24h + buffer for sparse lines
+      const startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-      // Get data for specified lines
       const result = await this.getHourlyData(lineIds, startDate, endDate);
-
-      if (!result || result.length === 0) {
-        return [];
-      }
-
-      // Find the last (most recent) period in the data that has actual data
-      // Sort by period descending to get the latest first
-      const sortedData = result.sort((a, b) => new Date(b.period) - new Date(a.period));
-
-      // Look for the latest period that is not at 00:00 (midnight) as it might be incomplete
-      let lastPeriod = null;
-      for (let i = 0; i < Math.min(50, sortedData.length); i++) {
-        const periodDate = new Date(sortedData[i].period);
-
-        // Skip midnight hours (00:00) as they might be incomplete data
-        if (periodDate.getHours() !== 0) {
-          lastPeriod = periodDate;
-          break;
-        }
-      }
-
-      // If no non-midnight period found, use the actual last period
-      if (!lastPeriod) {
-        lastPeriod = new Date(sortedData[0].period);
-      }
-
-      // Calculate start period (23 hours before last period)
-      const startPeriod = new Date(lastPeriod.getTime() - 23 * 60 * 60 * 1000);
-
-      // Filter data to get exactly 24 hours (from startPeriod to lastPeriod inclusive)
-      const filteredData = result.filter(record => {
-        const recordDate = new Date(record.period);
-        return recordDate >= startPeriod && recordDate <= lastPeriod;
-      });
-
-      return filteredData;
+      return (result && result.length > 0) ? result : [];
     } catch (error) {
       console.error('Error in getHourlyDataLast24h:', error);
       return null;
@@ -324,12 +283,8 @@ export const archiveDataApi = {
 export const paramArchiveApi = {
   async getParamsForLines(lineIds) {
     if (!lineIds || lineIds.length === 0) return [];
-
-    const now = new Date();
-    const toDate = now.toISOString().split('T')[0];
-
     try {
-      const result = await apiClient.get('/param/', { line_id: lineIds, to_date: toDate });
+      const result = await apiClient.get('/param/', { line_id: lineIds });
       return Array.isArray(result) ? result : [];
     } catch (err) {
       console.warn('Failed to load params:', err);

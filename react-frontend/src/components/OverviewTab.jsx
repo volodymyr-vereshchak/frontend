@@ -121,42 +121,39 @@ const OverviewTab = () => {
         console.warn('Failed to load dP parameters, using defaults:', err);
       }
 
-      // Fetch last 24h hourly data
-      const last24hResponse = await archiveDataApi.getHourlyDataLast24h(reportLineIds);
-      let last24hData = Array.isArray(last24hResponse) ? last24hResponse : last24hResponse?.data || [];
+      // Fetch recent hourly data (3 days: covers current + previous 24h windows + buffer)
+      const allHourlyResponse = await archiveDataApi.getHourlyDataLast24h(reportLineIds);
+      const allHourlyData = Array.isArray(allHourlyResponse) ? allHourlyResponse : allHourlyResponse?.data || [];
 
-      if (!Array.isArray(last24hData) || last24hData.length === 0) {
+      if (!Array.isArray(allHourlyData) || allHourlyData.length === 0) {
         throw new Error('Нет данных за последние 24 часа');
       }
 
-      // Determine previous 24h period
-      const periods = last24hData
-        .map(r => r.period ? new Date(r.period) : null)
-        .filter(d => d && !isNaN(d.getTime()))
-        .sort((a, b) => a - b);
+      // Find most recent record across all lines
+      const allTimestamps = allHourlyData
+        .map(r => r.period ? new Date(r.period).getTime() : null)
+        .filter(t => t && !isNaN(t));
 
-      if (periods.length === 0) {
+      if (allTimestamps.length === 0) {
         throw new Error('Не удалось определить временные границы данных');
       }
 
-      const currentStart = periods[0];
-      const currentEnd = periods[periods.length - 1];
+      const currentEnd = new Date(Math.max(...allTimestamps));
+      const currentStart = new Date(currentEnd.getTime() - 23 * 60 * 60 * 1000);
 
-      const previousEnd = new Date(currentStart);
-      previousEnd.setHours(previousEnd.getHours() - 1);
-      const previousStart = new Date(previousEnd);
-      previousStart.setHours(previousStart.getHours() - 23);
+      // Current 24h window (for volume totals)
+      const last24hData = allHourlyData.filter(r => {
+        const d = new Date(r.period);
+        return d >= currentStart && d <= currentEnd;
+      });
 
-      const previousStartStr = OverviewCalculator.formatDateForAPI(previousStart);
-      const previousEndStr = OverviewCalculator.formatDateForAPI(previousEnd);
-
-      // Fetch previous 24h data
-      const previous24hResponse = await archiveDataApi.getHourlyData(
-        reportLineIds,
-        previousStartStr,
-        previousEndStr
-      );
-      let previous24hData = Array.isArray(previous24hResponse) ? previous24hResponse : previous24hResponse?.data || [];
+      // Previous 24h window (no separate HTTP request needed)
+      const previousEnd = new Date(currentStart.getTime() - 60 * 60 * 1000);
+      const previousStart = new Date(previousEnd.getTime() - 23 * 60 * 60 * 1000);
+      const previous24hData = allHourlyData.filter(r => {
+        const d = new Date(r.period);
+        return d >= previousStart && d <= previousEnd;
+      });
 
       // Calculate metrics
       const lineNames = {};
@@ -167,13 +164,14 @@ const OverviewTab = () => {
       const currentTotal = OverviewCalculator.calculate24hTotal(last24hData, reportLineIds);
       const previousTotal = OverviewCalculator.calculate24hTotal(previous24hData, reportLineIds);
       const volumeComparison = OverviewCalculator.calculateComparison(currentTotal, previousTotal);
-      const flowComparisons = OverviewCalculator.calculateLastHourFlow(last24hData, reportLineIds);
+      // Use full 3-day data for flow/pressures: ensures sparse lines (daily updates) get 2+ records
+      const flowComparisons = OverviewCalculator.calculateLastHourFlow(allHourlyData, reportLineIds);
       const volumeComparisons = OverviewCalculator.calculate24hVolumeByLine(
         last24hData,
         previous24hData,
         reportLineIds
       );
-      const pressures = OverviewCalculator.getLastPressures(last24hData, reportLineIds, lines, paramsMap);
+      const pressures = OverviewCalculator.getLastPressures(allHourlyData, reportLineIds, lines, paramsMap);
 
       const pressureTimestamps = {};
       Object.keys(pressures).forEach(lineId => {
@@ -195,7 +193,6 @@ const OverviewTab = () => {
       });
 
       setLastUpdateTime(new Date());
-      setCountdown(300);
     } catch (err) {
       console.error('Error loading overview data:', err);
       setError(err.message || 'Ошибка загрузки данных');
