@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { branchApi, lumgApi, gasVolumeApi, calcTypeApi } from '../../services/api';
+import { useLocalStorage } from '../../hooks/useLocalStorage';
 
 const EMPTY_ADD = { name: '', address: '', c_time: '600', type_id: '' };
 
 export default function CalcsTab() {
   const [branches, setBranches]               = useState([]);
   const [allLumgs, setAllLumgs]               = useState([]);
-  const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useLocalStorage('hlv-calcs-branch', '');
   const [lumgs, setLumgs]                     = useState([]);
-  const [selectedLumgId, setSelectedLumgId]   = useState('');
+  const [selectedLumgId, setSelectedLumgId]   = useLocalStorage('hlv-calcs-lumg', '');
   const [calcTypes, setCalcTypes]             = useState([]);
   const [calcs, setCalcs]                     = useState([]);
   const [editingId, setEditingId]             = useState(null);
@@ -25,7 +26,11 @@ export default function CalcsTab() {
       if (b) setBranches(b);
       if (l) setAllLumgs(l);
       if (ct) setCalcTypes(ct);
-      if (b?.length > 0) setSelectedBranchId(String(b[0].id));
+      if (b?.length > 0) {
+        setSelectedBranchId(prev =>
+          b.some(x => String(x.id) === prev) ? prev : String(b[0].id)
+        );
+      }
     });
   }, []);
 
@@ -33,7 +38,13 @@ export default function CalcsTab() {
     if (!selectedBranchId || allLumgs.length === 0) return;
     const filtered = allLumgs.filter(l => String(l.branch_id) === selectedBranchId);
     setLumgs(filtered);
-    setSelectedLumgId(filtered.length > 0 ? String(filtered[0].id) : '');
+    if (filtered.length > 0) {
+      setSelectedLumgId(prev =>
+        filtered.some(l => String(l.id) === prev) ? prev : String(filtered[0].id)
+      );
+    } else {
+      setSelectedLumgId('');
+    }
   }, [selectedBranchId, allLumgs]);
 
   useEffect(() => {

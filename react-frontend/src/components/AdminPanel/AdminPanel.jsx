@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './AdminPanel.css';
+import { useLocalStorage } from '../../hooks/useLocalStorage';
 import BranchesTab from './BranchesTab';
 import LumgsTab from './LumgsTab';
 import DataPathsTab from './DataPathsTab';
@@ -80,8 +81,8 @@ const TAB_LABELS = GROUPS.flatMap(g => g.items).reduce((acc, item) => {
 }, {});
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState('users');
-  const [collapsed, setCollapsed] = useState({});
+  const [activeTab, setActiveTab] = useLocalStorage('hlv-admin-tab', 'users');
+  const [collapsed, setCollapsed] = useLocalStorage('hlv-admin-collapsed', {});
 
   const toggleGroup = (id) =>
     setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));

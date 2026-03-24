@@ -76,15 +76,30 @@ function AppContent({ user }) {
     const lineIdParam = params.get('lineId');
     const dateFilterEnabledParam = params.get('dateFilterEnabled');
 
+    let savedTab = 'overview';
+    let savedDateRange = null;
+    let savedDateFilter = false;
+    let savedLineId = null;
+    try {
+      const s = localStorage.getItem('hlv-active-tab');
+      if (s) savedTab = JSON.parse(s);
+      const dr = localStorage.getItem('hlv-date-range');
+      if (dr) savedDateRange = JSON.parse(dr);
+      const df = localStorage.getItem('hlv-date-filter');
+      if (df !== null) savedDateFilter = JSON.parse(df);
+      const sl = localStorage.getItem('hlv-selected-line');
+      if (sl !== null) savedLineId = JSON.parse(sl);
+    } catch {}
+
     const initialState = {
-      archiveType: archiveTypeParam || 'overview',
-      dateRange: getInitialDateRange(),
+      archiveType: archiveTypeParam || savedTab,
+      dateRange: savedDateRange || getInitialDateRange(),
       selectedLines: [],
-      isDateFilterEnabled: false,
+      isDateFilterEnabled: savedDateFilter,
       lineIdFromURL: null
     };
 
-    // Set date range if provided in URL
+    // URL params override localStorage
     if (fromDateParam && toDateParam) {
       initialState.dateRange = {
         fromDate: fromDateParam,
@@ -94,14 +109,15 @@ function AppContent({ user }) {
       };
     }
 
-    // Set date filter enabled state
     if (dateFilterEnabledParam === 'true') {
       initialState.isDateFilterEnabled = true;
     }
 
-    // Store lineId to be selected after TreeView loads
+    // URL lineId takes priority over saved line; otherwise restore saved line
     if (lineIdParam) {
       initialState.lineIdFromURL = parseInt(lineIdParam, 10);
+    } else if (savedLineId) {
+      initialState.lineIdFromURL = savedLineId;
     }
 
     return initialState;
@@ -117,6 +133,22 @@ function AppContent({ user }) {
   const [isGRSReportOpen, setIsGRSReportOpen] = useState(false);
   const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
   const [selectedLineIsVirtual, setSelectedLineIsVirtual] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem('hlv-active-tab', JSON.stringify(archiveType)); } catch {}
+  }, [archiveType]);
+
+  useEffect(() => {
+    try { localStorage.setItem('hlv-date-range', JSON.stringify(dateRange)); } catch {}
+  }, [dateRange]);
+
+  useEffect(() => {
+    try { localStorage.setItem('hlv-date-filter', JSON.stringify(isDateFilterEnabled)); } catch {}
+  }, [isDateFilterEnabled]);
+
+  useEffect(() => {
+    try { localStorage.setItem('hlv-selected-line', JSON.stringify(selectedLines[0] ?? null)); } catch {}
+  }, [selectedLines]);
 
   // Auto-switch to daily archive when virtual line is selected with non-allowed archive type
   useEffect(() => {

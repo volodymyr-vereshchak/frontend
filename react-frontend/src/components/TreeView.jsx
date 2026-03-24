@@ -197,7 +197,12 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
 
         setTreeData(treeStructure);
         treeDataRef.current = treeStructure;
-        setExpandedGroups(new Set());
+        try {
+          const saved = localStorage.getItem('hlv-tree-expanded');
+          setExpandedGroups(saved ? new Set(JSON.parse(saved)) : new Set());
+        } catch {
+          setExpandedGroups(new Set());
+        }
 
       } catch (err) {
         setError(`${t('loadingError')}: ${err.message}`);
@@ -217,6 +222,10 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
       return next;
     });
   };
+
+  useEffect(() => {
+    try { localStorage.setItem('hlv-tree-expanded', JSON.stringify([...expandedGroups])); } catch {}
+  }, [expandedGroups]);
 
   // Notify parent on selection change
   useEffect(() => {

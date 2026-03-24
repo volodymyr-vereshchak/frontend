@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { branchApi, lumgApi, lineApi, gasVolumeApi } from '../../services/api';
+import { useLocalStorage } from '../../hooks/useLocalStorage';
 
 const EMPTY_ADD = { name: '', line: '', meter: false, gas_volume_calc_id: '' };
 
 export default function LinesConfigTab() {
   const [branches, setBranches]         = useState([]);
-  const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useLocalStorage('hlv-lines-branch', '');
   const [lumgs, setLumgs]               = useState([]);
   const [allLumgs, setAllLumgs]         = useState([]);
-  const [selectedLumgId, setSelectedLumgId] = useState('');
+  const [selectedLumgId, setSelectedLumgId] = useLocalStorage('hlv-lines-lumg', '');
   const [calcs, setCalcs]               = useState([]);
   const [lines, setLines]               = useState([]);
   const [saving, setSaving]             = useState({});
@@ -24,7 +25,11 @@ export default function LinesConfigTab() {
     Promise.all([branchApi.getAll(), lumgApi.getAll()]).then(([branchData, lumgData]) => {
       if (branchData) setBranches(branchData);
       if (lumgData) setAllLumgs(lumgData);
-      if (branchData?.length > 0) setSelectedBranchId(String(branchData[0].id));
+      if (branchData?.length > 0) {
+        setSelectedBranchId(prev =>
+          branchData.some(b => String(b.id) === prev) ? prev : String(branchData[0].id)
+        );
+      }
     });
   }, []);
 
@@ -32,7 +37,13 @@ export default function LinesConfigTab() {
     if (!selectedBranchId || allLumgs.length === 0) return;
     const filtered = allLumgs.filter(l => String(l.branch_id) === selectedBranchId);
     setLumgs(filtered);
-    setSelectedLumgId(filtered.length > 0 ? String(filtered[0].id) : '');
+    if (filtered.length > 0) {
+      setSelectedLumgId(prev =>
+        filtered.some(l => String(l.id) === prev) ? prev : String(filtered[0].id)
+      );
+    } else {
+      setSelectedLumgId('');
+    }
   }, [selectedBranchId, allLumgs]);
 
   useEffect(() => {
