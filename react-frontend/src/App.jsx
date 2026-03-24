@@ -162,7 +162,7 @@ function AppContent({ user }) {
 
   const handleLinesSelected = useCallback((lineIds, lineMetadata) => {
     setSelectedLines(lineIds);
-    setLineIdFromURL(lineIds[0] ?? null);
+    if (lineIds.length > 0) setLineIdFromURL(lineIds[0]);
 
     // Определить, является ли выбранная линия виртуальной
     if (lineIds && lineIds.length > 0) {

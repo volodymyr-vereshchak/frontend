@@ -75,7 +75,12 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
   const { t } = useLanguage();
   const [treeData, setTreeData] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [expandedGroups, setExpandedGroups] = useState(new Set());
+  const [expandedGroups, setExpandedGroups] = useState(() => {
+    try {
+      const saved = localStorage.getItem('hlv-tree-expanded');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -197,12 +202,6 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
 
         setTreeData(treeStructure);
         treeDataRef.current = treeStructure;
-        try {
-          const saved = localStorage.getItem('hlv-tree-expanded');
-          setExpandedGroups(saved ? new Set(JSON.parse(saved)) : new Set());
-        } catch {
-          setExpandedGroups(new Set());
-        }
 
       } catch (err) {
         setError(`${t('loadingError')}: ${err.message}`);
