@@ -312,6 +312,12 @@
         </div>
 
         <div class="controls">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                <label style="font-size:13px;font-weight:500;color:#B9E42B;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Філія:</label>
+                <select id="branchSelect" onchange="handleBranchChange()" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #404040;border-radius:6px;padding:8px 12px;font-size:13px;min-width:200px;">
+                    <option value="">Завантаження...</option>
+                </select>
+            </div>
             <div class="date-controls">
                 <div class="date-group">
                     <label for="fromDate">Дата с:</label>
@@ -407,13 +413,17 @@
             document.querySelector('#noDataText').textContent = t('noData');
         }
 
-        const API_BASE_URL = window.APP_CONFIG?.API_URL || 'http://localhost:8000';
+        const API_BASE_URL = window.APP_CONFIG?.API_URL || '';
         let GRS_LINES = window.APP_CONFIG?.GRS_CONFIG?.TRENDS_IDS || [6, 11, 16, 17, 18, 19, 20, 21, 1001, 1002, 1003, 1004];
 
         let tableData = [];
         let lineNames = {};
         let visibleLines = [];
         let useVirtualLines = false;
+        let allBranches = [];
+        let allLumgs = [];
+        let GRS_PHYSICAL_LINES = [];
+        let GRS_VIRTUAL_LINES = [];
 
         async function fetchLineNames() {
             try {
@@ -477,6 +487,64 @@
             return false;
         }
 
+        async function loadLinesByBranch(branchId) {
+            // Physical lines with include_in_trends via lumg hierarchy
+            const branchLumgIds = allLumgs.filter(l => l.branch_id === branchId).map(l => l.id);
+            let physicalLines = [];
+            if (branchLumgIds.length > 0) {
+                const linesArr = await Promise.all(
+                    branchLumgIds.map(lid => fetch(`/lines/?lumg_id=${lid}`).then(r => r.json()))
+                );
+                physicalLines = linesArr.flat().filter(l => l && l.include_in_trends);
+            }
+
+            // Virtual lines with include_in_trends for this branch
+            const vRes = await fetch(`/virtual_lines/?include_in_trends=true&branch_id=${branchId}`);
+            const virtualLines = vRes.ok ? await vRes.json() : [];
+
+            GRS_PHYSICAL_LINES = physicalLines.map(l => l.id);
+            GRS_VIRTUAL_LINES = virtualLines.map(l => l.id);
+            GRS_LINES = [...GRS_PHYSICAL_LINES, ...GRS_VIRTUAL_LINES];
+
+            physicalLines.forEach(l => { lineNames[l.id] = l.name || `Line ${l.id}`; });
+            virtualLines.forEach(l => { lineNames[l.id] = l.name || `VLine ${l.id}`; });
+        }
+
+        async function handleBranchChange() {
+            const branchId = parseInt(document.getElementById('branchSelect').value) || null;
+            if (branchId) await loadLinesByBranch(branchId);
+            tableData = [];
+            document.getElementById('tableBody').innerHTML = '';
+            document.getElementById('exportBtn').style.display = 'none';
+            document.getElementById('noData').style.display = 'none';
+        }
+
+        async function fetchBranchesAndLumgs() {
+            try {
+                const [branchRes, lumgRes] = await Promise.all([
+                    fetch('/grmu_branch/'),
+                    fetch('/lumgs/'),
+                ]);
+                if (branchRes.ok) allBranches = await branchRes.json();
+                if (lumgRes.ok) allLumgs = await lumgRes.json();
+
+                const sel = document.getElementById('branchSelect');
+                sel.innerHTML = '';
+                allBranches.forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = b.name;
+                    sel.appendChild(opt);
+                });
+                if (allBranches.length > 0) {
+                    sel.value = allBranches[0].id;
+                    await loadLinesByBranch(allBranches[0].id);
+                }
+            } catch (error) {
+                console.warn('Could not fetch branches/lumgs:', error);
+            }
+        }
+
         function initializeDates() {
             const today = new Date();
             const year = today.getFullYear();
@@ -534,17 +602,30 @@
             }
         }
 
-        async function fetchHourlyData(fromDate, toDate) {
-            const params = new URLSearchParams();
-            GRS_LINES.forEach(lineId => params.append('line_id', lineId));
-            params.append('from_date', fromDate);
-            params.append('to_date', toDate);
-
-            const response = await fetch(`${API_BASE_URL}/hourly_virtual/?${params}`);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        async function checkResponse(r) {
+            if (!r.ok) {
+                let detail = r.statusText;
+                try { const body = await r.json(); if (body.detail) detail = body.detail; } catch (_) {}
+                throw new Error(detail);
             }
-            return await response.json();
+            return r.json();
+        }
+
+        async function fetchHourlyData(fromDate, toDate) {
+            const results = [];
+            if (GRS_PHYSICAL_LINES.length > 0) {
+                const p = new URLSearchParams();
+                GRS_PHYSICAL_LINES.forEach(id => p.append('line_id', id));
+                p.append('from_date', fromDate); p.append('to_date', toDate);
+                results.push(...await checkResponse(await fetch(`${API_BASE_URL}/hourly/?${p}`)));
+            }
+            if (GRS_VIRTUAL_LINES.length > 0) {
+                const p = new URLSearchParams();
+                GRS_VIRTUAL_LINES.forEach(id => p.append('line_id', id));
+                p.append('from_date', fromDate); p.append('to_date', toDate);
+                results.push(...await checkResponse(await fetch(`${API_BASE_URL}/hourly_virtual/?${p}`)));
+            }
+            return results;
         }
 
         async function fetchEnterpriseVolumes(fromDate, toDate) {
@@ -790,6 +871,7 @@
                 await fetchLineNames();
             }
 
+            await fetchBranchesAndLumgs();
             updateUI();
         });
     </script>

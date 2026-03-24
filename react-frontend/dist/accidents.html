@@ -353,6 +353,13 @@
         <div class="controls">
             <div class="controls-row">
                 <div class="control-group select-group">
+                    <label for="branchSelect">Філія</label>
+                    <select id="branchSelect" onchange="handleBranchChange()">
+                        <option value="">Всі філії</option>
+                    </select>
+                </div>
+
+                <div class="control-group select-group">
                     <label for="calcSelect">Вычислитель</label>
                     <select id="calcSelect" onchange="handleCalcChange()">
                         <option value="">Загрузка...</option>
@@ -439,11 +446,13 @@
     </div>
 
     <script type="module">
-        const API_URL = window.APP_CONFIG?.API_URL || 'http://localhost:8000';
+        const API_URL = window.APP_CONFIG?.API_URL || '';
         let currentData = null;
         let expandedRows = new Set();
         let allLines = [];
         let allCalcs = [];
+        let allLumgs = [];
+        let allBranches = [];
         let groupedAccidents = [];
 
         // Утилиты для обработки аварий (импортированы из accidentsCalculator.js)
@@ -649,29 +658,66 @@
         // Загрузка списка вычислителей и линий
         async function loadCalcsAndLines() {
             try {
-                // Загружаем вычислители
-                const calcsResponse = await fetch(`${API_URL}/gas-volume-calcs/`);
+                // Загружаем все данные параллельно
+                const [calcsResponse, linesResponse, lumgsResponse, branchesResponse] = await Promise.all([
+                    fetch(`${API_URL}/gas-volume-calcs/`),
+                    fetch(`${API_URL}/lines/`),
+                    fetch(`${API_URL}/lumgs/`),
+                    fetch(`${API_URL}/grmu_branch/`),
+                ]);
+
                 allCalcs = await calcsResponse.json();
-
-                const calcSelect = document.getElementById('calcSelect');
-                calcSelect.innerHTML = '<option value="">Все вычислители</option>';
-
-                allCalcs.forEach(calc => {
-                    const option = document.createElement('option');
-                    option.value = calc.id;
-                    option.textContent = calc.name || `Вычислитель ${calc.id}`;
-                    calcSelect.appendChild(option);
-                });
-
-                // Загружаем линии
-                const linesResponse = await fetch(`${API_URL}/lines/`);
                 allLines = await linesResponse.json();
+                allLumgs = await lumgsResponse.json();
+                allBranches = await branchesResponse.json();
 
-                updateLineSelect();
+                // Заполняем список филий
+                const branchSelect = document.getElementById('branchSelect');
+                branchSelect.innerHTML = '<option value="">Всі філії</option>';
+                allBranches.forEach(branch => {
+                    const option = document.createElement('option');
+                    option.value = branch.id;
+                    option.textContent = branch.name;
+                    branchSelect.appendChild(option);
+                });
+                // Автовибір першої філії
+                if (allBranches.length > 0) {
+                    branchSelect.value = allBranches[0].id;
+                }
+
+                updateCalcSelect();
             } catch (error) {
                 console.error('Ошибка загрузки данных:', error);
                 showError('Ошибка загрузки списка вычислителей и линий');
             }
+        }
+
+        // Обновление списка вычислителей при изменении филии
+        function handleBranchChange() {
+            document.getElementById('calcSelect').value = '';
+            updateCalcSelect();
+        }
+
+        // Обновление списка вычислителей с учётом выбранной филии
+        function updateCalcSelect() {
+            const branchId = document.getElementById('branchSelect').value;
+            const branchLumgIds = branchId
+                ? allLumgs.filter(l => l.branch_id == branchId).map(l => l.id)
+                : null;
+            const filteredCalcs = branchLumgIds
+                ? allCalcs.filter(c => branchLumgIds.includes(c.lumg_id))
+                : allCalcs;
+
+            const calcSelect = document.getElementById('calcSelect');
+            calcSelect.innerHTML = '<option value="">Все вычислители</option>';
+            filteredCalcs.forEach(calc => {
+                const option = document.createElement('option');
+                option.value = calc.id;
+                option.textContent = calc.name || `Вычислитель ${calc.id}`;
+                calcSelect.appendChild(option);
+            });
+
+            updateLineSelect();
         }
 
         // Обновление списка линий при изменении вычислителя
@@ -681,15 +727,20 @@
 
         function updateLineSelect() {
             const calcId = document.getElementById('calcSelect').value;
+            const branchId = document.getElementById('branchSelect').value;
             const lineSelect = document.getElementById('lineSelect');
 
             lineSelect.innerHTML = '<option value="">Все линии</option>';
 
             let filteredLines = allLines;
 
-            // Если выбран конкретный вычислитель, фильтруем линии
+            // Фільтруємо по вычислителю або по філії
             if (calcId) {
                 filteredLines = allLines.filter(line => line.gas_volume_calc_id == calcId);
+            } else if (branchId) {
+                const branchLumgIds = allLumgs.filter(l => l.branch_id == branchId).map(l => l.id);
+                const branchCalcIds = allCalcs.filter(c => branchLumgIds.includes(c.lumg_id)).map(c => c.id);
+                filteredLines = allLines.filter(line => branchCalcIds.includes(line.gas_volume_calc_id));
             }
 
             filteredLines.forEach(line => {
