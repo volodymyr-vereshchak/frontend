@@ -328,22 +328,13 @@ export const paramArchiveApi = {
     const now = new Date();
     const toDate = now.toISOString().split('T')[0];
 
-    // API doesn't support multiple line_id in one request, so we need to make separate requests
-    const promises = lineIds.map(lineId => {
-      const params = {
-        line_id: lineId,
-        to_date: toDate
-      };
-      return apiClient.get('/param/', params).catch(err => {
-        console.warn(`Failed to load params for line ${lineId}:`, err);
-        return []; // Return empty array if request fails
-      });
-    });
-
-    const results = await Promise.all(promises);
-
-    // Flatten the results - each request returns an array with 0 or 1 element
-    return results.flat();
+    try {
+      const result = await apiClient.get('/param/', { line_id: lineIds, to_date: toDate });
+      return Array.isArray(result) ? result : [];
+    } catch (err) {
+      console.warn('Failed to load params:', err);
+      return [];
+    }
   }
 };
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import './OverviewTab.css';
 import { useLanguage } from '../contexts/LanguageContext';
 import { lineApi, archiveDataApi, paramArchiveApi, branchApi, lumgApi } from '../services/api';
@@ -17,7 +18,7 @@ const OverviewTab = () => {
   // Branch selection
   const [branches, setBranches] = useState([]);
   const [allLumgs, setAllLumgs] = useState([]);
-  const [selectedBranchId, setSelectedBranchId] = useState(null);
+  const [selectedBranchId, setSelectedBranchId] = useLocalStorage('hlv-overview-branch', null);
   const [selectorLoading, setSelectorLoading] = useState(true);
 
   // Data state
@@ -44,7 +45,9 @@ const OverviewTab = () => {
         setAllLumgs(lumgList);
 
         if (branchList.length > 0) {
-          setSelectedBranchId(branchList[0].id);
+          setSelectedBranchId(prev =>
+            prev !== null && branchList.some(b => b.id === prev) ? prev : branchList[0].id
+          );
         }
       } catch (err) {
         console.error('Failed to load branches/lumgs:', err);
