@@ -184,6 +184,12 @@ function BranchDataPaths() {
             {/* Mapping table */}
             {Array.isArray(pv) && pv.length > 0 && (
               <div style={{ marginTop: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+                  <button className="btn-secondary" style={{ fontSize: 12, padding: '2px 10px' }}
+                    onClick={() => setPreview(prev => { const n = { ...prev }; delete n[b.id]; return n; })}>
+                    ▲ Згорнути
+                  </button>
+                </div>
                 <table className="admin-table" style={{ marginBottom: 8 }}>
                   <thead>
                     <tr>
