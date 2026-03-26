@@ -198,7 +198,7 @@ export default function LinesConfigTab() {
                 placeholder="0" />
             </div>
             <div className="admin-form-group">
-              <label>Вичислювач</label>
+              <label>Обчислювач</label>
               <select className="admin-select" value={addForm.gas_volume_calc_id}
                 onChange={e => setAddForm(f => ({ ...f, gas_volume_calc_id: e.target.value }))}>
                 <option value="">— обрати —</option>
@@ -230,7 +230,7 @@ export default function LinesConfigTab() {
             <th>№</th>
             <th>Назва</th>
             <th>Лічильник</th>
-            <th>Вичислювач</th>
+            <th>Обчислювач</th>
             <th>В звіт</th>
             <th>В тренди</th>
             <th>Вис. тиск</th>

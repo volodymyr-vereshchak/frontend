@@ -42,7 +42,7 @@ const GROUPS = [
     icon: '〰',
     items: [
       { id: 'lines_config',  label: 'Конфігурація' },
-      { id: 'calcs',         label: 'Вичислювачі' },
+      { id: 'calcs',         label: 'Обчислювачі' },
       { id: 'virtual_lines', label: 'Кільця' },
     ],
   },
