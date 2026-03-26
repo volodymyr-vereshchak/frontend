@@ -24,8 +24,8 @@ function BranchDataPaths() {
     await Promise.all(
       branchData.map(async (b) => {
         const [dp, maps] = await Promise.all([
-          branchApi.getConfigPath(b.id),
-          branchApi.getConfigMappings(b.id),
+          branchApi.getConfigPath(b.id).catch(() => null),
+          branchApi.getConfigMappings(b.id).catch(() => []),
         ]);
         pathMap[b.id] = dp || null;
         mappingMap[b.id] = maps || [];
@@ -280,8 +280,8 @@ function LumgDataPaths() {
     await Promise.all(
       data.map(async (lumg) => {
         const [dp, eis] = await Promise.all([
-          lumgApi.getDataPath(lumg.id),
-          lumgApi.getEisCodes(lumg.id),
+          lumgApi.getDataPath(lumg.id).catch(() => null),
+          lumgApi.getEisCodes(lumg.id).catch(() => []),
         ]);
         pathMap[lumg.id] = dp || null;
         eisMap[lumg.id] = eis || [];
