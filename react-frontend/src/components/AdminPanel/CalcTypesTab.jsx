@@ -46,7 +46,7 @@ export default function CalcTypesTab() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Видалити тип вичислювача?')) return;
+    if (!window.confirm('Видалити тип обчислювача?')) return;
     const ok = await calcTypeApi.delete(id);
     if (ok) { await load(); showStatus(true, 'Видалено'); }
   };

@@ -90,7 +90,7 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
           onChange={e => setFilterCalcId(e.target.value)}
           style={{ minWidth: 180 }}
         >
-          <option value="">Всі типи вичислювачів</option>
+          <option value="">Всі типи обчислювачів</option>
           {calcTypes.map(c => <option key={c.id} value={c.type_id}>{c.type_id} — {c.type_name}</option>)}
         </select>
         <input
@@ -114,7 +114,7 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
           />
         </div>
         <div className="admin-form-group">
-          <label>Тип вичислювача</label>
+          <label>Тип обчислювача</label>
           <select
             className="admin-select" required
             value={form.gas_volume_calc_type_id}
@@ -142,7 +142,7 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
         <thead>
           <tr>
             <th style={{ width: 70 }}>Код</th>
-            <th style={{ width: 160 }}>Тип вичислювача</th>
+            <th style={{ width: 160 }}>Тип обчислювача</th>
             <th>Назва</th>
             <th style={{ width: 120 }}></th>
           </tr>

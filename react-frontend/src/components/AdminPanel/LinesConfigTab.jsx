@@ -116,7 +116,7 @@ export default function LinesConfigTab() {
     setAddError(null);
     if (!addForm.name.trim()) { setAddError('Введіть назву'); return; }
     if (!addForm.line || isNaN(parseInt(addForm.line))) { setAddError('Введіть номер лінії'); return; }
-    if (!addForm.gas_volume_calc_id) { setAddError('Оберіть вичислювач'); return; }
+    if (!addForm.gas_volume_calc_id) { setAddError('Оберіть обчислювач'); return; }
     setAdding(true);
     const result = await lineApi.create({
       name: addForm.name.trim(),

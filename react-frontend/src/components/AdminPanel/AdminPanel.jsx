@@ -53,7 +53,7 @@ const GROUPS = [
     items: [
       { id: 'enterprises',    label: 'Промисловість' },
       { id: 'device_catalog', label: 'Обладнання' },
-      { id: 'calc_types',     label: 'Типи вичислювачів' },
+      { id: 'calc_types',     label: 'Типи обчислювачів' },
       { id: 'event_types',    label: 'Аварії та зміни' },
     ],
   },
