@@ -86,7 +86,7 @@ export default function CalcsTab() {
   // ── Delete ────────────────────────────────────────────────────────────────
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Видалити вичислювач та всі його лінії і архівні дані?')) return;
+    if (!window.confirm('Видалити обчислювач та всі його лінії і архівні дані?')) return;
     setCalcs(prev => prev.filter(c => c.id !== id));
     setDeletingId(id);
     const ok = await gasVolumeApi.delete(id);
@@ -139,7 +139,7 @@ export default function CalcsTab() {
         </div>
         <div className="admin-form-group" style={{ alignSelf: 'flex-end' }}>
           <button className="btn-primary" onClick={() => { setShowAdd(v => !v); setAddError(null); }}>
-            {showAdd ? 'Скасувати' : '+ Додати вичислювач'}
+            {showAdd ? 'Скасувати' : '+ Додати обчислювач'}
           </button>
         </div>
       </div>
@@ -147,13 +147,13 @@ export default function CalcsTab() {
       {/* Add form */}
       {showAdd && (
         <div style={{ border: '1px solid #4CAF50', borderRadius: 6, padding: 12, marginBottom: 12, background: '#1a2a1a' }}>
-          <strong style={{ color: '#B9E42B', fontSize: 13 }}>Новий вичислювач</strong>
+          <strong style={{ color: '#B9E42B', fontSize: 13 }}>Новий обчислювач</strong>
           <div className="admin-form" style={{ marginTop: 8 }}>
             <div className="admin-form-group">
               <label>Назва</label>
               <input className="admin-input" style={{ minWidth: 180 }}
                 value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Назва вичислювача" />
+                placeholder="Назва обчислювача" />
             </div>
             <div className="admin-form-group">
               <label>Адреса</label>
@@ -198,7 +198,7 @@ export default function CalcsTab() {
         <tbody>
           {calcs.length === 0 && (
             <tr><td colSpan={6} style={{ color: '#555', textAlign: 'center', padding: 16 }}>
-              {selectedLumgId ? 'Немає вичислювачів' : 'Оберіть ЛУМГ'}
+              {selectedLumgId ? 'Немає обчислювачів' : 'Оберіть ЛУМГ'}
             </td></tr>
           )}
           {calcs.map(c => (
