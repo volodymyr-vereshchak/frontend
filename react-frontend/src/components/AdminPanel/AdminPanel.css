@@ -20,13 +20,17 @@
 }
 
 .admin-sidebar-header {
-  padding: 14px 16px 10px;
+  padding: 0 16px;
+  height: 45px;
+  display: flex;
+  align-items: center;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: #B9E42B;
   border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
 }
 
 .admin-nav-group {
@@ -116,7 +120,10 @@
 }
 
 .admin-main-header {
-  padding: 12px 20px;
+  padding: 0 20px;
+  height: 45px;
+  display: flex;
+  align-items: center;
   font-size: 15px;
   font-weight: 600;
   color: #B9E42B;
