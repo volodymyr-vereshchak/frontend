@@ -408,16 +408,17 @@ const EnterprisePollAnalysis = () => {
   };
 
   const exportUnpolledToExcel = () => {
-    const headers = [t('selectEnterprise'), t('correctorType'), t('correctorNumber'), t('channelNumber'), t('lineName')];
+    const headers = [t('selectEnterprise'), t('correctorType'), t('correctorNumber'), t('channelNumber'), t('lineName'), t('status')];
     const data = unpolledEnterprises.map(e => ([
       e.enterprise_name,
       getDeviceTypeName(e.mfDev, e.typeDev),
       e.serNum,
       e.chNum,
-      getLineName(e.line_id != null ? e.line_id : '__no_line__')
+      getLineName(e.line_id != null ? e.line_id : '__no_line__'),
+      e.enabled ? t('statusEnabled') : t('statusDisabled')
     ]));
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    ws['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 20 }];
+    ws['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 20 }, { wch: 12 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, t('unpolledEnterprises'));
     const today = new Date().toISOString().slice(0, 10);
@@ -892,6 +893,7 @@ const EnterprisePollAnalysis = () => {
                       <th>{t('correctorNumber')}</th>
                       <th>{t('channelNumber')}</th>
                       <th>{t('lineName')}</th>
+                      <th>{t('status')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -909,6 +911,11 @@ const EnterprisePollAnalysis = () => {
                         <td>{enterprise.serNum}</td>
                         <td>{enterprise.chNum}</td>
                         <td>{getLineName(enterprise.line_id != null ? enterprise.line_id : '__no_line__')}</td>
+                        <td>
+                          <span className={`status-badge ${enterprise.enabled ? 'enabled' : 'disabled'}`}>
+                            {enterprise.enabled ? t('statusEnabled') : t('statusDisabled')}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

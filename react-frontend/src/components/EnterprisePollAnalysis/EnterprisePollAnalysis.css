@@ -611,6 +611,25 @@
   padding: 40px;
 }
 
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.enabled {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+}
+
+.status-badge.disabled {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
 /* Error Toast */
 .error-toast {
   position: fixed;

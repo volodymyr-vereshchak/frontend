@@ -238,5 +238,8 @@ export const ru = {
   correctorType: "Тип корректора",
   correctorNumber: "Номер корректора",
   channelNumber: "Номер канала",
-  exportExcel: "Экспорт в Excel"
+  exportExcel: "Экспорт в Excel",
+  status: "Статус",
+  statusEnabled: "Включена",
+  statusDisabled: "Отключена"
 };
