@@ -5,13 +5,24 @@ import { branchApi, dpdGlobalConfigApi, dpdCredentialApi } from '../../services/
 
 function DpdGlobalConfigSection() {
   const [config, setConfig] = useState(null);
+  const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ api_base_url: '', auth_url: '', timeout_sec: 30 });
   const [st, setSt] = useState(null);
 
   const load = async () => {
-    const data = await dpdGlobalConfigApi.get().catch(() => null);
-    setConfig(data || null);
+    try {
+      const data = await dpdGlobalConfigApi.get();
+      setConfig(data || null);
+      setLoadError(false);
+    } catch (err) {
+      if (err?.status === 404) {
+        setConfig(null);
+        setLoadError(false);
+      } else {
+        setLoadError(true);
+      }
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -104,6 +115,7 @@ function DpdGlobalConfigSection() {
         </div>
       )}
 
+      {loadError && <div className="admin-status error" style={{ marginTop: 8 }}>Помилка завантаження — перевірте підключення до API</div>}
       {st && <div className={`admin-status ${st.ok ? 'ok' : 'error'}`} style={{ marginTop: 8 }}>{st.msg}</div>}
     </div>
   );
