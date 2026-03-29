@@ -479,23 +479,22 @@ export default function EnterprisesTab() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th style={{ whiteSpace: 'nowrap' }}>ID</th>
                 <th>Підприємство</th>
-                <th>Відділення</th>
-                <th>ЛУМГ</th>
-                <th>Лінія</th>
-                <th>SerNum</th>
+                <th style={{ whiteSpace: 'nowrap' }}>Відділення</th>
+                <th style={{ whiteSpace: 'nowrap' }}>Лінія</th>
+                <th style={{ whiteSpace: 'nowrap' }}>SerNum</th>
                 <th>Виробник</th>
-                <th>TypeDev</th>
-                <th>Канал</th>
-                <th>Актив</th>
-                <th>Увімкн</th>
+                <th style={{ whiteSpace: 'nowrap' }}>TypeDev</th>
+                <th style={{ whiteSpace: 'nowrap' }}>Канал</th>
+                <th style={{ whiteSpace: 'nowrap' }}>Актив</th>
+                <th style={{ whiteSpace: 'nowrap' }}>Увімкн</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={12} style={{ color: '#555', textAlign: 'center', padding: 20 }}>
+                <tr><td colSpan={11} style={{ color: '#555', textAlign: 'center', padding: 20 }}>
                   Нічого не знайдено
                 </td></tr>
               )}
@@ -505,7 +504,8 @@ export default function EnterprisesTab() {
                   <tr key={ent.id}>
                     <td>{ent.id}</td>
 
-                    <td>
+                    <td style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        title={ent.enterprise_name}>
                       {isEditing
                         ? <input className="admin-input" style={{ minWidth: 180 }}
                             value={editForm.enterprise_name}
@@ -522,8 +522,6 @@ export default function EnterprisesTab() {
                             {branchLabel(ent)}
                           </span>}
                     </td>
-
-                    <td style={{ color: '#888', fontSize: 12 }}>{lumgLabel(ent)}</td>
 
                     <td>
                       {isEditing
