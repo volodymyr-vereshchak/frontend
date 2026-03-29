@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import './EnterprisePollAnalysis.css';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { enterprisePollApi, enterpriseApi, lineApi, branchApi } from '../../services/api';
+import { useUser } from '../../contexts/UserContext';
 
 // Register locales
 registerLocale('ru', ru);
@@ -61,10 +62,12 @@ const normalizeEnt = (e) => ({
  */
 const EnterprisePollAnalysis = () => {
   const { language, t } = useLanguage();
+  const { user } = useUser();
 
   // State
   const [enterprises, setEnterprises] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState(null); // null = all
   const [lineNames, setLineNames] = useState({});
   const [collapsedBranches, setCollapsedBranches] = useState({});
   const [collapsedLines, setCollapsedLines] = useState({});
@@ -140,7 +143,13 @@ const EnterprisePollAnalysis = () => {
         });
       }
       setLineNames(namesMap);
-      setBranches(Array.isArray(branchesData) ? branchesData : []);
+      const branchList = Array.isArray(branchesData) ? branchesData : [];
+      setBranches(branchList);
+
+      // For non-admin with single branch — auto-select it
+      if (user?.role !== 'admin' && user?.allowed_branch_ids?.length === 1) {
+        setSelectedBranchId(user.allowed_branch_ids[0]);
+      }
 
       if (enterprisesData && Array.isArray(enterprisesData)) {
         setEnterprises(enterprisesData.map(normalizeEnt));
@@ -170,7 +179,9 @@ const EnterprisePollAnalysis = () => {
       const today = new Date();
 
       // Get unique line IDs from active enterprises (exclude those without lines)
-      const activeEnterprises = enterprises.filter(e => e.active);
+      const activeEnterprises = enterprises.filter(e =>
+        e.active && (selectedBranchId == null || e.branch_id === selectedBranchId)
+      );
       const lineIds = [...new Set(activeEnterprises.map(e => e.line_id).filter(id => id != null))];
 
       if (lineIds.length === 0) {
@@ -215,7 +226,7 @@ const EnterprisePollAnalysis = () => {
     } finally {
       setIsCheckingUnpolled(false);
     }
-  }, [enterprises, t]);
+  }, [enterprises, selectedBranchId, t]);
 
   /**
    * Poll selected enterprise
@@ -271,10 +282,16 @@ const EnterprisePollAnalysis = () => {
    * Filter enterprises by search query
    */
   const filteredEnterprises = useMemo(() => {
-    if (!searchQuery.trim()) return enterprises;
-    const query = searchQuery.toLowerCase();
-    return enterprises.filter(e => e.enterprise_name.toLowerCase().includes(query));
-  }, [enterprises, searchQuery]);
+    let list = enterprises;
+    if (selectedBranchId != null) {
+      list = list.filter(e => e.branch_id === selectedBranchId);
+    }
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      list = list.filter(e => e.enterprise_name.toLowerCase().includes(query));
+    }
+    return list;
+  }, [enterprises, selectedBranchId, searchQuery]);
 
   /**
    * Group enterprises: branch → line → enterprises
@@ -393,10 +410,26 @@ const EnterprisePollAnalysis = () => {
     setCollapsedLines(prev => ({ ...prev, [lineId]: !prev[lineId] }));
   };
 
+  // Branches available to this user for the selector
+  const availableBranches = useMemo(() => {
+    if (user?.role === 'admin') return branches;
+    if (!user?.allowed_branch_ids?.length) return [];
+    return branches.filter(b => user.allowed_branch_ids.includes(b.id));
+  }, [branches, user]);
+
+  // Show branch selector if admin (can pick all/specific) or viewer with >1 branch
+  const showBranchSelector = user?.role === 'admin' || availableBranches.length > 1;
+
   const getBranchName = (branchKey) => {
     if (branchKey === '__no_branch__') return 'Без відділення';
     const branch = branches.find(b => String(b.id) === branchKey);
     return branch ? branch.name : `Відділення ${branchKey}`;
+  };
+
+  const getBranchNameById = (branchId) => {
+    if (branchId == null) return '—';
+    const branch = branches.find(b => b.id === branchId);
+    return branch ? branch.name : `Філія ${branchId}`;
   };
 
   /**
@@ -408,8 +441,9 @@ const EnterprisePollAnalysis = () => {
   };
 
   const exportUnpolledToExcel = () => {
-    const headers = [t('selectEnterprise'), t('correctorType'), t('correctorNumber'), t('channelNumber'), t('lineName'), t('status')];
+    const headers = ['Філія', t('selectEnterprise'), t('correctorType'), t('correctorNumber'), t('channelNumber'), t('lineName'), t('status')];
     const data = unpolledEnterprises.map(e => ([
+      getBranchNameById(e.branch_id),
       e.enterprise_name,
       getDeviceTypeName(e.mfDev, e.typeDev),
       e.serNum,
@@ -418,7 +452,7 @@ const EnterprisePollAnalysis = () => {
       e.enabled ? t('statusEnabled') : t('statusDisabled')
     ]));
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    ws['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 20 }, { wch: 12 }];
+    ws['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 20 }, { wch: 18 }, { wch: 14 }, { wch: 20 }, { wch: 12 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, t('unpolledEnterprises'));
     const today = new Date().toISOString().slice(0, 10);
@@ -571,6 +605,19 @@ const EnterprisePollAnalysis = () => {
           >
             {t('hourlyPoll')}
           </button>
+
+          {showBranchSelector && (
+            <select
+              className="branch-selector"
+              value={selectedBranchId ?? ''}
+              onChange={e => setSelectedBranchId(e.target.value === '' ? null : Number(e.target.value))}
+            >
+              {user?.role === 'admin' && <option value="">Всі філії</option>}
+              {availableBranches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="poll-date-pickers">
@@ -888,6 +935,7 @@ const EnterprisePollAnalysis = () => {
                 <table className="unpolled-table">
                   <thead>
                     <tr>
+                      <th>Філія</th>
                       <th>{t('selectEnterprise')}</th>
                       <th>{t('correctorType')}</th>
                       <th>{t('correctorNumber')}</th>
@@ -906,6 +954,7 @@ const EnterprisePollAnalysis = () => {
                           setShowUnpolledModal(false);
                         }}
                       >
+                        <td>{getBranchNameById(enterprise.branch_id)}</td>
                         <td>{enterprise.enterprise_name}</td>
                         <td>{getDeviceTypeName(enterprise.mfDev, enterprise.typeDev)}</td>
                         <td>{enterprise.serNum}</td>
