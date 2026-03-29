@@ -256,6 +256,8 @@ const EnterprisePollAnalysis = () => {
       const data = await enterprisePollApi.pollEnterpriseDevice(
         selectedEnterprise.line_id,
         selectedEnterprise.serNum,
+        selectedEnterprise.mfDev,
+        selectedEnterprise.typeDev,
         selectedEnterprise.chNum,
         formatDateForAPI(startDateTime),
         formatDateForAPI(endDateTime),

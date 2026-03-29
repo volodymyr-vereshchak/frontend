@@ -404,9 +404,11 @@ export const enterprisePollApi = {
   }
   ,
 
-  async pollEnterpriseDevice(lineId, serNum, chNum, fromDate, toDate, periodType = 'daily') {
+  async pollEnterpriseDevice(lineId, serNum, mfDev, typeDev, chNum, fromDate, toDate, periodType = 'daily') {
     const params = {
       serNum: serNum,
+      mfDev: mfDev,
+      typeDev: typeDev,
       chNum: chNum,
       from_date: fromDate,
       to_date: toDate,
