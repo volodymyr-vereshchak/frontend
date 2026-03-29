@@ -142,20 +142,12 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
   const buttons = [
     { id: 'overview', label: t('overview'), disabled: false },
     { id: 'days', label: t('dailyArchive'), disabled: false },
-    { id: 'hours', label: t('hourlyArchive'), disabled: false }
+    { id: 'hours', label: t('hourlyArchive'), disabled: false },
+    { id: 'sys', label: t('systemArchive'), disabled: isVirtualLine },
+    { id: 'edits', label: t('editArchive'), disabled: isVirtualLine },
+    { id: 'param', label: t('parameters'), disabled: isVirtualLine },
+    { id: 'poll', label: t('enterprisePoll'), disabled: false },
   ];
-
-  // Для виртуальных линий НЕ показываем sys, edit, param
-  if (!isVirtualLine) {
-    buttons.push(
-      { id: 'sys', label: t('systemArchive'), disabled: false },
-      { id: 'edits', label: t('editArchive'), disabled: false },
-      { id: 'param', label: t('parameters'), disabled: false }
-    );
-  }
-
-  // Poll button is always visible (independent feature)
-  buttons.push({ id: 'poll', label: t('enterprisePoll'), disabled: false });
 
   // Admin button — only visible to admin role
   if (user?.role === 'admin') {
@@ -230,9 +222,10 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
             key={button.id}
             className={`menu-button ${button.type === 'info' ? 'info-button' : ''} ${
               activeButton === button.id ? 'active' : ''
-            }`}
-            onClick={() => handleButtonClick(button.id)}
-            title={button.label}
+            } ${button.disabled ? 'disabled' : ''}`}
+            onClick={() => !button.disabled && handleButtonClick(button.id)}
+            title={button.disabled ? `${button.label} (недоступно для віртуальних ліній)` : button.label}
+            disabled={button.disabled}
           >
             <span className="button-icon">{getButtonIcon(button.id, activeButton === button.id)}</span>
           </button>

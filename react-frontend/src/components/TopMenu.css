@@ -133,6 +133,18 @@
   box-shadow: 0 2px 8px rgba(185, 228, 43, 0.3);
 }
 
+.menu-button:disabled,
+.menu-button.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.menu-button:disabled:hover,
+.menu-button.disabled:hover {
+  background-color: #373a3c;
+  border-color: #3E3E3E;
+}
+
 .info-button {
   background-color: #0dcaf0;
   border-color: #0dcaf0;

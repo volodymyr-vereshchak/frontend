@@ -153,8 +153,9 @@ function AppContent({ user }) {
   // Auto-switch to daily archive when virtual line is selected with non-allowed archive type
   useEffect(() => {
     if (selectedLineIsVirtual) {
-      // Виртуальные линии поддерживают только daily и hourly
-      if (archiveType !== 'daily' && archiveType !== 'hourly' && archiveType !== 'overview') {
+      // Виртуальные линии поддерживают только daily, hourly, overview, poll, admin
+      if (archiveType !== 'daily' && archiveType !== 'hourly' && archiveType !== 'overview' &&
+          archiveType !== 'poll' && archiveType !== 'admin') {
         setArchiveType('daily');
       }
     }
