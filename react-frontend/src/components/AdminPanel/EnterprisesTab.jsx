@@ -126,11 +126,11 @@ export default function EnterprisesTab() {
   const loadData = () => {
     setLoading(true);
     Promise.all([
-      enterpriseApi.getAll(),
-      lineApi.getAll(),
-      gasVolumeApi.getGasVolumeCalcs(),
-      lumgApi.getAll(),
-      branchApi.getAll(),
+      enterpriseApi.getAll().catch(() => []),
+      lineApi.getAll().catch(() => []),
+      gasVolumeApi.getGasVolumeCalcs().catch(() => []),
+      lumgApi.getAll().catch(() => []),
+      branchApi.getAll().catch(() => []),
     ]).then(([ent, lns, cls, lmgs, brs]) => {
       setEnterprises(Array.isArray(ent)  ? ent  : []);
       setLines(      Array.isArray(lns)  ? lns  : []);
