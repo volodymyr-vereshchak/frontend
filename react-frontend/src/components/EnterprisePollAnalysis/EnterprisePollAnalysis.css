@@ -63,6 +63,19 @@
   border-color: #B9E42B;
 }
 
+.poll-header-divider {
+  width: 1px;
+  height: 32px;
+  background: #444;
+  margin: 0 4px;
+}
+
+.poll-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Date Pickers Section */
 .poll-date-pickers {
   display: flex;

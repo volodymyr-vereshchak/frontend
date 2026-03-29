@@ -605,19 +605,6 @@ const EnterprisePollAnalysis = () => {
           >
             {t('hourlyPoll')}
           </button>
-
-          {showBranchSelector && (
-            <select
-              className="branch-selector"
-              value={selectedBranchId ?? ''}
-              onChange={e => setSelectedBranchId(e.target.value === '' ? null : Number(e.target.value))}
-            >
-              {user?.role === 'admin' && <option value="">Всі філії</option>}
-              {availableBranches.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          )}
         </div>
 
         <div className="poll-date-pickers">
@@ -671,6 +658,19 @@ const EnterprisePollAnalysis = () => {
         </div>
 
         <div className="poll-controls-right">
+          <div className="poll-header-divider" />
+          {showBranchSelector && (
+            <select
+              className="branch-selector"
+              value={selectedBranchId ?? ''}
+              onChange={e => setSelectedBranchId(e.target.value === '' ? null : Number(e.target.value))}
+            >
+              {user?.role === 'admin' && <option value="">Всі філії</option>}
+              {availableBranches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
           <button
             className="unpolled-button"
             onClick={checkUnpolledEnterprises}
