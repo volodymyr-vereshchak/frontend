@@ -455,13 +455,16 @@ export const archiveDataVirtualApi = {
 };
 
 export const enterpriseVirtualApi = {
-  async getEnterpriseVolumesVirtual(lineIds, fromDate, toDate, periodType = 'daily') {
+  async getEnterpriseVolumesVirtual(lineIds, fromDate, toDate, periodType = 'daily', branchId = null) {
     const params = {
       line_id: lineIds,
       from_date: fromDate,
       to_date: toDate,
       period_type: periodType
     };
+    if (branchId !== null && branchId !== undefined) {
+      params.branch_id = branchId;
+    }
     return await apiClient.get('/enterprise/volumes_virtual/', params);
   }
 };

@@ -180,18 +180,23 @@ const NightConsumption = ({ isOpen, onClose }) => {
     setError(null);
 
     try {
+      // Commercial day: 07:00 of fromDate to 06:00 of toDate
+      const commercialFrom = `${dateRange.fromDate}T07:00:00`;
+      const commercialTo = `${dateRange.toDate}T06:00:00`;
+
       // Fetch hourly data and enterprise data in parallel using VIRTUAL endpoints
       const [hourlyData, enterpriseData] = await Promise.all([
         archiveDataVirtualApi.getHourlyDataVirtual(
           grsLines,
-          dateRange.fromDate,
-          dateRange.toDate
+          commercialFrom,
+          commercialTo
         ),
         enterpriseVirtualApi.getEnterpriseVolumesVirtual(
           grsLines,
-          dateRange.fromDate,
-          dateRange.toDate,
-          'hourly' // CRITICAL: period_type='hourly' for hourly enterprise data
+          commercialFrom,
+          commercialTo,
+          'hourly', // CRITICAL: period_type='hourly' for hourly enterprise data
+          selectedBranchId
         )
       ]);
 
