@@ -764,7 +764,10 @@
             hideError();
 
             try {
-                const data = await fetchEnterpriseVolumes(fromDate, toDate, currentPeriodType);
+                // For hourly, use commercial day range: fromDate 07:00 to toDate 06:00
+                const entFrom = currentPeriodType === 'hourly' ? fromDate + 'T07:00:00' : fromDate;
+                const entTo = currentPeriodType === 'hourly' ? toDate + 'T06:00:00' : toDate;
+                const data = await fetchEnterpriseVolumes(entFrom, entTo, currentPeriodType);
 
                 console.log('Enterprise API response:', data.length, 'records');
                 console.log('Sample enterprise data:', data.slice(0, 2));
@@ -865,9 +868,13 @@
             hideChart();
 
             try {
+                // For hourly, use commercial day range: fromDate 07:00 to toDate 06:00
+                const hourlyFrom = fromDate + 'T07:00:00';
+                const hourlyTo = toDate + 'T06:00:00';
+
                 let data = currentPeriodType === 'daily'
                     ? await fetchDailyData(fromDate, toDate)
-                    : await fetchHourlyData(fromDate, toDate);
+                    : await fetchHourlyData(hourlyFrom, hourlyTo);
 
                 // Filter irregular timestamps for hourly data
                 if (currentPeriodType === 'hourly' && data && data.length > 0) {
