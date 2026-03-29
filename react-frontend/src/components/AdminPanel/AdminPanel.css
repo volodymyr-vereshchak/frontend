@@ -134,7 +134,7 @@
 
 .admin-tab-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   padding: 16px 20px;
   background: #1a1a1a;
 }
