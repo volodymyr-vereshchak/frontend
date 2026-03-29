@@ -590,95 +590,106 @@ const EnterprisePollAnalysis = () => {
 
   return (
     <div className="enterprise-poll-analysis">
-      {/* Header with Date Pickers */}
-      <div className="poll-header">
-        <div className="poll-controls-left">
-          <button
-            className={`period-button ${periodType === 'daily' ? 'active' : ''}`}
-            onClick={() => setPeriodType('daily')}
-          >
-            {t('dailyPoll')}
-          </button>
-          <button
-            className={`period-button ${periodType === 'hourly' ? 'active' : ''}`}
-            onClick={() => setPeriodType('hourly')}
-          >
-            {t('hourlyPoll')}
-          </button>
+      {/* Header: two side-by-side cards */}
+      <div className="poll-header-row">
+
+        {/* Card 1 — Poll enterprise */}
+        <div className="poll-card">
+          <div className="poll-card-title">Опрос підприємства</div>
+          <div className="poll-card-body">
+            <div className="poll-controls-left">
+              <button
+                className={`period-button ${periodType === 'daily' ? 'active' : ''}`}
+                onClick={() => setPeriodType('daily')}
+              >
+                {t('dailyPoll')}
+              </button>
+              <button
+                className={`period-button ${periodType === 'hourly' ? 'active' : ''}`}
+                onClick={() => setPeriodType('hourly')}
+              >
+                {t('hourlyPoll')}
+              </button>
+            </div>
+
+            <div className="poll-date-pickers">
+              <label className="picker-label">{t('periodStart')}</label>
+              <DatePicker
+                ref={startPickerRef}
+                selected={startDateTime}
+                onChange={handleStartDateTimeChange}
+                showTimeSelect={periodType === 'hourly'}
+                timeIntervals={60}
+                timeFormat="HH:mm"
+                dateFormat={periodType === 'hourly' ? "dd.MM.yyyy HH:mm" : "dd.MM.yyyy"}
+                className="datetime-picker"
+                locale={currentLocale}
+                placeholderText={t('selectDateTime')}
+                shouldCloseOnSelect={periodType === 'daily'}
+                onSelect={handleStartDateSelect}
+                dayClassName={getTodayClassName}
+                renderCustomHeader={renderCustomHeader}
+                todayButton={t('today')}
+              />
+
+              <label className="picker-label">{t('periodEnd')}</label>
+              <DatePicker
+                ref={endPickerRef}
+                selected={endDateTime}
+                onChange={handleEndDateTimeChange}
+                showTimeSelect={periodType === 'hourly'}
+                timeIntervals={60}
+                timeFormat="HH:mm"
+                dateFormat={periodType === 'hourly' ? "dd.MM.yyyy HH:mm" : "dd.MM.yyyy"}
+                className="datetime-picker"
+                locale={currentLocale}
+                placeholderText={t('selectDateTime')}
+                minDate={startDateTime}
+                shouldCloseOnSelect={periodType === 'daily'}
+                onSelect={handleEndDateSelect}
+                dayClassName={getTodayClassName}
+                renderCustomHeader={renderCustomHeader}
+                todayButton={t('today')}
+              />
+
+              <button
+                className="poll-action-button"
+                onClick={pollEnterprise}
+                disabled={isPollLoading || !selectedEnterprise || selectedEnterprise.line_id == null}
+                title={!selectedEnterprise ? t('selectEnterprise') : t('poll')}
+              >
+                {isPollLoading ? '...' : t('poll')}
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="poll-date-pickers">
-          <label className="picker-label">{t('periodStart')}</label>
-          <DatePicker
-            ref={startPickerRef}
-            selected={startDateTime}
-            onChange={handleStartDateTimeChange}
-            showTimeSelect={periodType === 'hourly'}
-            timeIntervals={60}
-            timeFormat="HH:mm"
-            dateFormat={periodType === 'hourly' ? "dd.MM.yyyy HH:mm" : "dd.MM.yyyy"}
-            className="datetime-picker"
-            locale={currentLocale}
-            placeholderText={t('selectDateTime')}
-            shouldCloseOnSelect={periodType === 'daily'}
-            onSelect={handleStartDateSelect}
-            dayClassName={getTodayClassName}
-            renderCustomHeader={renderCustomHeader}
-            todayButton={t('today')}
-          />
-
-          <label className="picker-label">{t('periodEnd')}</label>
-          <DatePicker
-            ref={endPickerRef}
-            selected={endDateTime}
-            onChange={handleEndDateTimeChange}
-            showTimeSelect={periodType === 'hourly'}
-            timeIntervals={60}
-            timeFormat="HH:mm"
-            dateFormat={periodType === 'hourly' ? "dd.MM.yyyy HH:mm" : "dd.MM.yyyy"}
-            className="datetime-picker"
-            locale={currentLocale}
-            placeholderText={t('selectDateTime')}
-            minDate={startDateTime}
-            shouldCloseOnSelect={periodType === 'daily'}
-            onSelect={handleEndDateSelect}
-            dayClassName={getTodayClassName}
-            renderCustomHeader={renderCustomHeader}
-            todayButton={t('today')}
-          />
-
-          <button
-            className="poll-action-button"
-            onClick={pollEnterprise}
-            disabled={isPollLoading || !selectedEnterprise || selectedEnterprise.line_id == null}
-            title={!selectedEnterprise ? t('selectEnterprise') : t('poll')}
-          >
-            {isPollLoading ? '...' : t('poll')}
-          </button>
-        </div>
-
-        <div className="poll-controls-right">
-          <div className="poll-header-divider" />
-          {showBranchSelector && (
-            <select
-              className="branch-selector"
-              value={selectedBranchId ?? ''}
-              onChange={e => setSelectedBranchId(e.target.value === '' ? null : Number(e.target.value))}
+        {/* Card 2 — Unpolled check */}
+        <div className="poll-card">
+          <div className="poll-card-title">Відсутність опросу</div>
+          <div className="poll-card-body">
+            {showBranchSelector && (
+              <select
+                className="branch-selector"
+                value={selectedBranchId ?? ''}
+                onChange={e => setSelectedBranchId(e.target.value === '' ? null : Number(e.target.value))}
+              >
+                {user?.role === 'admin' && <option value="">Всі філії</option>}
+                {availableBranches.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            )}
+            <button
+              className="unpolled-button"
+              onClick={checkUnpolledEnterprises}
+              disabled={isCheckingUnpolled || isLoading}
             >
-              {user?.role === 'admin' && <option value="">Всі філії</option>}
-              {availableBranches.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          )}
-          <button
-            className="unpolled-button"
-            onClick={checkUnpolledEnterprises}
-            disabled={isCheckingUnpolled || isLoading}
-          >
-            {isCheckingUnpolled ? '...' : t('unpolledEnterprises')}
-          </button>
+              {isCheckingUnpolled ? '...' : t('unpolledEnterprises')}
+            </button>
+          </div>
         </div>
+
       </div>
 
       {/* Main Content */}
