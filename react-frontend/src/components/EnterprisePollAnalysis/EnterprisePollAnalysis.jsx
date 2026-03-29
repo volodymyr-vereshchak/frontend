@@ -155,11 +155,18 @@ const EnterprisePollAnalysis = () => {
       if (enterprisesData && Array.isArray(enterprisesData)) {
         const normalized = enterprisesData.map(normalizeEnt);
         setEnterprises(normalized);
-        // Collapse all branches initially
+        // Collapse all branches and lines initially
         const allBranchKeys = [...new Set(normalized.map(e =>
           e.branch_id != null ? String(e.branch_id) : '__no_branch__'
         ))];
         setCollapsedBranches(Object.fromEntries(allBranchKeys.map(k => [k, true])));
+
+        const allLineCollapseKeys = [...new Set(normalized.map(e => {
+          const bKey = e.branch_id != null ? String(e.branch_id) : '__no_branch__';
+          const lKey = e.line_id  != null ? String(e.line_id)  : '__no_line__';
+          return `${bKey}_${lKey}`;
+        }))];
+        setCollapsedLines(Object.fromEntries(allLineCollapseKeys.map(k => [k, true])));
       } else {
         setEnterprises([]);
       }
@@ -726,7 +733,12 @@ const EnterprisePollAnalysis = () => {
                     e.branch_id != null ? String(e.branch_id) : '__no_branch__'
                   ))];
                   setCollapsedBranches(Object.fromEntries(allBranchKeys.map(k => [k, true])));
-                  setCollapsedLines({});
+                  const allLineKeys = [...new Set(enterprises.map(e => {
+                    const bKey = e.branch_id != null ? String(e.branch_id) : '__no_branch__';
+                    const lKey = e.line_id  != null ? String(e.line_id)  : '__no_line__';
+                    return `${bKey}_${lKey}`;
+                  }))];
+                  setCollapsedLines(Object.fromEntries(allLineKeys.map(k => [k, true])));
                 }
               }}
               className="search-input"
