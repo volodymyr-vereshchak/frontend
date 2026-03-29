@@ -687,7 +687,13 @@ const EnterprisePollAnalysis = () => {
                 className="poll-action-button"
                 onClick={pollEnterprise}
                 disabled={isPollLoading || !selectedEnterprise || selectedEnterprise.line_id == null}
-                title={!selectedEnterprise ? t('selectEnterprise') : t('poll')}
+                title={
+                  !selectedEnterprise
+                    ? t('selectEnterprise')
+                    : selectedEnterprise.line_id == null
+                      ? 'Підприємство не прив\'язане до лінії — опрос неможливий'
+                      : t('poll')
+                }
               >
                 {isPollLoading ? '...' : t('poll')}
               </button>
