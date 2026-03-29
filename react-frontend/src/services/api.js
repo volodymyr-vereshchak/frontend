@@ -406,13 +406,13 @@ export const enterprisePollApi = {
 
   async pollEnterpriseDevice(lineId, serNum, chNum, fromDate, toDate, periodType = 'daily') {
     const params = {
-      line_id: lineId,
       serNum: serNum,
       chNum: chNum,
       from_date: fromDate,
       to_date: toDate,
       period_type: periodType
     };
+    if (lineId != null) params.line_id = lineId;
     return await apiClient.get('/enterprise/volumes/', params);
   }
 };

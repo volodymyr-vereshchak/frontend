@@ -246,7 +246,7 @@ const EnterprisePollAnalysis = () => {
    * Poll selected enterprise
    */
   const pollEnterprise = useCallback(async () => {
-    if (!selectedEnterprise || selectedEnterprise.line_id == null) return;
+    if (!selectedEnterprise) return;
 
     setIsPollLoading(true);
     setError(null);
@@ -686,14 +686,8 @@ const EnterprisePollAnalysis = () => {
               <button
                 className="poll-action-button"
                 onClick={pollEnterprise}
-                disabled={isPollLoading || !selectedEnterprise || selectedEnterprise.line_id == null}
-                title={
-                  !selectedEnterprise
-                    ? t('selectEnterprise')
-                    : selectedEnterprise.line_id == null
-                      ? 'Підприємство не прив\'язане до лінії — опрос неможливий'
-                      : t('poll')
-                }
+                disabled={isPollLoading || !selectedEnterprise}
+                title={!selectedEnterprise ? t('selectEnterprise') : t('poll')}
               >
                 {isPollLoading ? '...' : t('poll')}
               </button>
