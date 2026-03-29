@@ -132,7 +132,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
       // Fetch daily data and enterprise data in parallel using VIRTUAL endpoints
       const [dailyData, enterpriseData] = await Promise.all([
         archiveDataVirtualApi.getDailyDataVirtual(grsLines, dateRange.fromDate, dateRange.toDate),
-        enterpriseVirtualApi.getEnterpriseVolumesVirtual(grsLines, dateRange.fromDate, dateRange.toDate, 'daily', selectedBranchId)
+        enterpriseVirtualApi.getEnterpriseVolumesVirtual(grsLines, dateRange.fromDate, dateRange.toDate)
       ]);
 
       if (!dailyData || dailyData.length === 0) {

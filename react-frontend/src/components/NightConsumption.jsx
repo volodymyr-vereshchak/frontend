@@ -195,8 +195,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
           grsLines,
           commercialFrom,
           commercialTo,
-          'hourly', // CRITICAL: period_type='hourly' for hourly enterprise data
-          selectedBranchId
+          'hourly' // CRITICAL: period_type='hourly' for hourly enterprise data
         )
       ]);
 
