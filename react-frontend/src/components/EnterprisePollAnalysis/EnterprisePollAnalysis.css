@@ -8,6 +8,20 @@
   overflow-y: auto;
 }
 
+/* Branch filter row */
+.poll-branch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.poll-branch-label {
+  font-size: 12px;
+  color: #aaa;
+  white-space: nowrap;
+}
+
 /* Header Controls */
 .poll-header-row {
   display: flex;

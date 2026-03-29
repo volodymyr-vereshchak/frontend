@@ -590,6 +590,23 @@ const EnterprisePollAnalysis = () => {
 
   return (
     <div className="enterprise-poll-analysis">
+      {/* Branch filter — global, affects tree and unpolled check */}
+      {showBranchSelector && (
+        <div className="poll-branch-row">
+          <span className="poll-branch-label">Філія:</span>
+          <select
+            className="branch-selector"
+            value={selectedBranchId ?? ''}
+            onChange={e => setSelectedBranchId(e.target.value === '' ? null : Number(e.target.value))}
+          >
+            {user?.role === 'admin' && <option value="">Всі філії</option>}
+            {availableBranches.map(b => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Header: two side-by-side cards */}
       <div className="poll-header-row">
 
@@ -668,18 +685,6 @@ const EnterprisePollAnalysis = () => {
         <div className="poll-card">
           <div className="poll-card-title">Відсутність опросу</div>
           <div className="poll-card-body">
-            {showBranchSelector && (
-              <select
-                className="branch-selector"
-                value={selectedBranchId ?? ''}
-                onChange={e => setSelectedBranchId(e.target.value === '' ? null : Number(e.target.value))}
-              >
-                {user?.role === 'admin' && <option value="">Всі філії</option>}
-                {availableBranches.map(b => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            )}
             <button
               className="unpolled-button"
               onClick={checkUnpolledEnterprises}
