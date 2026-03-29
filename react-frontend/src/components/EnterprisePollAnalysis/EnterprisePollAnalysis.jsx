@@ -17,6 +17,7 @@ import './EnterprisePollAnalysis.css';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { enterprisePollApi, enterpriseApi, lineApi, branchApi } from '../../services/api';
 import { useUser } from '../../contexts/UserContext';
+import { useLocalStorage } from '../../hooks/useLocalStorage';
 
 // Register locales
 registerLocale('ru', ru);
@@ -67,9 +68,9 @@ const EnterprisePollAnalysis = () => {
   // State
   const [enterprises, setEnterprises] = useState([]);
   const [branches, setBranches] = useState([]);
-  const [selectedBranchId, setSelectedBranchId] = useState(null); // null = all
+  const [selectedBranchId, setSelectedBranchId] = useLocalStorage('hlv-poll-branch', null);
   const [lineNames, setLineNames] = useState({});
-  const [collapsedBranches, setCollapsedBranches] = useState({});
+  const [collapsedBranches, setCollapsedBranches] = useState(null); // null = всі згорнуті (lazy init після завантаження)
   const [collapsedLines, setCollapsedLines] = useState({});
   const [unpolledEnterprises, setUnpolledEnterprises] = useState([]);
   const [selectedEnterprise, setSelectedEnterprise] = useState(null);
@@ -152,7 +153,13 @@ const EnterprisePollAnalysis = () => {
       }
 
       if (enterprisesData && Array.isArray(enterprisesData)) {
-        setEnterprises(enterprisesData.map(normalizeEnt));
+        const normalized = enterprisesData.map(normalizeEnt);
+        setEnterprises(normalized);
+        // Collapse all branches initially
+        const allBranchKeys = [...new Set(normalized.map(e =>
+          e.branch_id != null ? String(e.branch_id) : '__no_branch__'
+        ))];
+        setCollapsedBranches(Object.fromEntries(allBranchKeys.map(k => [k, true])));
       } else {
         setEnterprises([]);
       }
@@ -706,7 +713,22 @@ const EnterprisePollAnalysis = () => {
               type="text"
               placeholder={t('searchEnterprise')}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                const q = e.target.value;
+                setSearchQuery(q);
+                if (q.trim()) {
+                  // Expand all when searching
+                  setCollapsedBranches({});
+                  setCollapsedLines({});
+                } else {
+                  // Collapse all when search cleared
+                  const allBranchKeys = [...new Set(enterprises.map(e =>
+                    e.branch_id != null ? String(e.branch_id) : '__no_branch__'
+                  ))];
+                  setCollapsedBranches(Object.fromEntries(allBranchKeys.map(k => [k, true])));
+                  setCollapsedLines({});
+                }
+              }}
               className="search-input"
             />
           </div>
@@ -716,7 +738,7 @@ const EnterprisePollAnalysis = () => {
               <div className="loading-message">{t('loadingEnterprises')}</div>
             ) : (
               Object.entries(enterprisesByBranchAndLine).map(([branchKey, lineGroups]) => {
-                const isBranchCollapsed = collapsedBranches[branchKey];
+                const isBranchCollapsed = collapsedBranches == null ? true : collapsedBranches[branchKey];
                 const totalCount = Object.values(lineGroups).reduce((s, arr) => s + arr.length, 0);
                 return (
                   <div key={`branch-${branchKey}`} className="branch-group">
