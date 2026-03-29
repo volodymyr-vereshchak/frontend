@@ -475,20 +475,33 @@ export default function EnterprisesTab() {
       {loading ? (
         <p style={{ color: '#aaa' }}>Завантаження…</p>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table className="admin-table">
+        <div>
+          <table className="admin-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+            <colgroup>
+              <col style={{ width: 36 }} />   {/* ID */}
+              <col style={{ width: '22%' }} /> {/* Підприємство */}
+              <col style={{ width: '14%' }} /> {/* Відділення */}
+              <col style={{ width: '14%' }} /> {/* Лінія */}
+              <col style={{ width: 72 }} />    {/* SerNum */}
+              <col style={{ width: '11%' }} /> {/* Виробник */}
+              <col style={{ width: 62 }} />    {/* TypeDev */}
+              <col style={{ width: 52 }} />    {/* Канал */}
+              <col style={{ width: 50 }} />    {/* Актив */}
+              <col style={{ width: 55 }} />    {/* Увімкн */}
+              <col style={{ width: 130 }} />   {/* Дії */}
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ whiteSpace: 'nowrap' }}>ID</th>
+                <th>ID</th>
                 <th>Підприємство</th>
-                <th style={{ whiteSpace: 'nowrap' }}>Відділення</th>
-                <th style={{ whiteSpace: 'nowrap' }}>Лінія</th>
-                <th style={{ whiteSpace: 'nowrap' }}>SerNum</th>
+                <th>Відділення</th>
+                <th>Лінія</th>
+                <th>SerNum</th>
                 <th>Виробник</th>
-                <th style={{ whiteSpace: 'nowrap' }}>TypeDev</th>
-                <th style={{ whiteSpace: 'nowrap' }}>Канал</th>
-                <th style={{ whiteSpace: 'nowrap' }}>Актив</th>
-                <th style={{ whiteSpace: 'nowrap' }}>Увімкн</th>
+                <th>TypeDev</th>
+                <th>Канал</th>
+                <th>Актив</th>
+                <th>Увімкн</th>
                 <th></th>
               </tr>
             </thead>
@@ -504,7 +517,7 @@ export default function EnterprisesTab() {
                   <tr key={ent.id}>
                     <td>{ent.id}</td>
 
-                    <td style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                         title={ent.enterprise_name}>
                       {isEditing
                         ? <input className="admin-input" style={{ minWidth: 180 }}
@@ -514,7 +527,8 @@ export default function EnterprisesTab() {
                     </td>
 
                     {/* Відділення — пряме поле, або вираховується з лінії */}
-                    <td>
+                    <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        title={branchLabel(ent)}>
                       {isEditing
                         ? <BranchSelect value={editForm.branch_id} branches={branches}
                             onChange={v => setEditForm(f => ({ ...f, branch_id: v }))} />
@@ -523,7 +537,8 @@ export default function EnterprisesTab() {
                           </span>}
                     </td>
 
-                    <td>
+                    <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        title={lineLabel(ent.line_id)}>
                       {isEditing
                         ? <LineSelect value={editForm.line_id} lines={lines}
                             onChange={v => setEditForm(f => ({ ...f, line_id: v }))} />
@@ -538,7 +553,8 @@ export default function EnterprisesTab() {
                         : ent.ser_num}
                     </td>
 
-                    <td>
+                    <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        title={MF_DEV_LABEL[ent.mf_dev] || String(ent.mf_dev)}>
                       {isEditing
                         ? <MfSelect value={editForm.mf_dev}
                             onChange={v => setEditForm(f => ({ ...f, mf_dev: v }))} />
