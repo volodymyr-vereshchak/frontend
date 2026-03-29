@@ -11,51 +11,55 @@
 /* Header Controls */
 .poll-header-row {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: stretch;
+  gap: 8px;
   margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
 .poll-card {
   background-color: #2a2a2a;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .poll-card-title {
-  padding: 6px 14px;
-  font-size: 11px;
+  padding: 3px 10px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
   color: #B9E42B;
   background-color: #222;
   border-bottom: 1px solid #3a3a3a;
+  white-space: nowrap;
 }
 
 .poll-card-body {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px;
+  flex: 1;
 }
 
 .poll-controls-left {
   display: flex;
-  gap: 8px;
+  gap: 5px;
 }
 
 .period-button {
-  padding: 8px 16px;
+  padding: 4px 10px;
   border: 1px solid #444;
   border-radius: 4px;
   background-color: #333;
   color: #e0e0e0;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 14px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .period-button:hover {
@@ -69,14 +73,14 @@
 }
 
 .branch-selector {
-  padding: 7px 10px;
+  padding: 4px 8px;
   border: 1px solid #444;
   border-radius: 4px;
   background-color: #333;
   color: #e0e0e0;
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
-  min-width: 160px;
+  min-width: 140px;
 }
 
 .branch-selector:focus {
@@ -84,29 +88,27 @@
   border-color: #B9E42B;
 }
 
-
 /* Date Pickers Section */
 .poll-date-pickers {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .poll-date-pickers .picker-label {
   color: #aaa;
-  font-size: 14px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
 .poll-date-pickers .datetime-picker {
-  padding: 8px 12px;
+  padding: 4px 8px;
   border: 1px solid #444;
   border-radius: 4px;
   background-color: #333;
   color: #e0e0e0;
-  font-size: 14px;
-  width: 160px;
+  font-size: 12px;
+  width: 100px;
   cursor: pointer;
 }
 
@@ -116,15 +118,16 @@
 }
 
 .poll-action-button {
-  padding: 8px 24px;
+  padding: 4px 14px;
   border: none;
   border-radius: 4px;
   background-color: #B9E42B;
   color: #000;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .poll-action-button:hover:not(:disabled) {
@@ -137,14 +140,15 @@
 }
 
 .unpolled-button {
-  padding: 8px 16px;
+  padding: 4px 12px;
   border: 1px solid #f62fc8;
   border-radius: 4px;
   background-color: transparent;
   color: #f62fc8;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 14px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .unpolled-button:hover:not(:disabled) {
