@@ -680,11 +680,6 @@
                     option.textContent = branch.name;
                     branchSelect.appendChild(option);
                 });
-                // Автовибір першої філії
-                if (allBranches.length > 0) {
-                    branchSelect.value = allBranches[0].id;
-                }
-
                 updateCalcSelect();
             } catch (error) {
                 console.error('Ошибка загрузки данных:', error);
