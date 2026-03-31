@@ -793,6 +793,14 @@
 
                 // Запрос к /sys/ эндпоинту
                 const response = await fetch(`${API_URL}/sys/?${params}`);
+                if (!response.ok) {
+                    const errBody = await response.json().catch(() => ({}));
+                    const detail = errBody.detail || '';
+                    if (response.status === 400 && detail.toLowerCase().includes('exceed')) {
+                        throw new Error('Занадто великий діапазон дат. Зменшіть проміжок та спробуйте знову.');
+                    }
+                    throw new Error(detail || `HTTP ${response.status}`);
+                }
                 const sysData = await response.json();
 
                 // Обработка данных
