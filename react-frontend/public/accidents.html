@@ -769,6 +769,8 @@
                 // Определяем какие линии загружать
                 let lineIds = [];
 
+                const branchId = document.getElementById('branchSelect').value;
+
                 if (lineId) {
                     // Выбрана конкретная линия
                     lineIds = [lineId];
@@ -776,6 +778,13 @@
                     // Выбран вычислитель - берем все его линии
                     lineIds = allLines
                         .filter(line => line.gas_volume_calc_id == calcId)
+                        .map(line => line.id);
+                } else if (branchId) {
+                    // Выбрана только філія - берем все линии этой філії
+                    const branchLumgIds = allLumgs.filter(l => l.branch_id == branchId).map(l => l.id);
+                    const branchCalcIds = allCalcs.filter(c => branchLumgIds.includes(c.lumg_id)).map(c => c.id);
+                    lineIds = allLines
+                        .filter(line => branchCalcIds.includes(line.gas_volume_calc_id))
                         .map(line => line.id);
                 } else {
                     // Ничего не выбрано - берем все линии
