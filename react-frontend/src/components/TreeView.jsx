@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './TreeView.css';
 import { branchApi, lumgApi, lineApi, dataApi, virtualLinesApi, virtualLinesHelper } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -75,6 +75,9 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
   const { t } = useLanguage();
   const [treeData, setTreeData] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedMeta, setSelectedMeta] = useState(null); // { name, gvcName, address, line, is_virtual }
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef(null);
   const [expandedGroups, setExpandedGroups] = useState(() => {
     try {
       const saved = localStorage.getItem('hlv-tree-expanded');
@@ -214,6 +217,49 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
     fetchData();
   }, []);
 
+  // ── Search filter ────────────────────────────────────────────────────────────
+  const filteredTree = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return treeData;
+
+    const filterLines = (lines) => lines.filter(l => l.name.toLowerCase().includes(q));
+
+    return treeData.flatMap(branch => {
+      const branchMatch = branch.name.toLowerCase().includes(q);
+
+      const filteredLumgs = (branch.children || []).flatMap(lumg => {
+        const lumgMatch = lumg.name.toLowerCase().includes(q);
+
+        const filteredGvcs = (lumg.children || []).flatMap(gvc => {
+          const gvcMatch = gvc.name.toLowerCase().includes(q);
+          const lines = gvcMatch ? gvc.children : filterLines(gvc.children);
+          return (gvcMatch || lines.length > 0) ? [{ ...gvc, children: lines }] : [];
+        });
+
+        const filteredVirtuals = lumgMatch
+          ? (lumg.virtualLines || [])
+          : filterLines(lumg.virtualLines || []);
+
+        if (lumgMatch || filteredGvcs.length > 0 || filteredVirtuals.length > 0) {
+          return [{
+            ...lumg,
+            children: lumgMatch ? lumg.children : filteredGvcs,
+            virtualLines: filteredVirtuals,
+          }];
+        }
+        return [];
+      });
+
+      if (branchMatch || filteredLumgs.length > 0) {
+        return [{ ...branch, children: branchMatch ? branch.children : filteredLumgs }];
+      }
+      return [];
+    });
+  }, [treeData, searchQuery]);
+
+  // When searching — treat all nodes as expanded; otherwise use saved state
+  const isExpanded = (id) => searchQuery.trim() ? true : expandedGroups.has(id);
+
   const toggleGroup = (id) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
@@ -285,14 +331,23 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
     setHasInitialized(true);
   }, [initialLineId, treeData, hasInitialized, loading]);
 
-  const isExpanded = (id) => expandedGroups.has(id);
   const isSelected = (id) => selectedItem === id;
 
-  const renderLines = (lines) => lines.map((line, i) => (
+  const renderLines = (lines, gvcName = null) => lines.map((line, i) => (
     <div
       key={`line-${line.id}-${i}`}
       className={`tree-line ${isSelected(line.id) ? 'selected' : ''} ${line.is_virtual ? 'virtual-line' : ''}`}
-      onClick={() => setSelectedItem(prev => prev === line.id ? null : line.id)}
+      onClick={() => {
+        const next = selectedItem === line.id ? null : line.id;
+        setSelectedItem(next);
+        setSelectedMeta(next ? {
+          name: line.name,
+          gvcName: gvcName,
+          address: line.address || null,
+          line: line.line || null,
+          is_virtual: line.is_virtual,
+        } : null);
+      }}
       title={line.is_virtual ? t('virtualLineTooltip') : line.name}
     >
       <span className="line-icon">
@@ -316,7 +371,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
       </div>
       {isExpanded(gvc.id) && gvc.children.length > 0 && (
         <div className="group-children">
-          {renderLines(gvc.children)}
+          {renderLines(gvc.children, gvc.name)}
         </div>
       )}
     </div>
@@ -336,7 +391,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         {isExpanded(lumg.id) && hasContent && (
           <div className="group-children">
             {lumg.children.map(gvc => renderGvc(gvc))}
-            {renderLines(lumg.virtualLines || [])}
+            {renderLines(lumg.virtualLines || [], lumg.name)}
           </div>
         )}
       </div>
@@ -382,16 +437,49 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
     <div className="tree-view">
       <div className="tree-header">
         <h6>{t('nodeListTitle')}</h6>
+        <input
+          ref={searchInputRef}
+          className="tree-search-input"
+          type="text"
+          placeholder={t('treeSearch')}
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+        />
       </div>
       <div className="tree-content">
-        {treeData.map(node => {
+        {filteredTree.map(node => {
           if (node.type === 'branch') return renderBranch(node);
           return null;
         })}
+        {filteredTree.length === 0 && searchQuery.trim() && (
+          <div className="no-results">{t('noDataToDisplay')}</div>
+        )}
       </div>
       {selectedItem && (
         <div className="selection-info">
-          {t('selectedLine')} ID {selectedItem}
+          <div className="selection-line-name">
+            {selectedMeta?.is_virtual && <span className="virtual-badge">V</span>}
+            {selectedMeta?.name || `ID ${selectedItem}`}
+          </div>
+          {selectedMeta?.gvcName && (
+            <div className="selection-detail">
+              <span className="selection-label">{t('calculator')}:</span>
+              <span className="selection-value">{selectedMeta.gvcName}</span>
+            </div>
+          )}
+          {selectedMeta?.address && (
+            <div className="selection-detail">
+              <span className="selection-label">{t('calcAddress')}:</span>
+              <span className="selection-value">{selectedMeta.address}</span>
+            </div>
+          )}
+          {selectedMeta?.line && (
+            <div className="selection-detail">
+              <span className="selection-label">{t('calcLine')}:</span>
+              <span className="selection-value">{selectedMeta.line}</span>
+            </div>
+          )}
+          <div className="selection-id">ID: {selectedItem}</div>
         </div>
       )}
     </div>
