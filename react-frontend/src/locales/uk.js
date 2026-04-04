@@ -127,7 +127,7 @@ export const uk = {
   treeSearch: "Пошук лінії...",
   calcAddress: "Адреса",
   calcLine: "Лінія",
-  calculator: "Вичислювач",
+  calculator: "Обчислювач",
   loadingError: "Помилка завантаження даних",
   noDataToDisplay: "Немає даних для відображення",
 

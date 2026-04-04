@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './TreeView.css';
-import { branchApi, lumgApi, lineApi, dataApi, virtualLinesApi, virtualLinesHelper } from '../services/api';
+import { branchApi, lumgApi, lineApi, dataApi, virtualLinesApi, virtualLinesHelper, calcTypeApi } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // SVG Icon Components
@@ -95,13 +95,17 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
       setError(null);
 
       try {
-        const [branches, lumgs, gvcs, allLines, virtualLines] = await Promise.all([
+        const [branches, lumgs, gvcs, calcTypes, allLines, virtualLines] = await Promise.all([
           branchApi.getAll(),
           lumgApi.getAll(),
           dataApi.getGasVolumeCalcs(),
+          calcTypeApi.getAll(),
           lineApi.getAll(),
           virtualLinesApi.getVisibleLines(),
         ]);
+
+        const calcTypeMap = {};
+        (calcTypes || []).forEach(ct => { calcTypeMap[ct.id] = ct.type_name; });
 
         // Group virtual lines by lumg_id; null-lumg_id entries by branch_id
         const virtualByLumg = {};
@@ -157,6 +161,8 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
                 id: `gvc-${gvc.id}`,
                 gvcId: gvc.id,
                 name: gvc.name,
+                address: gvc.address,
+                typeName: gvc.type_id ? (calcTypeMap[gvc.type_id] || null) : null,
                 children: gvcLines.map(line => ({
                   id: line.id,
                   name: line.name,
@@ -333,7 +339,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
 
   const isSelected = (id) => selectedItem === id;
 
-  const renderLines = (lines, gvcName = null) => lines.map((line, i) => (
+  const renderLines = (lines, gvcMeta = null) => lines.map((line, i) => (
     <div
       key={`line-${line.id}-${i}`}
       className={`tree-line ${isSelected(line.id) ? 'selected' : ''} ${line.is_virtual ? 'virtual-line' : ''}`}
@@ -342,8 +348,8 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         setSelectedItem(next);
         setSelectedMeta(next ? {
           name: line.name,
-          gvcName: gvcName,
-          address: line.address || null,
+          typeName: gvcMeta?.typeName || null,
+          address: gvcMeta?.address ?? null,
           line: line.line || null,
           is_virtual: line.is_virtual,
         } : null);
@@ -371,7 +377,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
       </div>
       {isExpanded(gvc.id) && gvc.children.length > 0 && (
         <div className="group-children">
-          {renderLines(gvc.children, gvc.name)}
+          {renderLines(gvc.children, { typeName: gvc.typeName, address: gvc.address })}
         </div>
       )}
     </div>
@@ -391,7 +397,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         {isExpanded(lumg.id) && hasContent && (
           <div className="group-children">
             {lumg.children.map(gvc => renderGvc(gvc))}
-            {renderLines(lumg.virtualLines || [], lumg.name)}
+            {renderLines(lumg.virtualLines || [], null)}
           </div>
         )}
       </div>
@@ -461,25 +467,27 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
             {selectedMeta?.is_virtual && <span className="virtual-badge">V</span>}
             {selectedMeta?.name || `ID ${selectedItem}`}
           </div>
-          {selectedMeta?.gvcName && (
-            <div className="selection-detail">
-              <span className="selection-label">{t('calculator')}:</span>
-              <span className="selection-value">{selectedMeta.gvcName}</span>
-            </div>
-          )}
-          {selectedMeta?.address && (
-            <div className="selection-detail">
-              <span className="selection-label">{t('calcAddress')}:</span>
-              <span className="selection-value">{selectedMeta.address}</span>
-            </div>
-          )}
-          {selectedMeta?.line && (
-            <div className="selection-detail">
-              <span className="selection-label">{t('calcLine')}:</span>
-              <span className="selection-value">{selectedMeta.line}</span>
-            </div>
-          )}
-          <div className="selection-id">ID: {selectedItem}</div>
+          <div className="selection-details-row">
+            {selectedMeta?.typeName && (
+              <span className="selection-chip">
+                <span className="selection-label">{t('calculator')}:</span>
+                <span className="selection-value">{selectedMeta.typeName}</span>
+              </span>
+            )}
+            {selectedMeta?.address != null && (
+              <span className="selection-chip">
+                <span className="selection-label">{t('calcAddress')}:</span>
+                <span className="selection-value">{selectedMeta.address}</span>
+              </span>
+            )}
+            {selectedMeta?.line != null && (
+              <span className="selection-chip">
+                <span className="selection-label">{t('calcLine')}:</span>
+                <span className="selection-value">{selectedMeta.line}</span>
+              </span>
+            )}
+            <span className="selection-chip selection-chip--id">ID: {selectedItem}</span>
+          </div>
         </div>
       )}
     </div>
