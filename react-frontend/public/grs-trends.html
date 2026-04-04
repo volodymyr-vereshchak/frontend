@@ -412,15 +412,10 @@
                 <button class="btn btn-primary" id="loadBtn" onclick="loadTrends()">
                     Загрузить данные
                 </button>
-                <div class="period-toggle">
-                    <label id="enterpriseLabel">Промышленность:</label>
-                    <div class="toggle-group" style="width: auto;">
-                        <input type="checkbox" id="enterpriseToggle" onchange="handleEnterpriseToggle()">
-                        <label for="enterpriseToggle" class="toggle-option" style="padding: 12px 20px;" id="enterpriseToggleLabel">
-                            📊 Промышленность
-                        </label>
-                    </div>
-                </div>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e0e0e0;font-size:13px;">
+                    <input type="checkbox" id="enterpriseToggle" onchange="handleEnterpriseToggle()">
+                    <span id="enterpriseToggleLabel">Промышленность</span>
+                </label>
             </div>
         </div>
 
@@ -593,8 +588,7 @@
                 noData: 'Нет данных для отображения',
                 error: 'Ошибка загрузки данных:',
                 selectDates: 'Пожалуйста, выберите даты',
-                enterpriseLabel: 'Промышленность:',
-                enterpriseToggle: '📊 Промышленность',
+                enterpriseOverlay: 'Промышленность',
                 loadingEnterprise: 'Загрузка данных промышленности...',
                 branch: 'Филиал:',
                 branchLoading: 'Загрузка...'
@@ -618,8 +612,7 @@
                 noData: 'Немає даних для відображення',
                 error: 'Помилка завантаження даних:',
                 selectDates: 'Будь ласка, оберіть дати',
-                enterpriseLabel: 'Промисловість:',
-                enterpriseToggle: '📊 Промисловість',
+                enterpriseOverlay: 'Промисловість',
                 loadingEnterprise: 'Завантаження даних промисловості...',
                 branch: 'Філія:',
                 branchLoading: 'Завантаження...'
@@ -647,8 +640,7 @@
             document.querySelector('#loadBtn').textContent = t('loadData');
             document.querySelector('#loadingText').textContent = t('loading');
             document.querySelector('#noDataText').textContent = t('noData');
-            document.querySelector('#enterpriseLabel').textContent = t('enterpriseLabel');
-            document.querySelector('#enterpriseToggleLabel').innerHTML = t('enterpriseToggle');
+            document.querySelector('#enterpriseToggleLabel').textContent = t('enterpriseOverlay');
             document.querySelector('#enterpriseLoadingText').textContent = t('loadingEnterprise');
             document.querySelector('#branchLabel').textContent = t('branch');
             const branchLoadingOption = document.querySelector('#branchLoadingOption');

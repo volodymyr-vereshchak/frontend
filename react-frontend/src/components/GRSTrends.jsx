@@ -18,6 +18,8 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [chartData, setChartData] = useState([]);
   const [visibleLines, setVisibleLines] = useState([]);
   const [linesLoading, setLinesLoading] = useState(false);
+  const [showEnterprise, setShowEnterprise] = useState(false);
+  const [showEnterprise, setShowEnterprise] = useState(false);
 
   // Branch selector
   const [branches, setBranches] = useState([]);
@@ -120,7 +122,6 @@ const GRSTrends = ({ isOpen, onClose }) => {
   }, [visibleLines, selectedBranchId]);
 
   const calculateTrends = async () => {
-    console.log('VIRTUAL_LINES_TEST_12345'); // DEBUG: test if new code is loaded
     if (grsLines.length === 0) {
       setError(t('noGrsLinesConfigured'));
       return;
@@ -130,14 +131,9 @@ const GRSTrends = ({ isOpen, onClose }) => {
     setError(null);
 
     try {
-      // Fetch daily data and enterprise data in parallel using VIRTUAL endpoints
-      const [dailyData, enterpriseData] = await Promise.all([
-        archiveDataVirtualApi.getDailyDataVirtual(grsLines, dateRange.fromDate, dateRange.toDate),
-        getEnterpriseWithCache(
-          grsLines, dateRange.fromDate, dateRange.toDate, 'daily',
-          (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
-        )
-      ]);
+      const dailyData = await archiveDataVirtualApi.getDailyDataVirtual(
+        grsLines, dateRange.fromDate, dateRange.toDate
+      );
 
       if (!dailyData || dailyData.length === 0) {
         setError(t('noDataAvailable'));
@@ -145,17 +141,15 @@ const GRSTrends = ({ isOpen, onClose }) => {
         return;
       }
 
-      // Log warning if no enterprise data (not an error)
-      if (!enterpriseData || enterpriseData.length === 0) {
-        console.warn('No enterprise data available, using GS volumes only');
+      let enterpriseData = [];
+      if (showEnterprise) {
+        enterpriseData = await getEnterpriseWithCache(
+          grsLines, dateRange.fromDate, dateRange.toDate, 'daily',
+          (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
+        ) || [];
       }
 
-      // Calculate trends with enterprise subtraction
-      const trendsData = calculateGRSTrendsPercentages(
-        dailyData,
-        grsLines,
-        enterpriseData || []
-      );
+      const trendsData = calculateGRSTrendsPercentages(dailyData, grsLines, enterpriseData);
       setChartData(trendsData);
 
     } catch (err) {
@@ -252,19 +246,19 @@ const GRSTrends = ({ isOpen, onClose }) => {
     calculateTrends();
   };
 
-  // Auto-calculate when date range or branch changes
+  // Auto-calculate when date range, branch or enterprise toggle changes
   useEffect(() => {
     if (isOpen && dateRange.fromDate && dateRange.toDate && selectedBranchId) {
       calculateTrends();
     }
-  }, [dateRange, isOpen, selectedBranchId]);
+  }, [dateRange, isOpen, selectedBranchId, showEnterprise]);
 
   // Re-calculate when enterprise cache is cleared (Ctrl+Shift+E)
   useEffect(() => {
     const handler = () => { if (isOpen) calculateTrends(); };
     window.addEventListener('enterprise-cache-cleared', handler);
     return () => window.removeEventListener('enterprise-cache-cleared', handler);
-  }, [isOpen, dateRange, selectedBranchId]);
+  }, [isOpen, dateRange, selectedBranchId, showEnterprise]);
 
   if (!isOpen) return null;
 
@@ -279,16 +273,27 @@ const GRSTrends = ({ isOpen, onClose }) => {
         </div>
 
         <div className="grs-trends-modal-body">
-          {/* Branch selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>{t('branch')}:</label>
-            <select
-              style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
-              value={selectedBranchId || ''}
-              onChange={e => { setSelectedBranchId(Number(e.target.value)); setChartData([]); }}
-            >
-              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
+          {/* Branch selector + Enterprise checkbox */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>{t('branch')}:</label>
+              <select
+                style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
+                value={selectedBranchId || ''}
+                onChange={e => { setSelectedBranchId(Number(e.target.value)); setChartData([]); }}
+              >
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: '#e0e0e0', fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={showEnterprise}
+                onChange={e => setShowEnterprise(e.target.checked)}
+                disabled={isLoading}
+              />
+              {t('enterpriseOverlay')}
+            </label>
           </div>
 
           {/* Date Range Picker */}
