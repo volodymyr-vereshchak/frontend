@@ -338,19 +338,23 @@ function LumgDataPaths() {
   const handleAddEis = async (lumgId) => {
     const code = (eisInput[lumgId] || '').trim();
     if (!code) return;
-    const result = await lumgApi.addEisCode(lumgId, { eis_code: code });
-    if (result?.id) {
+    try {
+      const result = await lumgApi.addEisCode(lumgId, { eis_code: code });
       setEisCodes(prev => ({ ...prev, [lumgId]: [...(prev[lumgId] || []), result] }));
       setEisInput(prev => ({ ...prev, [lumgId]: '' }));
       setEisStatus(prev => ({ ...prev, [lumgId]: { ok: true, msg: 'Додано' } }));
-    } else {
-      setEisStatus(prev => ({ ...prev, [lumgId]: { ok: false, msg: result?.detail || 'Помилка' } }));
+    } catch (err) {
+      setEisStatus(prev => ({ ...prev, [lumgId]: { ok: false, msg: err?.message || 'Помилка' } }));
     }
   };
 
   const handleDeleteEis = async (lumgId, code) => {
-    await lumgApi.deleteEisCode(lumgId, code);
-    setEisCodes(prev => ({ ...prev, [lumgId]: (prev[lumgId] || []).filter(e => e.eis_code !== code) }));
+    try {
+      await lumgApi.deleteEisCode(lumgId, code);
+      setEisCodes(prev => ({ ...prev, [lumgId]: (prev[lumgId] || []).filter(e => e.eis_code !== code) }));
+    } catch (err) {
+      setEisStatus(prev => ({ ...prev, [lumgId]: { ok: false, msg: err?.message || 'Помилка видалення' } }));
+    }
   };
 
   const handleScan = async (lumgId) => {
@@ -369,14 +373,18 @@ function LumgDataPaths() {
 
   const handleAddSelected = async (lumgId) => {
     const sel = scanSelected[lumgId] || new Set();
+    let added = 0;
     for (const code of sel) {
-      const result = await lumgApi.addEisCode(lumgId, { eis_code: code });
-      if (result?.id) {
+      try {
+        const result = await lumgApi.addEisCode(lumgId, { eis_code: code });
         setEisCodes(prev => ({ ...prev, [lumgId]: [...(prev[lumgId] || []), result] }));
+        added++;
+      } catch (err) {
+        // skip duplicates or other errors silently — continue with remaining codes
       }
     }
     setScanResults(prev => { const n = { ...prev }; delete n[lumgId]; return n; });
-    setEisStatus(prev => ({ ...prev, [lumgId]: { ok: true, msg: `Додано ${sel.size} кодів` } }));
+    setEisStatus(prev => ({ ...prev, [lumgId]: { ok: true, msg: `Додано ${added} кодів` } }));
   };
 
   return (
