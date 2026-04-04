@@ -124,6 +124,10 @@ export const uk = {
   // TreeView
   nodeListTitle: "Список вузлів обліку",
   selectedLine: "Обрана лінія:",
+  treeSearch: "Пошук лінії...",
+  calcAddress: "Адреса",
+  calcLine: "Лінія",
+  calculator: "Вичислювач",
   loadingError: "Помилка завантаження даних",
   noDataToDisplay: "Немає даних для відображення",
 

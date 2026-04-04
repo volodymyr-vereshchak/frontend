@@ -124,6 +124,10 @@ export const ru = {
   // TreeView
   nodeListTitle: "Список узлов учета",
   selectedLine: "Выбрана линия:",
+  treeSearch: "Поиск линии...",
+  calcAddress: "Адрес",
+  calcLine: "Линия",
+  calculator: "Вычислитель",
   loadingError: "Ошибка загрузки данных",
   noDataToDisplay: "Нет данных для отображения",
 
