@@ -412,8 +412,8 @@
                 <button class="btn btn-primary" id="loadBtn" onclick="loadTrends()">
                     Загрузить данные
                 </button>
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e0e0e0;font-size:13px;">
-                    <input type="checkbox" id="enterpriseToggle" onchange="handleEnterpriseToggle()">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#d0d0d0;font-size:13px;font-weight:500;padding:8px 12px;border:1px solid #404040;border-radius:6px;background:#1a1a1a;transition:border-color .2s;" onmouseover="this.style.borderColor='#4CAF50'" onmouseout="this.style.borderColor=document.getElementById('enterpriseToggle').checked?'#4CAF50':'#404040'">
+                    <input type="checkbox" id="enterpriseToggle" onchange="handleEnterpriseToggle();this.closest('label').style.borderColor=this.checked?'#4CAF50':'#404040'" style="width:15px;height:15px;cursor:pointer;accent-color:#4CAF50;">
                     <span id="enterpriseToggleLabel">Промышленность</span>
                 </label>
             </div>
