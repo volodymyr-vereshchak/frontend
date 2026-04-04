@@ -31,8 +31,12 @@ const SimplifiedEnterpriseControl = ({
     const byPeriod = {};
 
     rawData.forEach(item => {
-      // Use period as-is from API (should match main chart data format)
-      const period = item.period;
+      // Normalize period key to match archive data format regardless of source
+      // (cached records have short "YYYY-MM-DDTHH", API returns "YYYY-MM-DDTHH:MM:SS")
+      const raw = String(item.period || '').replace(' ', 'T');
+      const period = archiveType === 'hourly'
+        ? raw.slice(0, 13)   // YYYY-MM-DDTHH
+        : raw.slice(0, 10);  // YYYY-MM-DD
 
       if (!byPeriod[period]) {
         byPeriod[period] = {

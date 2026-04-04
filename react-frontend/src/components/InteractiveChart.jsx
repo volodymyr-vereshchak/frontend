@@ -75,8 +75,9 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
 
         let matchedCount = 0;
         sortedChartData = sortedChartData.map(item => {
-          const period = item.period;
-          const enterpriseValues = enterpriseData.byPeriod[period];
+          const raw = String(item.period || '').replace(' ', 'T');
+          const periodKey = archiveType === 'hourly' ? raw.slice(0, 13) : raw.slice(0, 10);
+          const enterpriseValues = enterpriseData.byPeriod[periodKey];
 
           if (enterpriseValues) {
             matchedCount++;
