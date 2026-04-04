@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { enterpriseApi, enterpriseVirtualApi } from '../services/api';
+import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { useLanguage } from '../contexts/LanguageContext';
 import './SimplifiedEnterpriseControl.css';
 
@@ -126,19 +127,17 @@ const SimplifiedEnterpriseControl = ({
         periodType
       });
 
-      const data = isVirtualLine
-        ? await enterpriseVirtualApi.getEnterpriseVolumesVirtual(
-            selectedLines,
-            dateRange.fromDate,
-            dateRange.toDate,
-            periodType
-          )
-        : await enterpriseApi.getEnterpriseVolumes(
-            selectedLines,
-            dateRange.fromDate,
-            dateRange.toDate,
-            periodType
-          );
+      const fetchFn = isVirtualLine
+        ? (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
+        : (lines, from, to, type) => enterpriseApi.getEnterpriseVolumes(lines, from, to, type);
+
+      const data = await getEnterpriseWithCache(
+        selectedLines,
+        dateRange.fromDate,
+        dateRange.toDate,
+        periodType,
+        fetchFn
+      );
 
       console.log('Enterprise data fetched:', data);
 
@@ -194,7 +193,17 @@ const SimplifiedEnterpriseControl = ({
     }
   }, [chartData, onEnterpriseDataChange]);
 
-  // useEffect #3: Click outside to close dropdown
+  // useEffect #3: Re-fetch when enterprise cache is cleared (Ctrl+Shift+E)
+  useEffect(() => {
+    const handleCacheCleared = () => {
+      previousParamsRef.current = null; // force re-fetch ignoring param dedup
+      if (isActive) fetchEnterpriseData();
+    };
+    window.addEventListener('enterprise-cache-cleared', handleCacheCleared);
+    return () => window.removeEventListener('enterprise-cache-cleared', handleCacheCleared);
+  }, [isActive, fetchEnterpriseData]);
+
+  // useEffect #4: Click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {

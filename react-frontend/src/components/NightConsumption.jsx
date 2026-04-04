@@ -8,6 +8,7 @@ import {
   virtualLinesHelper,
   branchApi,
 } from '../services/api';
+import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
 import * as XLSX from 'xlsx';
@@ -191,11 +192,9 @@ const NightConsumption = ({ isOpen, onClose }) => {
           commercialFrom,
           commercialTo
         ),
-        enterpriseVirtualApi.getEnterpriseVolumesVirtual(
-          grsLines,
-          commercialFrom,
-          commercialTo,
-          'hourly' // CRITICAL: period_type='hourly' for hourly enterprise data
+        getEnterpriseWithCache(
+          grsLines, commercialFrom, commercialTo, 'hourly',
+          (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
         )
       ]);
 
@@ -391,6 +390,13 @@ const NightConsumption = ({ isOpen, onClose }) => {
       calculateNightConsumption();
     }
   }, [dateRange, isOpen, selectedBranchId]);
+
+  // Re-calculate when enterprise cache is cleared (Ctrl+Shift+E)
+  useEffect(() => {
+    const handler = () => { if (isOpen) calculateNightConsumption(); };
+    window.addEventListener('enterprise-cache-cleared', handler);
+    return () => window.removeEventListener('enterprise-cache-cleared', handler);
+  }, [isOpen, dateRange, selectedBranchId]);
 
   if (!isOpen) return null;
 

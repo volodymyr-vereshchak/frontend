@@ -5,6 +5,7 @@ import {
   enterpriseVirtualApi,
   branchApi,
 } from '../services/api';
+import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
 import InteractiveChart from './InteractiveChart';
@@ -132,7 +133,10 @@ const GRSTrends = ({ isOpen, onClose }) => {
       // Fetch daily data and enterprise data in parallel using VIRTUAL endpoints
       const [dailyData, enterpriseData] = await Promise.all([
         archiveDataVirtualApi.getDailyDataVirtual(grsLines, dateRange.fromDate, dateRange.toDate),
-        enterpriseVirtualApi.getEnterpriseVolumesVirtual(grsLines, dateRange.fromDate, dateRange.toDate)
+        getEnterpriseWithCache(
+          grsLines, dateRange.fromDate, dateRange.toDate, 'daily',
+          (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
+        )
       ]);
 
       if (!dailyData || dailyData.length === 0) {
@@ -254,6 +258,13 @@ const GRSTrends = ({ isOpen, onClose }) => {
       calculateTrends();
     }
   }, [dateRange, isOpen, selectedBranchId]);
+
+  // Re-calculate when enterprise cache is cleared (Ctrl+Shift+E)
+  useEffect(() => {
+    const handler = () => { if (isOpen) calculateTrends(); };
+    window.addEventListener('enterprise-cache-cleared', handler);
+    return () => window.removeEventListener('enterprise-cache-cleared', handler);
+  }, [isOpen, dateRange, selectedBranchId]);
 
   if (!isOpen) return null;
 

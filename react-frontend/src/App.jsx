@@ -14,6 +14,7 @@ import { LanguageProvider } from './contexts/LanguageContext'
 import { UserProvider } from './contexts/UserContext'
 import { useUser } from './contexts/UserContext'
 import { virtualLinesHelper } from './services/api'
+import { clearEnterpriseCache, cleanExpired } from './services/enterpriseCache'
 
 function AppInner() {
   const { user, loading } = useUser();
@@ -133,6 +134,22 @@ function AppContent({ user }) {
   const [isGRSReportOpen, setIsGRSReportOpen] = useState(false);
   const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
   const [selectedLineIsVirtual, setSelectedLineIsVirtual] = useState(false);
+
+  // Clean expired enterprise cache entries on app startup
+  useEffect(() => { cleanExpired(); }, []);
+
+  // Ctrl+Shift+E — clear enterprise cache and re-fetch in all open components
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+        e.preventDefault();
+        clearEnterpriseCache();
+        console.log('[EnterpriseCache] Cache cleared via Ctrl+Shift+E');
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   useEffect(() => {
     try { localStorage.setItem('hlv-active-tab', JSON.stringify(archiveType)); } catch {}
