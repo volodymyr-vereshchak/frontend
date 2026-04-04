@@ -249,20 +249,20 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
           { key: 'd20', label: 'd20', sortable: true, isAveragable: true },
           { key: 'cutoff', label: 'Cutoff', sortable: true, isAveragable: true },
           { key: 'roughness', label: 'Roughness', sortable: true, isAveragable: true },
-          { key: 'max_dp', label: 'Макс. ΔP', sortable: true, isAveragable: true },
-          { key: 'min_dp', label: 'Мин. ΔP', sortable: true, isAveragable: true },
+          { key: 'max_dp', label: t('paramMaxDp'), sortable: true, isAveragable: true },
+          { key: 'min_dp', label: t('paramMinDp'), sortable: true, isAveragable: true },
           { key: 'A0su', label: 'A0su', sortable: true, isAveragable: true },
           { key: 'A1su', label: 'A1su', sortable: true, isAveragable: true },
           { key: 'A2su', label: 'A2su', sortable: true, isAveragable: true },
           { key: 'A0pipe', label: 'A0pipe', sortable: true, isAveragable: true },
           { key: 'A1pipe', label: 'A1pipe', sortable: true, isAveragable: true },
           { key: 'A2pipe', label: 'A2pipe', sortable: true, isAveragable: true },
-          { key: 'radius', label: 'Радиус', sortable: true, isAveragable: true },
-          { key: 'su_year', label: 'SU год', sortable: true, isAveragable: true },
-          { key: 'max_p', label: 'Макс. P', sortable: true, isAveragable: true },
-          { key: 'min_p', label: 'Мин. P', sortable: true, isAveragable: true },
-          { key: 'max_t', label: 'Макс. T', sortable: true, isAveragable: true },
-          { key: 'min_t', label: 'Мин. T', sortable: true, isAveragable: true }
+          { key: 'radius', label: t('paramRadius'), sortable: true, isAveragable: true },
+          { key: 'su_year', label: t('paramSuYear'), sortable: true, isAveragable: true },
+          { key: 'max_p', label: t('paramMaxP'), sortable: true, isAveragable: true },
+          { key: 'min_p', label: t('paramMinP'), sortable: true, isAveragable: true },
+          { key: 'max_t', label: t('paramMaxT'), sortable: true, isAveragable: true },
+          { key: 'min_t', label: t('paramMinT'), sortable: true, isAveragable: true }
         ];
       default:
         return [];

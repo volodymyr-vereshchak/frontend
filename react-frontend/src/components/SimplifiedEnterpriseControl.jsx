@@ -237,8 +237,8 @@ const SimplifiedEnterpriseControl = ({
           className={`enterprise-settings-btn ${isActive ? 'active' : ''}`}
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           disabled={!isActive || loading}
-          title={isActive ? "Настройки промышленности" : "Включите промышленность"}
-          aria-label="Настройки"
+          title={isActive ? t('enterpriseSettings') : t('enableEnterprise')}
+          aria-label={t('enterpriseSettings')}
           aria-expanded={isDropdownOpen}
         >
           <span className="button-icon">⚙️</span>
@@ -252,7 +252,7 @@ const SimplifiedEnterpriseControl = ({
           {loading && (
             <div className="enterprise-loading">
               <div className="loading-spinner"></div>
-              <p>{t('loadingEnterpriseData') || 'Загрузка данных предприятий...'}</p>
+              <p>{t('loadingEnterpriseData')}</p>
               <div className="progress-bar">
                 <div className="progress-bar-fill"></div>
               </div>
@@ -291,7 +291,7 @@ const SimplifiedEnterpriseControl = ({
               {/* Show message if no data */}
               {enterpriseData === null && (
                 <div className="enterprise-empty">
-                  <small>{t('enterpriseNoData') || 'Нет данных по предприятиям'}</small>
+                  <small>{t('enterpriseNoData')}</small>
                 </div>
               )}
             </>

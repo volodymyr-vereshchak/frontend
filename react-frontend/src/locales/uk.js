@@ -262,5 +262,19 @@ export const uk = {
   grsReportModalTitle: "Звіт по обсягах газу за останні 24 години",
   loadingReport: "Завантаження звіту...",
   getReport: "Отримати звіт",
-  clickToGetReport: "Натисніть «Отримати звіт» для завантаження даних"
+  clickToGetReport: "Натисніть «Отримати звіт» для завантаження даних",
+
+  // Enterprise control
+  enterpriseSettings: "Налаштування промисловості",
+  enableEnterprise: "Увімкніть промисловість",
+
+  // Param archive columns
+  paramMaxDp: "Макс. ΔP",
+  paramMinDp: "Мін. ΔP",
+  paramRadius: "Радіус",
+  paramSuYear: "SU рік",
+  paramMaxP: "Макс. P",
+  paramMinP: "Мін. P",
+  paramMaxT: "Макс. T",
+  paramMinT: "Мін. T"
 };

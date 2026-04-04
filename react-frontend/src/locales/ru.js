@@ -262,5 +262,19 @@ export const ru = {
   grsReportModalTitle: "Отчет по объемам газа за последние 24 часа",
   loadingReport: "Загрузка отчета...",
   getReport: "Получить отчет",
-  clickToGetReport: "Нажмите «Получить отчет» для загрузки данных"
+  clickToGetReport: "Нажмите «Получить отчет» для загрузки данных",
+
+  // Enterprise control
+  enterpriseSettings: "Настройки промышленности",
+  enableEnterprise: "Включите промышленность",
+
+  // Param archive columns
+  paramMaxDp: "Макс. ΔP",
+  paramMinDp: "Мин. ΔP",
+  paramRadius: "Радиус",
+  paramSuYear: "SU год",
+  paramMaxP: "Макс. P",
+  paramMinP: "Мин. P",
+  paramMaxT: "Макс. T",
+  paramMinT: "Мин. T"
 };
