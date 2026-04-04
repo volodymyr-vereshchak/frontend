@@ -11,7 +11,7 @@
  */
 
 const TTL = 60 * 60 * 1000; // 1 hour
-const PREFIX = 'ent_';
+const PREFIX = 'ent2_'; // v2: local-time keys (v1 used UTC, caused cache poisoning)
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -66,16 +66,25 @@ export function generatePeriods(fromDate, toDate, periodType) {
   const from = new Date(String(fromDate).slice(0, 10) + 'T00:00:00');
   const to   = new Date(String(toDate).slice(0, 10)   + 'T23:59:59');
 
+  // Use local time helpers to avoid UTC offset shifting periods
+  const localDate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const localHour = (d) => `${localDate(d)}T${String(d.getHours()).padStart(2, '0')}`;
+
   if (periodType === 'hourly') {
     const cur = new Date(from);
     while (cur <= to) {
-      periods.push(cur.toISOString().slice(0, 13)); // YYYY-MM-DDTHH
+      periods.push(localHour(cur)); // YYYY-MM-DDTHH in local time
       cur.setHours(cur.getHours() + 1);
     }
   } else {
     const cur = new Date(from);
     while (cur <= to) {
-      periods.push(cur.toISOString().slice(0, 10)); // YYYY-MM-DD
+      periods.push(localDate(cur)); // YYYY-MM-DD in local time
       cur.setDate(cur.getDate() + 1);
     }
   }
@@ -101,7 +110,7 @@ export function cleanExpired() {
  */
 export function clearEnterpriseCache() {
   Object.keys(localStorage)
-    .filter(k => k.startsWith(PREFIX))
+    .filter(k => k.startsWith(PREFIX) || k.startsWith('ent_'))
     .forEach(k => localStorage.removeItem(k));
   window.dispatchEvent(new CustomEvent('enterprise-cache-cleared'));
 }
