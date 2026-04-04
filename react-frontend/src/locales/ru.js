@@ -241,5 +241,26 @@ export const ru = {
   exportExcel: "Экспорт в Excel",
   status: "Статус",
   statusEnabled: "Включена",
-  statusDisabled: "Отключена"
+  statusDisabled: "Отключена",
+
+  // Shared UI
+  branch: "Филиал",
+  unknownLine: "Линия",
+  flowUnit: "м³/ч",
+  dpUnit: "кг/м²",
+  noPressureData: "Нет данных о давлении",
+  selectBranchPrompt: "Выберите филиал для отображения данных",
+
+  // Error messages
+  noLumgsForBranch: "Нет ЛУМГов для выбранного филиала",
+  noReportLinesForBranch: "Нет линий для отчета в выбранном филиале",
+  noDataFor24h: "Нет данных за последние 24 часа",
+  noLinesData: "Не удалось получить данные линий",
+  noTimeBoundsError: "Не удалось определить временные границы данных",
+
+  // GRS Report modal
+  grsReportModalTitle: "Отчет по объемам газа за последние 24 часа",
+  loadingReport: "Загрузка отчета...",
+  getReport: "Получить отчет",
+  clickToGetReport: "Нажмите «Получить отчет» для загрузки данных"
 };

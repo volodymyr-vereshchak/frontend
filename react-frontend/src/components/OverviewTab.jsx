@@ -82,7 +82,7 @@ const OverviewTab = () => {
         .map(l => l.id);
 
       if (branchLumgIds.length === 0) {
-        throw new Error('Немає ЛУМГів для обраної філії');
+        throw new Error(t('noLumgsForBranch'));
       }
 
       // Fetch lines for all LUMGs in parallel
@@ -92,7 +92,7 @@ const OverviewTab = () => {
       let lines = linesResponses.flatMap(r => Array.isArray(r) ? r : r?.data || []);
 
       if (!Array.isArray(lines) || lines.length === 0) {
-        throw new Error('Не вдалося отримати дані ліній');
+        throw new Error(t('noLinesData'));
       }
 
       // Filter only lines included in report
@@ -100,7 +100,7 @@ const OverviewTab = () => {
       const reportLineIds = lines.map(line => line.id);
 
       if (reportLineIds.length === 0) {
-        throw new Error('Немає ліній з прапором include_in_report для обраної філії');
+        throw new Error(t('noReportLinesForBranch'));
       }
 
       // Fetch parameters for all report lines
@@ -126,16 +126,16 @@ const OverviewTab = () => {
       const allHourlyData = Array.isArray(allHourlyResponse) ? allHourlyResponse : allHourlyResponse?.data || [];
 
       if (!Array.isArray(allHourlyData) || allHourlyData.length === 0) {
-        throw new Error('Нет данных за последние 24 часа');
+        throw new Error(t('noDataFor24h'));
       }
 
       // Find most recent record across all lines
       const allTimestamps = allHourlyData
         .map(r => r.period ? new Date(r.period).getTime() : null)
-        .filter(t => t && !isNaN(t));
+        .filter(ts => ts && !isNaN(ts));
 
       if (allTimestamps.length === 0) {
-        throw new Error('Не удалось определить временные границы данных');
+        throw new Error(t('noTimeBoundsError'));
       }
 
       const currentEnd = new Date(Math.max(...allTimestamps));
@@ -158,7 +158,7 @@ const OverviewTab = () => {
       // Calculate metrics
       const lineNames = {};
       lines.forEach(line => {
-        lineNames[line.id] = line.name || `Линия ${line.id}`;
+        lineNames[line.id] = line.name || `${t('unknownLine')} ${line.id}`;
       });
 
       const currentTotal = OverviewCalculator.calculate24hTotal(last24hData, reportLineIds);
@@ -244,7 +244,7 @@ const OverviewTab = () => {
           {/* Branch selector */}
           <div className="overview-selectors">
             <div className="selector-group">
-              <label className="selector-label">Філія</label>
+              <label className="selector-label">{t('branch')}</label>
               <select
                 className="overview-select"
                 value={selectedBranchId ?? ''}
@@ -274,7 +274,7 @@ const OverviewTab = () => {
       {/* No branch selected */}
       {!selectorLoading && !selectedBranchId && (
         <div className="overview-error">
-          <p className="error-message">Виберіть філію для відображення даних</p>
+          <p className="error-message">{t('selectBranchPrompt')}</p>
         </div>
       )}
 

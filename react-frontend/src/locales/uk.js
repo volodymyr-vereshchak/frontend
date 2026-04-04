@@ -241,5 +241,26 @@ export const uk = {
   exportExcel: "Експорт в Excel",
   status: "Статус",
   statusEnabled: "Включена",
-  statusDisabled: "Відключена"
+  statusDisabled: "Відключена",
+
+  // Shared UI
+  branch: "Філія",
+  unknownLine: "Лінія",
+  flowUnit: "м³/г",
+  dpUnit: "кг/м²",
+  noPressureData: "Немає даних про тиск",
+  selectBranchPrompt: "Виберіть філію для відображення даних",
+
+  // Error messages
+  noLumgsForBranch: "Немає ЛУМГів для обраної філії",
+  noReportLinesForBranch: "Немає ліній для звіту в обраній філії",
+  noDataFor24h: "Немає даних за останні 24 години",
+  noLinesData: "Не вдалося отримати дані ліній",
+  noTimeBoundsError: "Не вдалося визначити часові межі даних",
+
+  // GRS Report modal
+  grsReportModalTitle: "Звіт по обсягах газу за останні 24 години",
+  loadingReport: "Завантаження звіту...",
+  getReport: "Отримати звіт",
+  clickToGetReport: "Натисніть «Отримати звіт» для завантаження даних"
 };

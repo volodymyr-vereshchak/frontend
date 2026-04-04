@@ -60,7 +60,7 @@ const GRSReport = ({ isOpen, onClose }) => {
         .map(l => l.id);
 
       if (branchLumgIds.length === 0) {
-        setError('Немає ЛУМГів для обраної філії');
+        setError(t('noLumgsForBranch'));
         return;
       }
 
@@ -71,7 +71,7 @@ const GRSReport = ({ isOpen, onClose }) => {
       const lines = linesArr.flat().filter(l => l && l.include_in_report);
 
       if (lines.length === 0) {
-        setError('Немає ліній з прапором include_in_report для обраної філії');
+        setError(t('noReportLinesForBranch'));
         return;
       }
 
@@ -79,7 +79,7 @@ const GRSReport = ({ isOpen, onClose }) => {
       const hourlyData = await archiveDataApi.getHourlyDataLast24h(lineIds);
 
       if (!hourlyData || hourlyData.length === 0) {
-        setError('Немає даних за останні 24 години');
+        setError(t('noDataFor24h'));
         return;
       }
 
@@ -220,21 +220,21 @@ const GRSReport = ({ isOpen, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="modal-title">Отчет по объемам газа за последние 24 часа</h3>
+          <h3 className="modal-title">{t('grsReportModalTitle')}</h3>
           <button className="close-button" onClick={onClose}>×</button>
         </div>
 
         <div className="grs-modal-body">
           {/* Branch selector */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>Філія:</label>
+            <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>{t('branch')}:</label>
             <select
               style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
               value={selectedBranchId || ''}
               onChange={handleBranchChange}
               disabled={selectorLoading}
             >
-              {selectorLoading && <option>Завантаження...</option>}
+              {selectorLoading && <option>{t('loading')}</option>}
               {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
@@ -242,20 +242,20 @@ const GRSReport = ({ isOpen, onClose }) => {
           {isLoading && (
             <div className="loading-container">
               <div className="loading-spinner"></div>
-              <p>Загрузка отчета...</p>
+              <p>{t('loadingReport')}</p>
             </div>
           )}
 
           {error && (
             <div className="error-container">
               <div className="error-icon">⚠️</div>
-              <p className="error-message">Ошибка: {error}</p>
+              <p className="error-message">{t('error')}: {error}</p>
             </div>
           )}
 
           {!isLoading && !error && !reportData && (
             <div className="initial-state">
-              <p>Нажмите кнопку "Получить отчет" для загрузки данных</p>
+              <p>{t('clickToGetReport')}</p>
             </div>
           )}
 
@@ -272,10 +272,10 @@ const GRSReport = ({ isOpen, onClose }) => {
             onClick={isLoading ? undefined : (reportData ? handleRefresh : fetchReport)}
             disabled={isLoading || !selectedBranchId}
           >
-            {isLoading ? 'Загрузка...' : (reportData ? 'Обновить' : 'Получить отчет')}
+            {isLoading ? t('loading') : (reportData ? t('refresh') : t('getReport'))}
           </button>
           <button className="btn btn-secondary" onClick={onClose}>
-            Закрыть
+            {t('close')}
           </button>
         </div>
       </div>

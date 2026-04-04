@@ -98,7 +98,7 @@ const FlowComparisonTable = ({ data, lineNames }) => {
         </thead>
         <tbody>
           {sortedData.map((row) => {
-            const lineName = lineNames ? lineNames[row.lineId] : `Линия ${row.lineId}`;
+            const lineName = lineNames ? lineNames[row.lineId] : `${t('unknownLine')} ${row.lineId}`;
             const changeClass = getChangeColor(row.isIncrease, row.isDecrease);
             const isSignificant = isSignificantChange(row.changePercent);
 

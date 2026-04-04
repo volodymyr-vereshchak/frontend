@@ -1,6 +1,7 @@
 import React from 'react';
 import './PressureGaugesGrid.css';
 import PressureGauge from './PressureGauge';
+import { useLanguage } from '../contexts/LanguageContext';
 
 /**
  * Pressure Gauges Grid Component
@@ -14,10 +15,12 @@ const PressureGaugesGrid = ({
   flowComparisons,
   volumeComparisons
 }) => {
+  const { t } = useLanguage();
+
   if (!pressures || Object.keys(pressures).length === 0) {
     return (
       <div className="gauges-grid-empty">
-        <p>Нет данных о давлении</p>
+        <p>{t('noPressureData')}</p>
       </div>
     );
   }
@@ -43,7 +46,7 @@ const PressureGaugesGrid = ({
       {Object.keys(pressures).map(lineIdStr => {
         const lineId = Number(lineIdStr);
         const pressureData = pressures[lineId];
-        const lineName = lineNames ? lineNames[lineId] : `Линия ${lineId}`;
+        const lineName = lineNames ? lineNames[lineId] : `${t('unknownLine')} ${lineId}`;
         const timestamp = timestamps ? timestamps[lineId] : null;
         const isHighPressure = pressureData?.isHighPressure || false;
 
