@@ -285,14 +285,14 @@ const GRSTrends = ({ isOpen, onClose }) => {
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: '#e0e0e0', fontSize: 13 }}>
+            <label className="trends-enterprise-checkbox">
               <input
                 type="checkbox"
                 checked={showEnterprise}
                 onChange={e => setShowEnterprise(e.target.checked)}
                 disabled={isLoading}
               />
-              {t('enterpriseOverlay')}
+              <span>{t('enterpriseOverlay')}</span>
             </label>
           </div>
 

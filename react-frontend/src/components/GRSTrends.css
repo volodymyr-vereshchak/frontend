@@ -1,3 +1,41 @@
+/* Enterprise checkbox — matches main chart style */
+.trends-enterprise-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  background-color: #2a2a2a;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.trends-enterprise-checkbox:hover {
+  border-color: #4CAF50;
+  background-color: #2f2f2f;
+}
+
+.trends-enterprise-checkbox input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: #4CAF50;
+}
+
+.trends-enterprise-checkbox input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.trends-enterprise-checkbox span {
+  font-size: 12px;
+  font-weight: 500;
+  color: #d0d0d0;
+  white-space: nowrap;
+}
+
 /* GRS Trends Modal */
 .grs-trends-modal {
   width: 95vw;
