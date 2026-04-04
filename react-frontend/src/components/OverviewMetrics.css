@@ -103,12 +103,26 @@
   margin-top: 4px;
 }
 
-.lines-count {
+.lines-count-ok {
   color: #B9E42B;
+}
+
+.lines-count-warn {
+  color: #ff6b6b;
 }
 
 .lines-total {
   color: #666666;
+}
+
+.lines-all-active {
+  border-color: rgba(185, 228, 43, 0.35) !important;
+  background: linear-gradient(135deg, #2a2a2a 0%, #2a2f1f 100%) !important;
+}
+
+.lines-partial {
+  border-color: rgba(255, 107, 107, 0.35) !important;
+  background: linear-gradient(135deg, #2a2a2a 0%, #2f1f1f 100%) !important;
 }
 
 /* Responsive adjustments */

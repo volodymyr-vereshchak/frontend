@@ -176,7 +176,7 @@ export const ru = {
 
   // Overview Tab
   grsOverviewTitle: "Обзор ГРС",
-  lastUpdate: "Последнее обновление",
+  lastUpdate: "Данные актуальны на",
   total24hVolume: "Общий объем за 24 часа",
   comparedToPrevious: "по сравнению с предыдущими 24ч",
   linePressures: "Давление по линиям",

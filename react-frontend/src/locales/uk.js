@@ -176,7 +176,7 @@ export const uk = {
 
   // Overview Tab
   grsOverviewTitle: "Огляд ГРС",
-  lastUpdate: "Останнє оновлення",
+  lastUpdate: "Дані актуальні на",
   total24hVolume: "Загальний обсяг за 24 години",
   comparedToPrevious: "порівняно з попередніми 24г",
   linePressures: "Тиск по лініях",

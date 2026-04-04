@@ -185,8 +185,21 @@ export class OverviewCalculator {
         isMeter: line.meter === true
       } : null;
 
+      // Min/max pressure over all 24h records (with same formula applied)
+      const pressureValues = lineRecords.map(r => {
+        let p = r.pressure || 0;
+        if (!isHighPressure && line && !line.meter) {
+          p = p - ((r.w_volume_dp || 0) / 10000);
+        }
+        return Math.round(p * 1000) / 1000;
+      });
+      const minPressure24h = pressureValues.length ? Math.min(...pressureValues) : null;
+      const maxPressure24h = pressureValues.length ? Math.max(...pressureValues) : null;
+
       pressures[lineId] = {
         pressure: pressure,
+        minPressure24h,
+        maxPressure24h,
         timestamp: lastRecord.periodDate,
         isHighPressure: isHighPressure,
         recordCount: lineRecords.length,

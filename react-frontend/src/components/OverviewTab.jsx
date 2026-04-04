@@ -178,6 +178,12 @@ const OverviewTab = () => {
         pressureTimestamps[lineId] = pressures[lineId].timestamp;
       });
 
+      // Active = line whose last timestamp matches the branch's last period (within 1 min)
+      const currentEndMs = currentEnd.getTime();
+      const activeLines = Object.values(pressures).filter(p =>
+        p.timestamp && Math.abs(new Date(p.timestamp).getTime() - currentEndMs) < 60 * 1000
+      ).length;
+
       setData({
         totalVolume24h: currentTotal,
         volumeComparison,
@@ -186,13 +192,13 @@ const OverviewTab = () => {
         pressures,
         lineNames,
         pressureTimestamps,
-        activeLines: Object.keys(pressures).length,
+        activeLines,
         totalLines: reportLineIds.length,
         currentPeriod: { start: currentStart, end: currentEnd },
         previousPeriod: { start: previousStart, end: previousEnd }
       });
 
-      setLastUpdateTime(new Date());
+      setLastUpdateTime(currentEnd);
     } catch (err) {
       console.error('Error loading overview data:', err);
       setError(err.message || 'Ошибка загрузки данных');

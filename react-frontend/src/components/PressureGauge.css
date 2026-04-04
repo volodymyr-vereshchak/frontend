@@ -7,23 +7,19 @@
   align-items: center;
   gap: 8px;
   border: 1px solid #3E3E3E;
-  transition: all 0.3s ease;
-  height: 100%;
-  min-height: 360px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  min-height: 0;
 }
 
 .pressure-gauge:hover {
   border-color: #B9E42B;
-  box-shadow: 0 0 10px rgba(185, 228, 43, 0.2);
+  box-shadow: 0 0 10px rgba(185, 228, 43, 0.15);
 }
 
+/* Header */
 .gauge-header {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 4px;
+  text-align: center;
 }
 
 .gauge-line-name {
@@ -36,57 +32,96 @@
   max-width: 100%;
 }
 
-.gauge-range-label {
-  font-size: 11px;
-  color: #999999;
+/* Pressure block */
+.gauge-pressure-block {
+  width: 100%;
+  background: #1a1a1a;
+  border-radius: 10px;
+  padding: 14px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.gauge-pressure-current {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.pressure-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: #B9E42B;
+  font-family: 'Courier New', Courier, monospace;
+  line-height: 1;
+}
+
+.pressure-unit {
+  font-size: 13px;
+  color: #888888;
   font-weight: 500;
 }
 
-.gauge-svg {
+.gauge-pressure-minmax {
+  display: flex;
+  align-items: center;
+  gap: 0;
   width: 100%;
-  max-width: 200px;
-  height: auto;
-  margin: 0 auto;
+  justify-content: center;
 }
 
-.gauge-value {
+.minmax-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  margin-top: -8px;
+  flex: 1;
 }
 
-.value-number {
-  font-size: 24px;
+.minmax-label {
+  font-size: 9px;
   font-weight: 700;
-  line-height: 1;
-  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666666;
 }
 
-.value-unit {
-  font-size: 12px;
-  color: #999999;
+.minmax-item:first-child .minmax-label { color: #5b9bd5; }
+.minmax-item:last-child  .minmax-label { color: #d57a5b; }
+
+.minmax-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #cccccc;
+  font-family: 'Courier New', Courier, monospace;
 }
 
+.minmax-divider {
+  width: 1px;
+  height: 28px;
+  background: #3E3E3E;
+  margin: 0 12px;
+}
+
+/* Timestamp */
 .gauge-footer {
   width: 100%;
   text-align: center;
-  margin-top: 4px;
 }
 
 .gauge-time {
   font-size: 11px;
-  color: #666666;
+  color: #555555;
 }
 
-/* Data sections - flow and volume */
+/* Data sections */
 .gauge-data-section {
   width: 100%;
   background: #1f1f1f;
   border-radius: 6px;
   padding: 8px 10px;
-  margin-top: 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -130,65 +165,17 @@
   font-weight: 600;
 }
 
-.data-change .change-icon {
-  font-size: 14px;
-  font-weight: 700;
-}
+.data-change .change-icon { font-size: 14px; font-weight: 700; }
+.data-change.increase { color: #90EE90; }
+.data-change.decrease { color: #ff6b6b; }
+.data-change.neutral  { color: #999999; }
 
-.data-change.increase {
-  color: #90EE90;
-}
-
-.data-change.decrease {
-  color: #ff6b6b;
-}
-
-.data-change.neutral {
-  color: #999999;
-}
-
-/* Responsive adjustments */
-@media (max-width: 480px) {
-  .pressure-gauge {
-    min-height: 340px;
-    padding: 12px;
-  }
-
-  .gauge-line-name {
-    font-size: 12px;
-  }
-
-  .value-number {
-    font-size: 20px;
-  }
-
-  .value-unit {
-    font-size: 10px;
-  }
-
-  .data-value {
-    font-size: 14px;
-  }
-
-  .data-unit {
-    font-size: 9px;
-  }
-
-  .data-change {
-    font-size: 11px;
-  }
-}
-
-/* dP Pressure Differential Section */
+/* dP section */
 .dp-section {
-  background: linear-gradient(135deg, #1f1f1f 0%, #252525 100%);
   border: 1px solid #3E3E3E;
 }
 
-.dp-bar-container {
-  width: 100%;
-  margin-top: 4px;
-}
+.dp-bar-container { width: 100%; margin-top: 4px; }
 
 .dp-bar-track {
   position: relative;
@@ -199,16 +186,9 @@
 
 .dp-bar-background {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg,
-    #90EE90 0%,
-    #B9E42B 33%,
-    #FFA500 66%,
-    #ff6b6b 100%
-  );
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, #90EE90 0%, #B9E42B 33%, #FFA500 66%, #ff6b6b 100%);
   border-radius: 6px;
   opacity: 0.3;
 }
@@ -227,70 +207,34 @@
   position: relative;
 }
 
-/* Current value marker - green */
 .dp-bar-marker-current {
   background: #B9E42B;
-  box-shadow: 0 0 8px rgba(185, 228, 43, 0.8),
-              0 0 4px rgba(185, 228, 43, 0.6);
+  box-shadow: 0 0 8px rgba(185,228,43,0.8), 0 0 4px rgba(185,228,43,0.6);
 }
-
 .dp-bar-marker-current::before {
   content: '';
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 4px solid #B9E42B;
+  position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent; border-top-color: #B9E42B;
 }
-
 .dp-bar-marker-current::after {
   content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-bottom: 4px solid #B9E42B;
+  position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent; border-bottom-color: #B9E42B;
 }
 
-/* Max value marker - orange */
 .dp-bar-marker-max {
   background: #FF9500;
-  box-shadow: 0 0 8px rgba(255, 149, 0, 0.8),
-              0 0 4px rgba(255, 149, 0, 0.6);
+  box-shadow: 0 0 8px rgba(255,149,0,0.8), 0 0 4px rgba(255,149,0,0.6);
 }
-
 .dp-bar-marker-max::before {
   content: '';
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 4px solid #FF9500;
+  position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent; border-top-color: #FF9500;
 }
-
 .dp-bar-marker-max::after {
   content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-bottom: 4px solid #FF9500;
+  position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
+  border: 4px solid transparent; border-bottom-color: #FF9500;
 }
 
 .dp-bar-labels {
@@ -302,12 +246,10 @@
   margin-top: 2px;
 }
 
-.dp-label-min,
-.dp-label-max {
+.dp-label-min, .dp-label-max {
   font-family: 'Courier New', Courier, monospace;
 }
 
-/* Values container with legend */
 .dp-values-container {
   display: flex;
   flex-direction: column;
@@ -315,11 +257,7 @@
   margin-top: 8px;
 }
 
-.dp-value-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+.dp-value-item { display: flex; flex-direction: column; gap: 2px; }
 
 .dp-value-legend {
   display: flex;
@@ -330,41 +268,12 @@
 }
 
 .dp-legend-marker {
-  width: 12px;
-  height: 3px;
+  width: 12px; height: 3px;
   border-radius: 1px;
   flex-shrink: 0;
 }
 
-.dp-legend-marker-current {
-  background: #B9E42B;
-  box-shadow: 0 0 4px rgba(185, 228, 43, 0.6);
-}
-
-.dp-legend-marker-max {
-  background: #FF9500;
-  box-shadow: 0 0 4px rgba(255, 149, 0, 0.6);
-}
-
-.dp-legend-label {
-  font-weight: 600;
-}
-
-.dp-value-row {
-  margin-top: 0;
-}
-
-@media (max-width: 480px) {
-  .dp-bar-track {
-    height: 10px;
-  }
-
-  .dp-bar-marker {
-    width: 2px;
-    height: 16px;
-  }
-
-  .dp-bar-labels {
-    font-size: 8px;
-  }
-}
+.dp-legend-marker-current { background: #B9E42B; box-shadow: 0 0 4px rgba(185,228,43,0.6); }
+.dp-legend-marker-max     { background: #FF9500; box-shadow: 0 0 4px rgba(255,149,0,0.6); }
+.dp-legend-label          { font-weight: 600; }
+.dp-value-row             { margin-top: 0; }

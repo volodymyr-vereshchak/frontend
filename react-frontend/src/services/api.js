@@ -262,13 +262,20 @@ export const archiveDataApi = {
     return await apiClient.get('/hourly/', params);
   },
 
+  async getLastPeriod(lineIds = []) {
+    const params = lineIds.length ? { line_id: lineIds } : {};
+    const result = await apiClient.get('/hourly_last_period/', params);
+    return result?.last_period ? new Date(result.last_period) : null;
+  },
+
   async getHourlyDataLast24h(lineIds = grsConfig.LINES_IDS) {
     try {
-      const now = new Date();
-      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const endDate = tomorrow.toISOString().split('T')[0];
-      // 3 days covers current 24h + previous 24h + buffer for sparse lines
-      const startDate = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      // Use last available period for these specific lines as anchor
+      const lastPeriod = await this.getLastPeriod(lineIds);
+      const anchor = lastPeriod || new Date();
+      const endDate = new Date(anchor.getTime() + 60 * 60 * 1000).toISOString().split('T')[0];
+      // 48h covers current 24h + previous 24h for comparison
+      const startDate = new Date(anchor.getTime() - 48 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const result = await this.getHourlyData(lineIds, startDate, endDate);
       return (result && result.length > 0) ? result : [];

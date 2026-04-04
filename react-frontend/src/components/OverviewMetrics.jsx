@@ -16,11 +16,12 @@ const OverviewMetrics = ({ totalVolume24h, volumeComparison, lastUpdate, activeL
 
   const formatTime = (date) => {
     if (!date) return '—';
-    return new Date(date).toLocaleTimeString('ru', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const time = d.toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+    return `${day}.${month}.${year} ${time}`;
   };
 
   // Determine arrow icon and color for volume comparison
@@ -80,19 +81,22 @@ const OverviewMetrics = ({ totalVolume24h, volumeComparison, lastUpdate, activeL
       </div>
 
       {/* Active Lines Card */}
-      <div className="metric-card lines-card">
-        <div className="card-icon">📍</div>
-        <div className="card-content">
-          <div className="card-label">{t('activeLines')}</div>
-          <div className="card-value-small">
-            <span className="lines-count">{activeLines || 0}</span>
-            <span className="lines-total"> / {totalLines || 0}</span>
+      {(() => {
+        const allActive = (activeLines || 0) === (totalLines || 0) && totalLines > 0;
+        return (
+          <div className={`metric-card lines-card ${allActive ? 'lines-all-active' : 'lines-partial'}`}>
+            <div className="card-content">
+              <div className="card-label">{t('activeLines')}</div>
+              <div className="card-value-small">
+                <span className={`lines-count ${allActive ? 'lines-count-ok' : 'lines-count-warn'}`}>
+                  {activeLines || 0}
+                </span>
+                <span className="lines-total"> / {totalLines || 0}</span>
+              </div>
+            </div>
           </div>
-          <div className="card-subtitle">
-            {activeLines === totalLines ? 'Все линии активны' : 'Не все линии активны'}
-          </div>
-        </div>
-      </div>
+        );
+      })()}
     </div>
   );
 };
