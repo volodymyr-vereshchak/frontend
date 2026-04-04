@@ -115,6 +115,19 @@
   color: #666666;
 }
 
+.update-card,
+.lines-card {
+  justify-content: center;
+  align-items: center;
+}
+
+.update-card .card-content,
+.lines-card .card-content {
+  align-items: center;
+  text-align: center;
+  flex: unset;
+}
+
 .lines-all-active {
   border-color: rgba(185, 228, 43, 0.35) !important;
   background: linear-gradient(135deg, #2a2a2a 0%, #2a2f1f 100%) !important;

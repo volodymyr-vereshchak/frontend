@@ -385,9 +385,9 @@
 
         <div class="controls">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-                <label style="font-size:13px;font-weight:500;color:#B9E42B;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Філія:</label>
+                <label id="branchLabel" style="font-size:13px;font-weight:500;color:#B9E42B;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Філія:</label>
                 <select id="branchSelect" onchange="handleBranchChange()" style="background:#1a1a1a;color:#e0e0e0;border:1px solid #404040;border-radius:6px;padding:8px 12px;font-size:13px;min-width:200px;">
-                    <option value="">Завантаження...</option>
+                    <option value="" id="branchLoadingOption">Завантаження...</option>
                 </select>
             </div>
             <div class="date-controls">
@@ -412,15 +412,10 @@
                 <button class="btn btn-primary" id="loadBtn" onclick="loadTrends()">
                     Загрузить данные
                 </button>
-                <div class="period-toggle">
-                    <label>Промышленность:</label>
-                    <div class="toggle-group" style="width: auto;">
-                        <input type="checkbox" id="enterpriseToggle" onchange="handleEnterpriseToggle()">
-                        <label for="enterpriseToggle" class="toggle-option" style="padding: 12px 20px;">
-                            📊 Промышленность
-                        </label>
-                    </div>
-                </div>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#d0d0d0;font-size:13px;font-weight:500;padding:8px 12px;border:1px solid #404040;border-radius:6px;background:#1a1a1a;transition:border-color .2s;" onmouseover="this.style.borderColor='#4CAF50'" onmouseout="this.style.borderColor=document.getElementById('enterpriseToggle').checked?'#4CAF50':'#404040'">
+                    <input type="checkbox" id="enterpriseToggle" onchange="handleEnterpriseToggle();this.closest('label').style.borderColor=this.checked?'#4CAF50':'#404040'" style="width:15px;height:15px;cursor:pointer;accent-color:#4CAF50;">
+                    <span id="enterpriseToggleLabel">Промышленность</span>
+                </label>
             </div>
         </div>
 
@@ -441,7 +436,7 @@
 
             <div id="enterpriseLoading" class="loading" style="display: none;">
                 <div class="spinner"></div>
-                <p>Загрузка данных промышленности...</p>
+                <p id="enterpriseLoadingText">Загрузка данных промышленности...</p>
                 <div class="enterprise-progress-bar">
                     <div class="enterprise-progress-fill"></div>
                 </div>
@@ -461,6 +456,117 @@
     </div>
 
     <script>
+        // ─── Enterprise Cache (localStorage, TTL 1h) ──────────────────────────
+        const ENT_TTL = 60 * 60 * 1000;
+        const ENT_PREFIX = 'ent_';
+
+        function entMakeKey(periodType, lineId, period) {
+            return ENT_PREFIX + (periodType === 'hourly' ? 'h' : 'd') + '_' + lineId + '_' + period;
+        }
+
+        function entNormalizePeriod(period, periodType) {
+            const s = String(period).replace(' ', 'T');
+            return periodType === 'hourly' ? s.slice(0, 13) : s.slice(0, 10);
+        }
+
+        function entGeneratePeriods(fromDate, toDate, periodType) {
+            const periods = [];
+            const from = new Date(String(fromDate).slice(0, 10) + 'T00:00:00');
+            const to   = new Date(String(toDate).slice(0, 10)   + 'T23:59:59');
+            if (periodType === 'hourly') {
+                const cur = new Date(from);
+                while (cur <= to) { periods.push(cur.toISOString().slice(0, 13)); cur.setHours(cur.getHours() + 1); }
+            } else {
+                const cur = new Date(from);
+                while (cur <= to) { periods.push(cur.toISOString().slice(0, 10)); cur.setDate(cur.getDate() + 1); }
+            }
+            return periods;
+        }
+
+        function entRead(key) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (!raw) return undefined;
+                const entry = JSON.parse(raw);
+                if (Date.now() - entry.ts > ENT_TTL) { localStorage.removeItem(key); return undefined; }
+                return entry.data;
+            } catch { return undefined; }
+        }
+
+        function entWrite(key, data) {
+            try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch {}
+        }
+
+        function entCleanExpired() {
+            Object.keys(localStorage).filter(k => k.startsWith(ENT_PREFIX)).forEach(k => {
+                try {
+                    const e = JSON.parse(localStorage.getItem(k));
+                    if (!e || Date.now() - e.ts > ENT_TTL) localStorage.removeItem(k);
+                } catch { localStorage.removeItem(k); }
+            });
+        }
+
+        function entClearAll() {
+            Object.keys(localStorage).filter(k => k.startsWith(ENT_PREFIX)).forEach(k => localStorage.removeItem(k));
+        }
+
+        async function entGetWithCache(lineIds, fromDate, toDate, periodType, fetchFn) {
+            const periods = entGeneratePeriods(fromDate, toDate, periodType);
+            const cachedRecords = [];
+            const missingByLine = {};
+
+            for (const lineId of lineIds) {
+                for (const period of periods) {
+                    const cached = entRead(entMakeKey(periodType, lineId, period));
+                    if (cached === undefined) {
+                        if (!missingByLine[lineId]) missingByLine[lineId] = [];
+                        missingByLine[lineId].push(period);
+                    } else if (cached !== null && cached.length > 0) {
+                        cachedRecords.push({ line_id: lineId, period, devices: cached });
+                    }
+                }
+            }
+
+            const missingLines = Object.keys(missingByLine).map(Number);
+            if (missingLines.length === 0) { console.log('[EntCache] Full hit'); return cachedRecords; }
+
+            const allMissing = Object.values(missingByLine).flat().sort();
+            const fetchFrom = allMissing[0].slice(0, 10);
+            const fetchTo   = allMissing[allMissing.length - 1].slice(0, 10);
+            console.log(`[EntCache] Fetching ${missingLines.length} lines (${fetchFrom}→${fetchTo})`);
+
+            let freshData = [];
+            try { freshData = await fetchFn(missingLines, fetchFrom, fetchTo, periodType) || []; }
+            catch (e) { console.error('[EntCache] Fetch error:', e); return cachedRecords; }
+
+            const lookup = {};
+            for (const rec of freshData) {
+                const pk = entNormalizePeriod(rec.period, periodType);
+                if (!lookup[rec.line_id]) lookup[rec.line_id] = {};
+                lookup[rec.line_id][pk] = rec.devices || [];
+            }
+            for (const lineId of missingLines) {
+                for (const period of missingByLine[lineId]) {
+                    const devices = lookup[lineId]?.[period];
+                    entWrite(entMakeKey(periodType, lineId, period), devices !== undefined ? devices : null);
+                }
+            }
+            return [...cachedRecords, ...freshData];
+        }
+
+        // Ctrl+Shift+E — clear enterprise cache and reload trends
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+                e.preventDefault();
+                entClearAll();
+                console.log('[EntCache] Cleared via Ctrl+Shift+E');
+                loadTrends(); // re-fetch everything
+            }
+        });
+
+        // Clean expired entries on load
+        entCleanExpired();
+
         // Translations
         const translations = {
             ru: {
@@ -481,7 +587,11 @@
                 loading: 'Загрузка данных...',
                 noData: 'Нет данных для отображения',
                 error: 'Ошибка загрузки данных:',
-                selectDates: 'Пожалуйста, выберите даты'
+                selectDates: 'Пожалуйста, выберите даты',
+                enterpriseOverlay: 'Промышленность',
+                loadingEnterprise: 'Загрузка данных промышленности...',
+                branch: 'Филиал:',
+                branchLoading: 'Загрузка...'
             },
             uk: {
                 title: 'Тренди ГРС',
@@ -501,7 +611,11 @@
                 loading: 'Завантаження даних...',
                 noData: 'Немає даних для відображення',
                 error: 'Помилка завантаження даних:',
-                selectDates: 'Будь ласка, оберіть дати'
+                selectDates: 'Будь ласка, оберіть дати',
+                enterpriseOverlay: 'Промисловість',
+                loadingEnterprise: 'Завантаження даних промисловості...',
+                branch: 'Філія:',
+                branchLoading: 'Завантаження...'
             }
         };
 
@@ -526,6 +640,11 @@
             document.querySelector('#loadBtn').textContent = t('loadData');
             document.querySelector('#loadingText').textContent = t('loading');
             document.querySelector('#noDataText').textContent = t('noData');
+            document.querySelector('#enterpriseToggleLabel').textContent = t('enterpriseOverlay');
+            document.querySelector('#enterpriseLoadingText').textContent = t('loadingEnterprise');
+            document.querySelector('#branchLabel').textContent = t('branch');
+            const branchLoadingOption = document.querySelector('#branchLoadingOption');
+            if (branchLoadingOption) branchLoadingOption.textContent = t('branchLoading');
 
             // Update chart title/description based on current mode
             updateChartLabels();
@@ -684,9 +803,9 @@
         }
 
         // Fetch enterprise volumes from API with retry logic (3 attempts)
-        async function fetchEnterpriseVolumes(fromDate, toDate, periodType) {
+        async function fetchEnterpriseVolumes(fromDate, toDate, periodType, lines) {
             const params = new URLSearchParams();
-            GRS_LINES.forEach(lineId => params.append('line_id', lineId));
+            (lines || GRS_LINES).forEach(lineId => params.append('line_id', lineId));
             params.append('from_date', fromDate);
             params.append('to_date', toDate);
             params.append('period_type', periodType);
@@ -767,7 +886,10 @@
                 // For hourly, use commercial day range: fromDate 07:00 to toDate 06:00
                 const entFrom = currentPeriodType === 'hourly' ? fromDate + 'T07:00:00' : fromDate;
                 const entTo = currentPeriodType === 'hourly' ? toDate + 'T06:00:00' : toDate;
-                const data = await fetchEnterpriseVolumes(entFrom, entTo, currentPeriodType);
+                const data = await entGetWithCache(
+                    GRS_LINES, entFrom, entTo, currentPeriodType,
+                    (lines, from, to, type) => fetchEnterpriseVolumes(from, to, type, lines)
+                );
 
                 console.log('Enterprise API response:', data.length, 'records');
                 console.log('Sample enterprise data:', data.slice(0, 2));

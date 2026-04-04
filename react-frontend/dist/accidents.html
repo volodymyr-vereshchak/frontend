@@ -680,11 +680,6 @@
                     option.textContent = branch.name;
                     branchSelect.appendChild(option);
                 });
-                // Автовибір першої філії
-                if (allBranches.length > 0) {
-                    branchSelect.value = allBranches[0].id;
-                }
-
                 updateCalcSelect();
             } catch (error) {
                 console.error('Ошибка загрузки данных:', error);
@@ -769,6 +764,8 @@
                 // Определяем какие линии загружать
                 let lineIds = [];
 
+                const branchId = document.getElementById('branchSelect').value;
+
                 if (lineId) {
                     // Выбрана конкретная линия
                     lineIds = [lineId];
@@ -776,6 +773,13 @@
                     // Выбран вычислитель - берем все его линии
                     lineIds = allLines
                         .filter(line => line.gas_volume_calc_id == calcId)
+                        .map(line => line.id);
+                } else if (branchId) {
+                    // Выбрана только філія - берем все линии этой філії
+                    const branchLumgIds = allLumgs.filter(l => l.branch_id == branchId).map(l => l.id);
+                    const branchCalcIds = allCalcs.filter(c => branchLumgIds.includes(c.lumg_id)).map(c => c.id);
+                    lineIds = allLines
+                        .filter(line => branchCalcIds.includes(line.gas_volume_calc_id))
                         .map(line => line.id);
                 } else {
                     // Ничего не выбрано - берем все линии
@@ -793,6 +797,14 @@
 
                 // Запрос к /sys/ эндпоинту
                 const response = await fetch(`${API_URL}/sys/?${params}`);
+                if (!response.ok) {
+                    const errBody = await response.json().catch(() => ({}));
+                    const detail = errBody.detail || '';
+                    if (response.status === 400 && detail.toLowerCase().includes('exceed')) {
+                        throw new Error('Занадто великий діапазон дат. Зменшіть проміжок та спробуйте знову.');
+                    }
+                    throw new Error(detail || `HTTP ${response.status}`);
+                }
                 const sysData = await response.json();
 
                 // Обработка данных
@@ -1081,6 +1093,7 @@
         window.loadAccidentsData = loadAccidentsData;
         window.exportToExcel = exportToExcel;
         window.handleCalcChange = handleCalcChange;
+        window.handleBranchChange = handleBranchChange;
 
         // Запуск при загрузке страницы
         initializePage();
