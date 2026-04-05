@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DataTable.css';
-import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper } from '../services/api';
+import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper, enterpriseApi, enterpriseVirtualApi } from '../services/api';
+import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import * as XLSX from 'xlsx';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -20,9 +21,26 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const [sortConfig, setSortConfig] = useState({ key: 'period', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
+  const [exportWithEnterprise, setExportWithEnterprise] = useState(false);
+
+  // Format period value for Excel export
+  const formatPeriodForExcel = (value) => {
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return value || '';
+    const locale = getLocale();
+    if (archiveType === 'daily') {
+      return date.toLocaleDateString(locale);
+    } else if (archiveType === 'hourly') {
+      return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
+    } else if (archiveType === 'edit' || archiveType === 'sys') {
+      return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    } else {
+      return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+  };
 
   // Excel export function
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (!rowData || rowData.length === 0) {
       alert(t('noDataExport'));
       return;
@@ -31,6 +49,116 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     try {
       const columns = getColumns();
 
+      // ── Enterprise export (daily/hourly only) ──────────────────────────────
+      if (exportWithEnterprise && (archiveType === 'daily' || archiveType === 'hourly') && selectedLines && selectedLines.length > 0) {
+        // Sort data chronologically
+        const sortedData = [...rowData].sort((a, b) => new Date(a.period) - new Date(b.period));
+        const fromDate = String(sortedData[0].period).slice(0, 10);
+        const toDate   = String(sortedData[sortedData.length - 1].period).slice(0, 10);
+        const periodType = archiveType === 'hourly' ? 'hourly' : 'daily';
+
+        const fetchFn = isVirtualLine
+          ? (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
+          : (lines, from, to, type) => enterpriseApi.getEnterpriseVolumes(lines, from, to, type);
+
+        const rawEnterprise = await getEnterpriseWithCache(selectedLines, fromDate, toDate, periodType, fetchFn) || [];
+
+        // Build per-period, per-enterprise breakdown
+        const entByPeriod = {}; // period key -> { entName -> volume }
+        const entNames = new Set();
+
+        rawEnterprise.forEach(record => {
+          const raw = String(record.period || '').replace(' ', 'T');
+          const pk  = archiveType === 'hourly' ? raw.slice(0, 13) : raw.slice(0, 10);
+          if (!entByPeriod[pk]) entByPeriod[pk] = {};
+          (record.devices || []).forEach(device => {
+            const name = device.enterprise_name || 'Unknown';
+            entNames.add(name);
+            entByPeriod[pk][name] = (entByPeriod[pk][name] || 0) + (device.volume || 0);
+          });
+        });
+
+        const sortedEntNames = [...entNames].sort();
+
+        // Build headers: archive columns + enterprise columns + totals
+        const archiveHeaders = columns.map(col => col.label);
+        const entHeaders     = sortedEntNames;
+        const extraHeaders   = [t('totalEnterpriseVolume'), t('netVolume')];
+        const headers        = [...archiveHeaders, ...entHeaders, ...extraHeaders];
+
+        // Build data rows
+        const dataRows = sortedData.map(row => {
+          const archiveCells = columns.map(col => {
+            const value = row[col.key];
+            if (col.key === 'period' && value) return formatPeriodForExcel(value);
+            if (typeof value === 'number') return value;
+            return value || '';
+          });
+
+          const raw = String(row.period || '').replace(' ', 'T');
+          const pk  = archiveType === 'hourly' ? raw.slice(0, 13) : raw.slice(0, 10);
+          const entData = entByPeriod[pk] || {};
+
+          const entCells = sortedEntNames.map(name => entData[name] || 0);
+          const totalEnt = entCells.reduce((s, v) => s + v, 0);
+          const lineVol  = row.volume || 0;
+          const netVol   = lineVol - totalEnt;
+
+          return [...archiveCells, ...entCells, totalEnt, netVol];
+        });
+
+        // Summary row
+        const summaryArchive = columns.map(col => {
+          if (col.key === 'period') return t('total');
+          if (col.isSummable) return sortedData.reduce((s, row) => s + (parseFloat(row[col.key]) || 0), 0);
+          return '';
+        });
+        const summaryEnt = sortedEntNames.map(name =>
+          sortedData.reduce((s, row) => {
+            const raw = String(row.period || '').replace(' ', 'T');
+            const pk  = archiveType === 'hourly' ? raw.slice(0, 13) : raw.slice(0, 10);
+            return s + ((entByPeriod[pk] || {})[name] || 0);
+          }, 0)
+        );
+        const summaryTotalEnt = summaryEnt.reduce((s, v) => s + v, 0);
+        const summaryLineVol  = sortedData.reduce((s, row) => s + (row.volume || 0), 0);
+        const summaryNetVol   = summaryLineVol - summaryTotalEnt;
+        const summaryRow      = [...summaryArchive, ...summaryEnt, summaryTotalEnt, summaryNetVol];
+
+        // Build workbook
+        const allRows = [headers, ...dataRows, summaryRow];
+        const workbook  = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet(allRows);
+
+        // Column widths
+        worksheet['!cols'] = headers.map((h, i) => {
+          const maxLen = Math.max(h.length, ...dataRows.map(r => String(r[i] ?? '').length));
+          return { wch: Math.min(Math.max(maxLen + 3, 12), 50) };
+        });
+
+        // Number format
+        const range = XLSX.utils.decode_range(worksheet['!ref']);
+        for (let r = 1; r <= range.e.r; r++) {
+          for (let c = range.s.c; c <= range.e.c; c++) {
+            const addr = XLSX.utils.encode_cell({ r, c });
+            if (worksheet[addr] && typeof worksheet[addr].v === 'number') {
+              worksheet[addr].z = '#,##0.00';
+            }
+          }
+        }
+
+        const archiveTypeNames = { daily: t('dailyArchive'), hourly: t('hourlyArchive') };
+        XLSX.utils.book_append_sheet(workbook, worksheet, archiveTypeNames[archiveType] || archiveType);
+
+        const now = new Date();
+        const ts  = now.toISOString().slice(0, 19).replace(/[T:]/g, '_');
+        const fileArchiveNames = { daily: t('dailyArchiveFile'), hourly: t('hourlyArchiveFile') };
+        XLSX.writeFile(workbook, `${fileArchiveNames[archiveType] || archiveType}_enterprise_${ts}.xlsx`);
+        return;
+      }
+
+      // ── Standard export ────────────────────────────────────────────────────
+
       // Prepare header row
       const headers = columns.map(col => col.label);
 
@@ -38,50 +166,8 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       const dataRows = rowData.map(row => {
         return columns.map(col => {
           let value = row[col.key];
-
-          // Format dates for Excel
-          if (col.key === 'period' && value) {
-            const date = new Date(value);
-            if (!isNaN(date.getTime())) {
-              const locale = getLocale();
-
-              // For daily archive, export only date (no time)
-              if (archiveType === 'daily') {
-                return date.toLocaleDateString(locale);
-              }
-              // For hourly archive, export date and time (without seconds)
-              else if (archiveType === 'hourly') {
-                return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false
-                });
-              }
-              // For edit and sys archives, format with seconds
-              else if (archiveType === 'edit' || archiveType === 'sys') {
-                return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                  hour12: false
-                });
-              }
-              // For other archives (param), use default format
-              else {
-                return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false
-                });
-              }
-            }
-          }
-
-          // Return numbers as-is for Excel
-          if (typeof value === 'number') {
-            return value;
-          }
-
+          if (col.key === 'period' && value) return formatPeriodForExcel(value);
+          if (typeof value === 'number') return value;
           return value || '';
         });
       });
@@ -692,14 +778,27 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
             <>
               <span style={{marginRight: '15px'}}>{t('records')}: {getRecordCount()}</span>
               {rowData && rowData.length > 0 && (
-                <button
-                  className="excel-export-btn"
-                  onClick={exportToExcel}
-                  title={t('export')}
-                >
-                  <ExcelIcon color="#000000" />
-                  <span>{t('excel')}</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {(archiveType === 'daily' || archiveType === 'hourly') && selectedLines && selectedLines.length > 0 && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer', color: '#ccc', whiteSpace: 'nowrap' }}>
+                      <input
+                        type="checkbox"
+                        checked={exportWithEnterprise}
+                        onChange={e => setExportWithEnterprise(e.target.checked)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      {t('enterpriseOverlay')}
+                    </label>
+                  )}
+                  <button
+                    className="excel-export-btn"
+                    onClick={exportToExcel}
+                    title={t('export')}
+                  >
+                    <ExcelIcon color="#000000" />
+                    <span>{t('excel')}</span>
+                  </button>
+                </div>
               )}
             </>
           )}
