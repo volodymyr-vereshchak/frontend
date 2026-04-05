@@ -22,6 +22,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(50);
   const [exportWithEnterprise, setExportWithEnterprise] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Format period value for Excel export
   const formatPeriodForExcel = (value) => {
@@ -46,6 +47,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       return;
     }
 
+    setIsExporting(true);
     try {
       const columns = getColumns();
 
@@ -278,6 +280,8 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     } catch (error) {
       console.error('Error exporting to Excel:', error);
       alert(t('exportError'));
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -794,9 +798,14 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
                     className="excel-export-btn"
                     onClick={exportToExcel}
                     title={t('export')}
+                    disabled={isExporting}
+                    style={isExporting ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
                   >
-                    <ExcelIcon color="#000000" />
-                    <span>{t('excel')}</span>
+                    {isExporting
+                      ? <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: '16px' }}>⏳</span>
+                      : <ExcelIcon color="#000000" />
+                    }
+                    <span>{isExporting ? t('loading') : t('excel')}</span>
                   </button>
                 </div>
               )}
