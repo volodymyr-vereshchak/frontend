@@ -101,8 +101,8 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
           const pk  = archiveType === 'hourly' ? raw.slice(0, 13) : raw.slice(0, 10);
           const entData = entByPeriod[pk] || {};
 
-          const entCells = sortedEntNames.map(name => entData[name] || 0);
-          const totalEnt = entCells.reduce((s, v) => s + v, 0);
+          const entCells = sortedEntNames.map(name => entData[name] != null ? entData[name] : '');
+          const totalEnt = entCells.reduce((s, v) => s + (v !== '' ? v : 0), 0);
           const lineVol  = row.volume || 0;
           const netVol   = lineVol - totalEnt;
 
