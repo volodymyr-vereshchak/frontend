@@ -273,9 +273,11 @@ export const archiveDataApi = {
       // Use last available period for these specific lines as anchor
       const lastPeriod = await this.getLastPeriod(lineIds);
       const anchor = lastPeriod || new Date();
-      const endDate = new Date(anchor.getTime() + 60 * 60 * 1000).toISOString().split('T')[0];
-      // 48h covers current 24h + previous 24h for comparison
-      const startDate = new Date(anchor.getTime() - 48 * 60 * 60 * 1000).toISOString().split('T')[0];
+      // +2 days buffer: toISOString() is UTC, so +1h can still land on the same UTC date
+      // for timezones UTC+3 and later. Use +2 days to guarantee endDate > anchor's local day.
+      const endDate = new Date(anchor.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      // 3 days back: covers current 24h + previous 24h + buffer
+      const startDate = new Date(anchor.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
       const result = await this.getHourlyData(lineIds, startDate, endDate);
       return (result && result.length > 0) ? result : [];
