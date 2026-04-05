@@ -76,7 +76,14 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
           (record.devices || []).forEach(device => {
             const name = device.enterprise_name || 'Unknown';
             entNames.add(name);
-            entByPeriod[pk][name] = (entByPeriod[pk][name] || 0) + (device.volume || 0);
+            if (device.volume != null) {
+              // Polled: add to sum (even if 0)
+              entByPeriod[pk][name] = (entByPeriod[pk][name] ?? 0) + device.volume;
+            } else if (entByPeriod[pk][name] === undefined) {
+              // Not polled and no prior data: mark explicitly as null (no data)
+              entByPeriod[pk][name] = null;
+            }
+            // If already has a value from another device, leave it (partial poll)
           });
         });
 
