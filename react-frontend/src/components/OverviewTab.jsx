@@ -129,18 +129,9 @@ const OverviewTab = () => {
         throw new Error(t('noDataFor24h'));
       }
 
-      // API returns naive datetime strings (no 'Z') but values are UTC.
-      // Append 'Z' so JS parses them as UTC, then toLocaleTimeString shows local time.
-      const asUTC = (s) => {
-        if (!s) return null;
-        if (s instanceof Date) return s; // already a Date (from overviewCalculator)
-        const str = String(s);
-        return new Date(str.endsWith('Z') || str.includes('+') ? str : str + 'Z');
-      };
-
       // Find most recent record across all lines
       const allTimestamps = allHourlyData
-        .map(r => r.period ? asUTC(r.period).getTime() : null)
+        .map(r => r.period ? new Date(r.period).getTime() : null)
         .filter(ts => ts && !isNaN(ts));
 
       if (allTimestamps.length === 0) {
@@ -152,7 +143,7 @@ const OverviewTab = () => {
 
       // Current 24h window (for volume totals)
       const last24hData = allHourlyData.filter(r => {
-        const d = asUTC(r.period);
+        const d = new Date(r.period);
         return d >= currentStart && d <= currentEnd;
       });
 
@@ -160,7 +151,7 @@ const OverviewTab = () => {
       const previousEnd = new Date(currentStart.getTime() - 60 * 60 * 1000);
       const previousStart = new Date(previousEnd.getTime() - 23 * 60 * 60 * 1000);
       const previous24hData = allHourlyData.filter(r => {
-        const d = asUTC(r.period);
+        const d = new Date(r.period);
         return d >= previousStart && d <= previousEnd;
       });
 
@@ -190,7 +181,7 @@ const OverviewTab = () => {
       // Active = line whose last timestamp matches the branch's last period (within 1 min)
       const currentEndMs = currentEnd.getTime();
       const activeLines = Object.values(pressures).filter(p =>
-        p.timestamp && Math.abs(asUTC(p.timestamp).getTime() - currentEndMs) < 60 * 1000
+        p.timestamp && Math.abs(new Date(p.timestamp).getTime() - currentEndMs) < 60 * 1000
       ).length;
 
       setData({

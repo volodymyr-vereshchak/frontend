@@ -2,12 +2,6 @@
  * Overview Calculator
  * Utility functions for calculating GRS overview metrics
  */
-// Parse API period string as UTC (backend stores naive UTC datetimes without 'Z')
-const parseUTC = (s) => {
-  if (!s) return null;
-  const str = String(s);
-  return new Date(str.endsWith('Z') || str.includes('+') ? str : str + 'Z');
-};
 
 export class OverviewCalculator {
   /**
@@ -68,7 +62,7 @@ export class OverviewCalculator {
         .filter(record => record.line_id === lineId)
         .map(record => ({
           ...record,
-          periodDate: parseUTC(record.period)
+          periodDate: new Date(record.period)
         }))
         .filter(record => !isNaN(record.periodDate.getTime()))
         .sort((a, b) => b.periodDate - a.periodDate);
@@ -150,7 +144,7 @@ export class OverviewCalculator {
         .filter(record => record.line_id === lineId)
         .map(record => ({
           ...record,
-          periodDate: record.period ? parseUTC(record.period) : null
+          periodDate: record.period ? new Date(record.period) : null
         }))
         .filter(record => record.periodDate && !isNaN(record.periodDate.getTime()))
         .sort((a, b) => b.periodDate - a.periodDate);
