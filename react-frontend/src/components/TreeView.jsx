@@ -314,6 +314,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
               return n;
             });
             setSelectedItem(initialLineId);
+            setSelectedMeta({ name: vline.name, typeName: null, address: null, line: vline.line || null, is_virtual: true });
             setHasInitialized(true);
             return;
           }
@@ -326,6 +327,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
                 return n;
               });
               setSelectedItem(initialLineId);
+              setSelectedMeta({ name: line.name, typeName: gvc.typeName || null, address: gvc.address ?? null, line: line.line || null, is_virtual: false });
               setHasInitialized(true);
               return;
             }
