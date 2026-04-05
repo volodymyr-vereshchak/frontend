@@ -150,7 +150,7 @@ export class OverviewCalculator {
         .filter(record => record.line_id === lineId)
         .map(record => ({
           ...record,
-          periodDate: record.period ? new Date(record.period) : null
+          periodDate: record.period ? parseUTC(record.period) : null
         }))
         .filter(record => record.periodDate && !isNaN(record.periodDate.getTime()))
         .sort((a, b) => b.periodDate - a.periodDate);
