@@ -90,6 +90,10 @@ export default function EnterprisesTab() {
   const [saving, setSaving]               = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
+  // Pagination
+  const [pageSize, setPageSize]     = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
+
   // Excel
   const [uploadBranchId, setUploadBranchId] = useState('');
   const [uploadStatus, setUploadStatus]     = useState(null);
@@ -141,6 +145,9 @@ export default function EnterprisesTab() {
   };
 
   useEffect(() => { loadData(); }, []);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [search, filterLineId, filterLumgId, filterBranchId, filterActive, filterEnabled, pageSize]);
 
   // ─── Filtering ─────────────────────────────────────────────────────────────
 
@@ -466,10 +473,40 @@ export default function EnterprisesTab() {
         </div>
       )}
 
-      {/* ── Count ────────────────────────────────────────────────────────── */}
-      <div style={{ color: '#666', fontSize: 12, marginBottom: 6 }}>
-        Показано: {filtered.length} / {enterprises.length}
-      </div>
+      {/* ── Count + Pagination ───────────────────────────────────────────── */}
+      {(() => {
+        const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+        const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+        return (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+              <span style={{ color: '#666', fontSize: 12 }}>
+                Показано: {filtered.length} / {enterprises.length}
+              </span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {[10, 50, 100].map(size => (
+                  <button key={size} onClick={() => setPageSize(size)} style={{
+                    padding: '2px 8px', fontSize: 12, cursor: 'pointer', borderRadius: 4,
+                    border: '1px solid #3a3a3a',
+                    background: pageSize === size ? '#1565c0' : '#2a2a2a',
+                    color: pageSize === size ? '#fff' : '#aaa',
+                  }}>{size}</button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  style={{ padding: '2px 8px', fontSize: 16, cursor: 'pointer', borderRadius: 4, border: '1px solid #3a3a3a', background: '#2a2a2a', color: '#aaa', lineHeight: 1 }}>
+                  ‹
+                </button>
+                <span style={{ color: '#aaa', fontSize: 12 }}>{currentPage} / {totalPages}</span>
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{ padding: '2px 8px', fontSize: 16, cursor: 'pointer', borderRadius: 4, border: '1px solid #3a3a3a', background: '#2a2a2a', color: '#aaa', lineHeight: 1 }}>
+                  ›
+                </button>
+              </div>
+            </div>
 
       {/* ── Table ────────────────────────────────────────────────────────── */}
       {loading ? (
@@ -506,12 +543,12 @@ export default function EnterprisesTab() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <tr><td colSpan={11} style={{ color: '#555', textAlign: 'center', padding: 20 }}>
                   Нічого не знайдено
                 </td></tr>
               )}
-              {filtered.map(ent => {
+              {paginated.map(ent => {
                 const isEditing = editingId === ent.id;
                 return (
                   <tr key={ent.id}>
@@ -615,6 +652,9 @@ export default function EnterprisesTab() {
           </table>
         </div>
       )}
+          </>
+        );
+      })()}
 
       {/* ── Delete confirmation ───────────────────────────────────────────── */}
       {deleteConfirm && (
