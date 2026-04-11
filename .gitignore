@@ -1,6 +1,11 @@
 # IDE
 .idea/
 
+# Claude Code
+.claude/
+tmpclaude-*/
+react-frontend/tmpclaude-*/
+
 # Python
 .venv/
 venv/
