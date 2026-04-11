@@ -831,6 +831,43 @@ const EnterprisePollAnalysis = () => {
               {/* Results Table */}
               {pollResults.length > 0 ? (
                 <>
+                  {/* Pagination bar — always visible above table */}
+                  <div className="poll-pagination">
+                    <div className="pagination-size-buttons">
+                      {[10, 50, 100].map(size => (
+                        <button
+                          key={size}
+                          className={`page-size-btn ${pageSize === size ? 'active' : ''}`}
+                          onClick={() => setPageSize(size)}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="pagination-nav">
+                      <button
+                        className="page-nav-btn"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        ‹
+                      </button>
+                      <span className="page-info">
+                        {currentPage} / {totalPages}
+                      </span>
+                      <button
+                        className="page-nav-btn"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        ›
+                      </button>
+                    </div>
+                    <span className="pagination-total">
+                      {pollResults.length} записів
+                    </span>
+                  </div>
+
                   <div className="poll-table-wrapper">
                     {/* Scrollable Table Body */}
                     <div className="poll-results-table-container">
@@ -867,43 +904,6 @@ const EnterprisePollAnalysis = () => {
                         </tr>
                       </tbody>
                     </table>
-                  </div>
-
-                  {/* Pagination */}
-                  <div className="poll-pagination">
-                    <div className="pagination-size-buttons">
-                      {[10, 50, 100].map(size => (
-                        <button
-                          key={size}
-                          className={`page-size-btn ${pageSize === size ? 'active' : ''}`}
-                          onClick={() => setPageSize(size)}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="pagination-nav">
-                      <button
-                        className="page-nav-btn"
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        ‹
-                      </button>
-                      <span className="page-info">
-                        {currentPage} / {totalPages}
-                      </span>
-                      <button
-                        className="page-nav-btn"
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        ›
-                      </button>
-                    </div>
-                    <span className="pagination-total">
-                      {pollResults.length} записів
-                    </span>
                   </div>
                 </>
               ) : (
