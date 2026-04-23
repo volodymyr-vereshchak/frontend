@@ -12,6 +12,7 @@ const PressureGaugesGrid = ({
   pressures,
   lineNames,
   timestamps,
+  referenceTime,
   flowComparisons,
   volumeComparisons
 }) => {
@@ -60,6 +61,7 @@ const PressureGaugesGrid = ({
             maxPressure24h={pressureData?.maxPressure24h}
             isHighPressure={isHighPressure}
             timestamp={timestamp || pressureData?.timestamp}
+            referenceTime={referenceTime}
             flowData={flowMap[lineId]}
             volumeData={volumeMap[lineId]}
             dpData={pressureData?.dpData}

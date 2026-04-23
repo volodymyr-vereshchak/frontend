@@ -16,6 +16,20 @@
   box-shadow: 0 0 10px rgba(185, 228, 43, 0.15);
 }
 
+.pressure-gauge--stale {
+  border-color: #7a2a2a;
+  background: #2e2020;
+}
+
+.pressure-gauge--stale:hover {
+  border-color: #e05252;
+  box-shadow: 0 0 10px rgba(224, 82, 82, 0.2);
+}
+
+.pressure-gauge--stale .gauge-time {
+  color: #e05252;
+}
+
 /* Header */
 .gauge-header {
   width: 100%;

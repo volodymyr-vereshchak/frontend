@@ -314,6 +314,7 @@ const OverviewTab = () => {
               pressures={data.pressures}
               lineNames={data.lineNames}
               timestamps={data.pressureTimestamps}
+              referenceTime={data.currentPeriod?.end}
               flowComparisons={data.flowComparisons}
               volumeComparisons={data.volumeComparisons}
             />

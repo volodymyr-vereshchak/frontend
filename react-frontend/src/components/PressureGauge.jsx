@@ -8,6 +8,7 @@ const PressureGauge = ({
   pressure,
   isHighPressure,
   timestamp,
+  referenceTime,
   flowData,
   volumeData,
   dpData,
@@ -15,6 +16,9 @@ const PressureGauge = ({
   maxPressure24h,
 }) => {
   const { t } = useLanguage();
+
+  const isStale = referenceTime && timestamp &&
+    Math.abs(new Date(timestamp).getTime() - new Date(referenceTime).getTime()) > 60 * 1000;
 
   const fmt = (num, decimals = 2) => {
     if (num === null || num === undefined || isNaN(num)) return '—';
@@ -49,7 +53,7 @@ const PressureGauge = ({
   };
 
   return (
-    <div className="pressure-gauge">
+    <div className={`pressure-gauge${isStale ? ' pressure-gauge--stale' : ''}`}>
       <div className="gauge-header">
         <span className="gauge-line-name">{lineName || `${t('unknownLine')} ${lineId}`}</span>
       </div>

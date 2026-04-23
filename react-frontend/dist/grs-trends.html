@@ -473,19 +473,12 @@
             const periods = [];
             const from = new Date(String(fromDate).slice(0, 10) + 'T00:00:00');
             const to   = new Date(String(toDate).slice(0, 10)   + 'T23:59:59');
-            function localDate(d) {
-                const y = d.getFullYear();
-                const m = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${y}-${m}-${day}`;
-            }
-            function localHour(d) { return `${localDate(d)}T${String(d.getHours()).padStart(2, '0')}`; }
             if (periodType === 'hourly') {
                 const cur = new Date(from);
-                while (cur <= to) { periods.push(localHour(cur)); cur.setHours(cur.getHours() + 1); }
+                while (cur <= to) { periods.push(cur.toISOString().slice(0, 13)); cur.setHours(cur.getHours() + 1); }
             } else {
                 const cur = new Date(from);
-                while (cur <= to) { periods.push(localDate(cur)); cur.setDate(cur.getDate() + 1); }
+                while (cur <= to) { periods.push(cur.toISOString().slice(0, 10)); cur.setDate(cur.getDate() + 1); }
             }
             return periods;
         }
@@ -529,12 +522,7 @@
                         if (!missingByLine[lineId]) missingByLine[lineId] = [];
                         missingByLine[lineId].push(period);
                     } else if (cached !== null && cached.length > 0) {
-                        cachedRecords.push({
-                            line_id: lineId,
-                            period,
-                            total_volume: cached.reduce((s, d) => s + (d.volume || 0), 0),
-                            devices: cached,
-                        });
+                        cachedRecords.push({ line_id: lineId, period, devices: cached });
                     }
                 }
             }
@@ -847,7 +835,9 @@
             const processed = {};
 
             rawData.forEach(item => {
-                const period = entNormalizePeriod(item.period, currentPeriodType);
+                const period = currentPeriodType === 'daily'
+                    ? item.period.split('T')[0]
+                    : item.period;
 
                 if (!processed[period]) {
                     processed[period] = {};
@@ -865,7 +855,9 @@
         // Subtract enterprise volumes from original data
         function subtractEnterpriseVolumes(originalData, enterpriseData) {
             return originalData.map(record => {
-                const period = entNormalizePeriod(record.period, currentPeriodType);
+                const period = currentPeriodType === 'daily'
+                    ? record.period.split('T')[0]
+                    : record.period;
 
                 const enterpriseVolume = enterpriseData[period]?.[record.line_id] || 0;
                 const netVolume = (record.volume || 0) - enterpriseVolume;
