@@ -847,9 +847,7 @@
             const processed = {};
 
             rawData.forEach(item => {
-                const period = currentPeriodType === 'daily'
-                    ? item.period.split('T')[0]
-                    : item.period;
+                const period = entNormalizePeriod(item.period, currentPeriodType);
 
                 if (!processed[period]) {
                     processed[period] = {};
@@ -867,9 +865,7 @@
         // Subtract enterprise volumes from original data
         function subtractEnterpriseVolumes(originalData, enterpriseData) {
             return originalData.map(record => {
-                const period = currentPeriodType === 'daily'
-                    ? record.period.split('T')[0]
-                    : record.period;
+                const period = entNormalizePeriod(record.period, currentPeriodType);
 
                 const enterpriseVolume = enterpriseData[period]?.[record.line_id] || 0;
                 const netVolume = (record.volume || 0) - enterpriseVolume;
