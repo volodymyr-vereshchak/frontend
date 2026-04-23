@@ -19,7 +19,6 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [visibleLines, setVisibleLines] = useState([]);
   const [linesLoading, setLinesLoading] = useState(false);
   const [showEnterprise, setShowEnterprise] = useState(false);
-  const [showEnterprise, setShowEnterprise] = useState(false);
 
   // Branch selector
   const [branches, setBranches] = useState([]);
@@ -176,7 +175,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
     const enterpriseMap = {};
     enterpriseData.forEach(entry => {
       const lineId = entry.line_id;
-      const date = new Date(entry.period).toISOString().split('T')[0];
+      const date = String(entry.period || '').replace(' ', 'T').slice(0, 10);
 
       if (!enterpriseMap[lineId]) {
         enterpriseMap[lineId] = {};
@@ -189,7 +188,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
     Object.keys(lineDataMap).forEach(lineId => {
       const lineData = lineDataMap[lineId];
       const totalVolume = lineData.reduce((sum, record) => {
-        const date = new Date(record.period).toISOString().split('T')[0];
+        const date = String(record.period || '').replace(' ', 'T').slice(0, 10);
         const gsVolume = record.volume || 0;
 
         // Subtract enterprise volume if exists for this line and date
@@ -210,7 +209,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
 
       if (totalVolume > 0) {
         lineData.forEach(record => {
-          const date = new Date(record.period).toISOString().split('T')[0];
+          const date = String(record.period || '').replace(' ', 'T').slice(0, 10);
           const gsVolume = record.volume || 0;
 
           // Subtract enterprise volume
