@@ -459,6 +459,44 @@
         // ─── Enterprise Cache (localStorage, TTL 1h) ──────────────────────────
         const ENT_TTL = 60 * 60 * 1000;
         const ENT_PREFIX = 'ent_';
+        const ENT_BUDGET_BYTES = 3 * 1024 * 1024; // 3 MB UTF-16
+
+        function entSize(key, value) {
+            return ((key?.length || 0) + (value?.length || 0)) * 2;
+        }
+
+        function entGetCacheSize() {
+            let total = 0;
+            for (const key of Object.keys(localStorage)) {
+                if (!key.startsWith(ENT_PREFIX)) continue;
+                total += entSize(key, localStorage.getItem(key));
+            }
+            return total;
+        }
+
+        function entEnforceBudget(target) {
+            if (target === undefined) target = ENT_BUDGET_BYTES;
+            const entries = [];
+            let total = 0;
+            for (const key of Object.keys(localStorage)) {
+                if (!key.startsWith(ENT_PREFIX)) continue;
+                const value = localStorage.getItem(key);
+                if (value === null) continue;
+                try {
+                    const parsed = JSON.parse(value);
+                    const size = entSize(key, value);
+                    entries.push({ key, ts: parsed?.ts || 0, size });
+                    total += size;
+                } catch { localStorage.removeItem(key); }
+            }
+            if (total <= target) return;
+            entries.sort((a, b) => a.ts - b.ts);
+            for (const e of entries) {
+                if (total <= target) break;
+                localStorage.removeItem(e.key);
+                total -= e.size;
+            }
+        }
 
         function entMakeKey(periodType, lineId, period) {
             return ENT_PREFIX + (periodType === 'hourly' ? 'h' : 'd') + '_' + lineId + '_' + period;
@@ -501,7 +539,13 @@
         }
 
         function entWrite(key, data) {
-            try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch {}
+            const value = JSON.stringify({ ts: Date.now(), data });
+            try { localStorage.setItem(key, value); return; } catch {}
+            entCleanExpired();
+            try { localStorage.setItem(key, value); return; } catch {}
+            entEnforceBudget(Math.max(0, ENT_BUDGET_BYTES - entSize(key, value)));
+            try { localStorage.setItem(key, value); }
+            catch { console.warn('[EntCache] Failed after eviction:', key); }
         }
 
         function entCleanExpired() {
@@ -557,12 +601,34 @@
                 if (!lookup[rec.line_id]) lookup[rec.line_id] = {};
                 lookup[rec.line_id][pk] = rec.devices || [];
             }
+            const writeQueue = [];
             for (const lineId of missingLines) {
                 for (const period of missingByLine[lineId]) {
                     const devices = lookup[lineId]?.[period];
-                    entWrite(entMakeKey(periodType, lineId, period), devices !== undefined ? devices : null);
+                    writeQueue.push({
+                        key: entMakeKey(periodType, lineId, period),
+                        data: devices !== undefined ? devices : null,
+                        period,
+                    });
                 }
             }
+
+            entEnforceBudget();
+            writeQueue.sort((a, b) => b.period.localeCompare(a.period));
+
+            let cached = 0, skipped = 0;
+            let currentSize = entGetCacheSize();
+            for (const { key, data } of writeQueue) {
+                const value = JSON.stringify({ ts: Date.now(), data });
+                const size = entSize(key, value);
+                if (currentSize + size > ENT_BUDGET_BYTES) { skipped++; continue; }
+                try { localStorage.setItem(key, value); currentSize += size; cached++; }
+                catch { skipped++; }
+            }
+            if (skipped > 0) {
+                console.warn(`[EntCache] Cached ${cached}/${cached+skipped} (${skipped} skipped — over budget)`);
+            }
+
             return [...cachedRecords, ...freshData];
         }
 

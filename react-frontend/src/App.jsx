@@ -14,7 +14,16 @@ import { LanguageProvider } from './contexts/LanguageContext'
 import { UserProvider } from './contexts/UserContext'
 import { useUser } from './contexts/UserContext'
 import { virtualLinesHelper } from './services/api'
-import { clearEnterpriseCache, cleanExpired } from './services/enterpriseCache'
+import { clearEnterpriseCache, cleanExpired, enforceCacheBudget } from './services/enterpriseCache'
+
+function safeSetItem(key, value) {
+  const s = JSON.stringify(value);
+  try { localStorage.setItem(key, s); }
+  catch {
+    enforceCacheBudget(1 * 1024 * 1024);
+    try { localStorage.setItem(key, s); } catch {}
+  }
+}
 
 function AppInner() {
   const { user, loading } = useUser();
@@ -152,19 +161,19 @@ function AppContent({ user }) {
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem('hlv-active-tab', JSON.stringify(archiveType)); } catch {}
+    safeSetItem('hlv-active-tab', archiveType);
   }, [archiveType]);
 
   useEffect(() => {
-    try { localStorage.setItem('hlv-date-range', JSON.stringify(dateRange)); } catch {}
+    safeSetItem('hlv-date-range', dateRange);
   }, [dateRange]);
 
   useEffect(() => {
-    try { localStorage.setItem('hlv-date-filter', JSON.stringify(isDateFilterEnabled)); } catch {}
+    safeSetItem('hlv-date-filter', isDateFilterEnabled);
   }, [isDateFilterEnabled]);
 
   useEffect(() => {
-    try { localStorage.setItem('hlv-selected-line', JSON.stringify(selectedLines[0] ?? null)); } catch {}
+    safeSetItem('hlv-selected-line', selectedLines[0] ?? null);
   }, [selectedLines]);
 
   // Auto-switch to daily archive when virtual line is selected with non-allowed archive type

@@ -12,12 +12,57 @@
 
 const TTL = 60 * 60 * 1000; // 1 hour
 const PREFIX = 'ent2_'; // v2: local-time keys (v1 used UTC, caused cache poisoning)
+const BUDGET_BYTES = 3 * 1024 * 1024; // 3 MB UTF-16 (out of ~5 MB Chrome quota)
+const ALL_PREFIXES = ['ent2_', 'ent_']; // ent_ — legacy, evicted naturally as oldest
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeKey(periodType, lineId, period) {
   const t = periodType === 'hourly' ? 'h' : 'd';
   return `${PREFIX}${t}_${lineId}_${period}`;
+}
+
+function entrySize(key, value) {
+  return ((key?.length || 0) + (value?.length || 0)) * 2;
+}
+
+/** Sum of all enterprise cache entries in UTF-16 bytes */
+export function getCacheSize() {
+  let total = 0;
+  for (const key of Object.keys(localStorage)) {
+    if (!ALL_PREFIXES.some(p => key.startsWith(p))) continue;
+    total += entrySize(key, localStorage.getItem(key));
+  }
+  return total;
+}
+
+/**
+ * Evict oldest enterprise cache entries (by write ts) until total size ≤ targetBytes.
+ * Corrupt JSON entries are removed unconditionally.
+ */
+export function enforceCacheBudget(targetBytes = BUDGET_BYTES) {
+  const entries = [];
+  let total = 0;
+  for (const key of Object.keys(localStorage)) {
+    if (!ALL_PREFIXES.some(p => key.startsWith(p))) continue;
+    const value = localStorage.getItem(key);
+    if (value === null) continue;
+    try {
+      const parsed = JSON.parse(value);
+      const size = entrySize(key, value);
+      entries.push({ key, ts: parsed?.ts || 0, size });
+      total += size;
+    } catch {
+      localStorage.removeItem(key);
+    }
+  }
+  if (total <= targetBytes) return;
+  entries.sort((a, b) => a.ts - b.ts);
+  for (const e of entries) {
+    if (total <= targetBytes) break;
+    localStorage.removeItem(e.key);
+    total -= e.size;
+  }
 }
 
 /** Normalize period string to cache key format (strip seconds, normalize T separator) */
@@ -42,16 +87,21 @@ function readEntry(key) {
 }
 
 function writeEntry(key, data) {
+  const value = JSON.stringify({ ts: Date.now(), data });
   try {
-    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+    localStorage.setItem(key, value);
+    return;
+  } catch {}
+  cleanExpired();
+  try {
+    localStorage.setItem(key, value);
+    return;
+  } catch {}
+  enforceCacheBudget(Math.max(0, BUDGET_BYTES - entrySize(key, value)));
+  try {
+    localStorage.setItem(key, value);
   } catch {
-    // localStorage full — clean expired entries and retry once
-    cleanExpired();
-    try {
-      localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
-    } catch {
-      // still full, skip caching silently
-    }
+    console.warn('[EnterpriseCache] Failed to cache entry after eviction:', key);
   }
 }
 
@@ -190,15 +240,44 @@ export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodTy
     freshLookup[lid][pk] = record.devices || [];
   }
 
-  // ── 5. Write to cache (data or null for each missing slot) ─────────────────
+  // ── 5. Greedy write: newest periods first, stop at budget ──────────────────
+  const writeQueue = [];
   for (const lineId of missingLines) {
     for (const period of missingByLine[lineId]) {
       const devices = freshLookup[lineId]?.[period];
-      writeEntry(
-        makeKey(periodType, lineId, period),
-        devices !== undefined ? devices : null
-      );
+      writeQueue.push({
+        key: makeKey(periodType, lineId, period),
+        data: devices !== undefined ? devices : null,
+        period,
+      });
     }
+  }
+
+  enforceCacheBudget();
+  writeQueue.sort((a, b) => b.period.localeCompare(a.period));
+
+  let cached = 0, skipped = 0;
+  let currentSize = getCacheSize();
+  for (const { key, data } of writeQueue) {
+    const value = JSON.stringify({ ts: Date.now(), data });
+    const size = entrySize(key, value);
+    if (currentSize + size > BUDGET_BYTES) {
+      skipped++;
+      continue;
+    }
+    try {
+      localStorage.setItem(key, value);
+      currentSize += size;
+      cached++;
+    } catch {
+      skipped++;
+    }
+  }
+  if (skipped > 0) {
+    console.warn(
+      `[EnterpriseCache] Cached ${cached}/${cached + skipped} entries ` +
+      `(${skipped} skipped — over budget ${(BUDGET_BYTES / 1024 / 1024).toFixed(1)} MB)`
+    );
   }
 
   // ── 6. Merge and return ────────────────────────────────────────────────────
