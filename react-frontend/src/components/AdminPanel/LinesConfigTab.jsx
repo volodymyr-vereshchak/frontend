@@ -253,7 +253,7 @@ export default function LinesConfigTab() {
                   <input className="admin-input" value={editForm.name}
                     onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
                     onKeyDown={e => { if (e.key === 'Escape') cancelEdit(); }}
-                    autoFocus style={{ minWidth: 160 }} />
+                    autoFocus style={{ minWidth: 0, width: 130 }} />
                 ) : l.name}
               </td>
               <td>
@@ -271,7 +271,8 @@ export default function LinesConfigTab() {
               <td>
                 {editingId === l.id ? (
                   <select className="admin-select" value={editForm.gas_volume_calc_id}
-                    onChange={e => setEditForm(f => ({ ...f, gas_volume_calc_id: e.target.value }))}>
+                    onChange={e => setEditForm(f => ({ ...f, gas_volume_calc_id: e.target.value }))}
+                    style={{ minWidth: 0, maxWidth: 120, fontSize: 11 }}>
                     {calcs.map(c => <option key={c.id} value={c.id}>{c.name || `#${c.id}`}</option>)}
                   </select>
                 ) : (
@@ -286,8 +287,17 @@ export default function LinesConfigTab() {
               <td style={{ whiteSpace: 'nowrap' }}>
                 {editingId === l.id ? (
                   <>
-                    <button className="btn-edit" onClick={() => saveEdit(l)} disabled={saving[`${l.id}_edit`]}>Зберегти</button>
-                    <button className="btn-secondary" onClick={cancelEdit}>Скасувати</button>
+                    <button title="Зберегти" onClick={() => saveEdit(l)} disabled={saving[`${l.id}_edit`]}
+                      style={{ padding: '3px 9px', marginRight: 4, borderRadius: 4, border: 'none',
+                        cursor: saving[`${l.id}_edit`] ? 'wait' : 'pointer',
+                        background: '#4CAF50', color: '#fff', fontSize: 14, fontWeight: 700 }}>
+                      ✓
+                    </button>
+                    <button title="Скасувати" onClick={cancelEdit}
+                      style={{ padding: '3px 9px', borderRadius: 4, border: 'none', cursor: 'pointer',
+                        background: '#555', color: '#fff', fontSize: 14, fontWeight: 700 }}>
+                      ✗
+                    </button>
                   </>
                 ) : (
                   <>
