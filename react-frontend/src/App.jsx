@@ -87,25 +87,23 @@ function AppContent({ user }) {
     const dateFilterEnabledParam = params.get('dateFilterEnabled');
 
     let savedTab = 'overview';
-    let savedDateRange = null;
-    let savedDateFilter = false;
     let savedLineId = null;
     try {
       const s = localStorage.getItem('hlv-active-tab');
       if (s) savedTab = JSON.parse(s);
-      const dr = localStorage.getItem('hlv-date-range');
-      if (dr) savedDateRange = JSON.parse(dr);
-      const df = localStorage.getItem('hlv-date-filter');
-      if (df !== null) savedDateFilter = JSON.parse(df);
       const sl = localStorage.getItem('hlv-selected-line');
       if (sl !== null) savedLineId = JSON.parse(sl);
     } catch {}
 
+    // Clear any stale date state that may have been saved previously
+    localStorage.removeItem('hlv-date-range');
+    localStorage.removeItem('hlv-date-filter');
+
     const initialState = {
       archiveType: archiveTypeParam || savedTab,
-      dateRange: savedDateRange || getInitialDateRange(),
+      dateRange: getInitialDateRange(),
       selectedLines: [],
-      isDateFilterEnabled: savedDateFilter,
+      isDateFilterEnabled: false,
       lineIdFromURL: null
     };
 
@@ -163,14 +161,6 @@ function AppContent({ user }) {
   useEffect(() => {
     safeSetItem('hlv-active-tab', archiveType);
   }, [archiveType]);
-
-  useEffect(() => {
-    safeSetItem('hlv-date-range', dateRange);
-  }, [dateRange]);
-
-  useEffect(() => {
-    safeSetItem('hlv-date-filter', isDateFilterEnabled);
-  }, [isDateFilterEnabled]);
 
   useEffect(() => {
     safeSetItem('hlv-selected-line', selectedLines[0] ?? null);
