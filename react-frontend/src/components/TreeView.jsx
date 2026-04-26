@@ -317,25 +317,25 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
     onLinesSelected(selectedItem ? [selectedItem] : [], lineMetadata);
   }, [selectedItem, onLinesSelected]);
 
-  // Auto-select line from URL parameter (only on first-ever load — after user
-  // touches tree state, respect their manual expand/collapse choices)
+  // Restore selection from initialLineId on mount. Tree path expansion is
+  // applied only on first-ever load — once the user has touched tree state,
+  // their manual collapse/expand is respected.
   useEffect(() => {
     if (!initialLineId || treeData.length === 0 || hasInitialized || loading) return;
-    if (userHasTreeState.current) {
-      setHasInitialized(true);
-      return;
-    }
+    const shouldExpand = !userHasTreeState.current;
 
     for (const node of treeData) {
       if (node.type === 'branch') {
         for (const lumg of node.children || []) {
           const vline = lumg.virtualLines?.find(c => c.id === initialLineId);
           if (vline) {
-            setExpandedGroups(prev => {
-              const n = new Set(prev);
-              n.add(node.id); n.add(lumg.id);
-              return n;
-            });
+            if (shouldExpand) {
+              setExpandedGroups(prev => {
+                const n = new Set(prev);
+                n.add(node.id); n.add(lumg.id);
+                return n;
+              });
+            }
             setSelectedItem(initialLineId);
             setSelectedMeta({ name: vline.name, typeName: null, address: null, line: vline.line || null, is_virtual: true });
             setHasInitialized(true);
@@ -344,11 +344,13 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
           for (const gvc of lumg.children || []) {
             const line = gvc.children?.find(c => c.id === initialLineId);
             if (line) {
-              setExpandedGroups(prev => {
-                const n = new Set(prev);
-                n.add(node.id); n.add(lumg.id); n.add(gvc.id);
-                return n;
-              });
+              if (shouldExpand) {
+                setExpandedGroups(prev => {
+                  const n = new Set(prev);
+                  n.add(node.id); n.add(lumg.id); n.add(gvc.id);
+                  return n;
+                });
+              }
               setSelectedItem(initialLineId);
               setSelectedMeta({ name: line.name, typeName: gvc.typeName || null, address: gvc.address ?? null, line: line.line || null, is_virtual: false });
               setHasInitialized(true);
