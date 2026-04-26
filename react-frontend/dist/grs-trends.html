@@ -602,25 +602,51 @@
                 lookup[rec.line_id][pk] = rec.devices || [];
             }
             const writeQueue = [];
+            const writeKeys = new Set();
             for (const lineId of missingLines) {
                 for (const period of missingByLine[lineId]) {
                     const devices = lookup[lineId]?.[period];
+                    const k = entMakeKey(periodType, lineId, period);
                     writeQueue.push({
-                        key: entMakeKey(periodType, lineId, period),
+                        key: k,
                         data: devices !== undefined ? devices : null,
                         period,
                     });
+                    writeKeys.add(k);
                 }
             }
-
-            entEnforceBudget();
             writeQueue.sort((a, b) => b.period.localeCompare(a.period));
 
+            const evictable = [];
+            let currentSize = 0;
+            for (const k of Object.keys(localStorage)) {
+                if (!k.startsWith(ENT_PREFIX)) continue;
+                const v = localStorage.getItem(k);
+                if (v === null) continue;
+                const sz = entSize(k, v);
+                currentSize += sz;
+                if (writeKeys.has(k)) continue;
+                try {
+                    const parsed = JSON.parse(v);
+                    evictable.push({ key: k, ts: parsed?.ts || 0, size: sz });
+                } catch {
+                    localStorage.removeItem(k);
+                    currentSize -= sz;
+                }
+            }
+            evictable.sort((a, b) => a.ts - b.ts);
+
             let cached = 0, skipped = 0;
-            let currentSize = entGetCacheSize();
             for (const { key, data } of writeQueue) {
                 const value = JSON.stringify({ ts: Date.now(), data });
                 const size = entSize(key, value);
+
+                while (currentSize + size > ENT_BUDGET_BYTES && evictable.length > 0) {
+                    const old = evictable.shift();
+                    localStorage.removeItem(old.key);
+                    currentSize -= old.size;
+                }
+
                 if (currentSize + size > ENT_BUDGET_BYTES) { skipped++; continue; }
                 try { localStorage.setItem(key, value); currentSize += size; cached++; }
                 catch { skipped++; }

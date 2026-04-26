@@ -240,27 +240,56 @@ export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodTy
     freshLookup[lid][pk] = record.devices || [];
   }
 
-  // ── 5. Greedy write: newest periods first, stop at budget ──────────────────
+  // ── 5. Greedy write: newest periods first; evict oldest existing on demand ─
   const writeQueue = [];
+  const writeKeys = new Set();
   for (const lineId of missingLines) {
     for (const period of missingByLine[lineId]) {
       const devices = freshLookup[lineId]?.[period];
+      const key = makeKey(periodType, lineId, period);
       writeQueue.push({
-        key: makeKey(periodType, lineId, period),
+        key,
         data: devices !== undefined ? devices : null,
         period,
       });
+      writeKeys.add(key);
     }
   }
-
-  enforceCacheBudget();
   writeQueue.sort((a, b) => b.period.localeCompare(a.period));
 
+  // Build eviction queue from existing entries (oldest ts first), excluding
+  // keys we're about to overwrite.
+  const evictable = [];
+  let currentSize = 0;
+  for (const k of Object.keys(localStorage)) {
+    if (!ALL_PREFIXES.some(p => k.startsWith(p))) continue;
+    const v = localStorage.getItem(k);
+    if (v === null) continue;
+    const sz = entrySize(k, v);
+    currentSize += sz;
+    if (writeKeys.has(k)) continue; // will be overwritten anyway
+    try {
+      const parsed = JSON.parse(v);
+      evictable.push({ key: k, ts: parsed?.ts || 0, size: sz });
+    } catch {
+      localStorage.removeItem(k);
+      currentSize -= sz;
+    }
+  }
+  evictable.sort((a, b) => a.ts - b.ts); // oldest first
+
   let cached = 0, skipped = 0;
-  let currentSize = getCacheSize();
   for (const { key, data } of writeQueue) {
     const value = JSON.stringify({ ts: Date.now(), data });
     const size = entrySize(key, value);
+
+    // Evict oldest existing entries until incoming entry fits
+    while (currentSize + size > BUDGET_BYTES && evictable.length > 0) {
+      const old = evictable.shift();
+      localStorage.removeItem(old.key);
+      currentSize -= old.size;
+    }
+
     if (currentSize + size > BUDGET_BYTES) {
       skipped++;
       continue;
