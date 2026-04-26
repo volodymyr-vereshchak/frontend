@@ -125,6 +125,7 @@ export const uk = {
   nodeListTitle: "Список вузлів обліку",
   selectedLine: "Обрана лінія:",
   treeSearch: "Пошук лінії...",
+  collapseAll: "Згорнути все та зняти вибір",
   calcAddress: "Адреса",
   calcLine: "Лінія",
   calculator: "Обчислювач",

@@ -56,6 +56,13 @@ const LineIcon = ({ selected = false }) => (
   </svg>
 );
 
+const CollapseAllIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 8L3 18C3 19.1046 3.89543 20 5 20L19 20C20.1046 20 21 19.1046 21 18L21 10C21 8.89543 20.1046 8 19 8L13 8L11 6L5 6C3.89543 6 3 6.89543 3 8Z" fill="#FFB74D" stroke="#FF9800" strokeWidth="1"/>
+    <path d="M9 14L12 11L15 14" stroke="#5D4037" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 const VirtualLineIcon = ({ selected = false }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <circle
@@ -84,6 +91,9 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
       return saved ? new Set(JSON.parse(saved)) : new Set();
     } catch { return new Set(); }
   });
+  // True once the user has explicitly touched the tree state — auto-expand to
+  // initialLineId only on first-ever load, then respect manual expand/collapse.
+  const userHasTreeState = useRef(localStorage.getItem('hlv-tree-expanded') !== null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -267,11 +277,19 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
   const isExpanded = (id) => searchQuery.trim() ? true : expandedGroups.has(id);
 
   const toggleGroup = (id) => {
+    userHasTreeState.current = true;
     setExpandedGroups(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+
+  const handleCollapseAll = () => {
+    userHasTreeState.current = true;
+    setExpandedGroups(new Set());
+    setSelectedItem(null);
+    setSelectedMeta(null);
   };
 
   useEffect(() => {
@@ -299,9 +317,14 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
     onLinesSelected(selectedItem ? [selectedItem] : [], lineMetadata);
   }, [selectedItem, onLinesSelected]);
 
-  // Auto-select line from URL parameter
+  // Auto-select line from URL parameter (only on first-ever load — after user
+  // touches tree state, respect their manual expand/collapse choices)
   useEffect(() => {
     if (!initialLineId || treeData.length === 0 || hasInitialized || loading) return;
+    if (userHasTreeState.current) {
+      setHasInitialized(true);
+      return;
+    }
 
     for (const node of treeData) {
       if (node.type === 'branch') {
@@ -445,14 +468,24 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
     <div className="tree-view">
       <div className="tree-header">
         <h6>{t('nodeListTitle')}</h6>
-        <input
-          ref={searchInputRef}
-          className="tree-search-input"
-          type="text"
-          placeholder={t('treeSearch')}
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-        />
+        <div className="tree-search-row">
+          <input
+            ref={searchInputRef}
+            className="tree-search-input"
+            type="text"
+            placeholder={t('treeSearch')}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          <button
+            type="button"
+            className="tree-collapse-btn"
+            title={t('collapseAll')}
+            onClick={handleCollapseAll}
+          >
+            <CollapseAllIcon />
+          </button>
+        </div>
       </div>
       <div className="tree-content">
         {filteredTree.map(node => {

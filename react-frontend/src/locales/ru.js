@@ -125,6 +125,7 @@ export const ru = {
   nodeListTitle: "Список узлов учета",
   selectedLine: "Выбрана линия:",
   treeSearch: "Поиск линии...",
+  collapseAll: "Свернуть все и снять выбор",
   calcAddress: "Адрес",
   calcLine: "Линия",
   calculator: "Вычислитель",
