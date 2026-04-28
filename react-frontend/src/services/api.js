@@ -382,7 +382,12 @@ export const calcTypeApi = {
 
 // Admin: SysType API
 export const sysTypeApi = {
-  getAll:  (calcTypeId) => apiClient.get(calcTypeId ? `/sys-types/?calc_type_id=${calcTypeId}` : '/sys-types/'),
+  getAll:  ({ calcTypeId, search, skip = 0, limit = 50 } = {}) => {
+    const p = new URLSearchParams({ skip, limit });
+    if (calcTypeId) p.set('calc_type_id', calcTypeId);
+    if (search)     p.set('search', search);
+    return apiClient.get(`/sys-types/?${p}`);
+  },
   create:  (data)       => apiClient.post('/sys-types/', data),
   update:  (id, data)   => apiClient.patch(`/sys-types/${id}`, data),
   delete:  (id)         => apiClient.delete(`/sys-types/${id}`),
@@ -390,7 +395,12 @@ export const sysTypeApi = {
 
 // Admin: EditType API
 export const editTypeApi = {
-  getAll:  (calcTypeId) => apiClient.get(calcTypeId ? `/edit-types/?calc_type_id=${calcTypeId}` : '/edit-types/'),
+  getAll:  ({ calcTypeId, search, skip = 0, limit = 50 } = {}) => {
+    const p = new URLSearchParams({ skip, limit });
+    if (calcTypeId) p.set('calc_type_id', calcTypeId);
+    if (search)     p.set('search', search);
+    return apiClient.get(`/edit-types/?${p}`);
+  },
   create:  (data)       => apiClient.post('/edit-types/', data),
   update:  (id, data)   => apiClient.patch(`/edit-types/${id}`, data),
   delete:  (id)         => apiClient.delete(`/edit-types/${id}`),

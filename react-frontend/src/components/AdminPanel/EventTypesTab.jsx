@@ -1,36 +1,67 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { calcTypeApi, sysTypeApi, editTypeApi } from '../../services/api';
 
-// ─── Generic event type table ─────────────────────────────────────────────────
+// ─── Generic event type table (server-side pagination + search) ───────────────
 
 function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
-  const [items, setItems] = useState([]);
+  const [items, setItems]           = useState([]);
+  const [total, setTotal]           = useState(0);
+  const [loading, setLoading]       = useState(false);
   const [filterCalcId, setFilterCalcId] = useState('');
-  const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState({});
-  const [form, setForm] = useState({ [idField]: '', gas_volume_calc_type_id: '', [nameField]: '' });
-  const [status, setStatus] = useState(null);
+  const [searchInput, setSearchInput]   = useState('');
+  const [search, setSearch]             = useState('');
+  const [editing, setEditing]       = useState({});
+  const [form, setForm]             = useState({ [idField]: '', gas_volume_calc_type_id: '', [nameField]: '' });
+  const [status, setStatus]         = useState(null);
+  const [pageSize, setPageSize]     = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const load = async (calcId) => {
-    const data = await api.getAll(calcId || undefined);
-    setItems(Array.isArray(data) ? data : []);
-  };
+  // Debounce search input → search state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
-  useEffect(() => { load(filterCalcId); }, [filterCalcId]);
+  // Server-side load
+  useEffect(() => {
+    let cancelled = false;
+    const doLoad = async () => {
+      setLoading(true);
+      try {
+        const data = await api.getAll({
+          calcTypeId: filterCalcId || undefined,
+          search:     search.trim() || undefined,
+          skip:       (currentPage - 1) * pageSize,
+          limit:      pageSize,
+        });
+        if (!cancelled) {
+          setItems(Array.isArray(data?.items) ? data.items : []);
+          setTotal(data?.total ?? 0);
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    doLoad();
+    return () => { cancelled = true; };
+  }, [filterCalcId, search, currentPage, pageSize]);
 
   const showStatus = (ok, msg) => { setStatus({ ok, msg }); setTimeout(() => setStatus(null), 3000); };
 
-  // gas_volume_calc_type_id stores type_id value (not DB id)
   const calcTypeLabel = (typeId) => {
     const c = calcTypes.find(c => c.type_id === typeId);
     return c ? `${c.type_id} — ${c.type_name}` : `#${typeId}`;
   };
 
-  const filtered = items.filter(i =>
-    !search ||
-    String(i[idField]).includes(search) ||
-    i[nameField].toLowerCase().includes(search.toLowerCase())
-  );
+  const reload = () => {
+    // Force re-fetch by toggling a dummy dep — simplest: reset page to current
+    setCurrentPage(p => p);
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -42,13 +73,13 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
       });
       if (result?.id) {
         setForm({ [idField]: '', gas_volume_calc_type_id: '', [nameField]: '' });
-        load(filterCalcId);
+        setCurrentPage(1);
         showStatus(true, 'Додано');
       }
     } catch (err) { showStatus(false, err.message || 'Помилка'); }
   };
 
-  const startEdit = (item) => setEditing(prev => ({
+  const startEdit  = (item) => setEditing(prev => ({
     ...prev,
     [item.id]: {
       [idField]: item[idField],
@@ -56,7 +87,6 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
       [nameField]: item[nameField],
     },
   }));
-
   const cancelEdit = (id) => setEditing(prev => { const n = { ...prev }; delete n[id]; return n; });
 
   const handleSave = async (id) => {
@@ -67,16 +97,18 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
         gas_volume_calc_type_id: Number(ed.gas_volume_calc_type_id),
         [nameField]: ed[nameField].trim(),
       });
-      if (result?.id) { cancelEdit(id); load(filterCalcId); showStatus(true, 'Збережено'); }
+      if (result?.id) { cancelEdit(id); reload(); showStatus(true, 'Збережено'); }
     } catch (err) { showStatus(false, err.message || 'Помилка'); }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Видалити запис?')) return;
     await api.delete(id);
-    load(filterCalcId);
+    reload();
     showStatus(true, 'Видалено');
   };
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <div style={{ marginBottom: 36 }}>
@@ -87,7 +119,7 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
         <select
           className="admin-select"
           value={filterCalcId}
-          onChange={e => setFilterCalcId(e.target.value)}
+          onChange={e => { setFilterCalcId(e.target.value); setCurrentPage(1); }}
           style={{ minWidth: 180 }}
         >
           <option value="">Всі типи обчислювачів</option>
@@ -96,11 +128,11 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
         <input
           className="admin-input"
           placeholder="Пошук за кодом або назвою…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={e => setSearchInput(e.target.value)}
           style={{ minWidth: 240 }}
         />
-        <span style={{ color: '#555', fontSize: 12 }}>{filtered.length} / {items.length}</span>
+        <span style={{ color: '#555', fontSize: 12 }}>{total} записів</span>
       </div>
 
       {/* Add form */}
@@ -138,67 +170,99 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
 
       {status && <div className={`admin-status ${status.ok ? 'ok' : 'error'}`} style={{ marginBottom: 8 }}>{status.msg}</div>}
 
-      <table className="admin-table">
-        <thead>
-          <tr>
-            <th style={{ width: 70 }}>Код</th>
-            <th style={{ width: 160 }}>Тип обчислювача</th>
-            <th>Назва</th>
-            <th style={{ width: 120 }}></th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.length === 0 && (
-            <tr><td colSpan={4} style={{ color: '#555', textAlign: 'center', padding: 16 }}>
-              {search || filterCalcId ? 'Нічого не знайдено' : 'Немає записів'}
-            </td></tr>
-          )}
-          {filtered.map(item => {
-            const ed = editing[item.id];
-            if (ed) return (
-              <tr key={item.id} style={{ background: '#1e2e08' }}>
-                <td>
-                  <input className="admin-input" type="number" style={{ minWidth: 70 }}
-                    value={ed[idField]}
-                    onChange={e => setEditing(prev => ({ ...prev, [item.id]: { ...prev[item.id], [idField]: e.target.value } }))}
-                  />
-                </td>
-                <td>
-                  <select className="admin-select" style={{ minWidth: 140 }}
-                    value={ed.gas_volume_calc_type_id}
-                    onChange={e => setEditing(prev => ({ ...prev, [item.id]: { ...prev[item.id], gas_volume_calc_type_id: e.target.value } }))}
-                  >
-                    {calcTypes.map(c => <option key={c.id} value={c.type_id}>{c.type_id} — {c.type_name}</option>)}
-                  </select>
-                </td>
-                <td>
-                  <input className="admin-input" style={{ width: '100%', minWidth: 240 }}
-                    value={ed[nameField]}
-                    onChange={e => setEditing(prev => ({ ...prev, [item.id]: { ...prev[item.id], [nameField]: e.target.value } }))}
-                  />
-                </td>
-                <td style={{ whiteSpace: 'nowrap' }}>
-                  <button className="btn-primary" style={{ fontSize: 11 }} onClick={() => handleSave(item.id)}>Зберегти</button>
-                  <button className="btn-secondary" style={{ fontSize: 11, marginLeft: 4 }} onClick={() => cancelEdit(item.id)}>Скасувати</button>
-                </td>
-              </tr>
-            );
-            return (
-              <tr key={item.id}>
-                <td>
-                  <span style={{ fontFamily: 'monospace', color: '#B9E42B' }}>{item[idField]}</span>
-                </td>
-                <td style={{ fontSize: 12, color: '#888' }}>{calcTypeLabel(item.gas_volume_calc_type_id)}</td>
-                <td>{item[nameField]}</td>
-                <td style={{ whiteSpace: 'nowrap' }}>
-                  <button className="btn-edit" onClick={() => startEdit(item)}>Ред.</button>
-                  <button className="btn-danger" onClick={() => handleDelete(item.id)}>Видалити</button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {/* ── Pagination controls ───────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[10, 50, 100].map(size => (
+            <button key={size} onClick={() => { setPageSize(size); setCurrentPage(1); }} style={{
+              padding: '2px 8px', fontSize: 12, cursor: 'pointer', borderRadius: 4,
+              border: '1px solid #3a3a3a',
+              background: pageSize === size ? '#1565c0' : '#2a2a2a',
+              color: pageSize === size ? '#fff' : '#aaa',
+            }}>{size}</button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            style={{ padding: '2px 8px', fontSize: 16, cursor: 'pointer', borderRadius: 4, border: '1px solid #3a3a3a', background: '#2a2a2a', color: '#aaa', lineHeight: 1 }}>
+            ‹
+          </button>
+          <span style={{ color: '#aaa', fontSize: 12 }}>{currentPage} / {totalPages}</span>
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            style={{ padding: '2px 8px', fontSize: 16, cursor: 'pointer', borderRadius: 4, border: '1px solid #3a3a3a', background: '#2a2a2a', color: '#aaa', lineHeight: 1 }}>
+            ›
+          </button>
+        </div>
+      </div>
+
+      {/* ── Table ────────────────────────────────────────────────────────── */}
+      {loading ? (
+        <p style={{ color: '#aaa' }}>Завантаження…</p>
+      ) : (
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th style={{ width: 70 }}>Код</th>
+              <th style={{ width: 160 }}>Тип обчислювача</th>
+              <th>Назва</th>
+              <th style={{ width: 120 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length === 0 && (
+              <tr><td colSpan={4} style={{ color: '#555', textAlign: 'center', padding: 16 }}>
+                {search || filterCalcId ? 'Нічого не знайдено' : 'Немає записів'}
+              </td></tr>
+            )}
+            {items.map(item => {
+              const ed = editing[item.id];
+              if (ed) return (
+                <tr key={item.id} style={{ background: '#1e2e08' }}>
+                  <td>
+                    <input className="admin-input" type="number" style={{ minWidth: 70 }}
+                      value={ed[idField]}
+                      onChange={e => setEditing(prev => ({ ...prev, [item.id]: { ...prev[item.id], [idField]: e.target.value } }))}
+                    />
+                  </td>
+                  <td>
+                    <select className="admin-select" style={{ minWidth: 140 }}
+                      value={ed.gas_volume_calc_type_id}
+                      onChange={e => setEditing(prev => ({ ...prev, [item.id]: { ...prev[item.id], gas_volume_calc_type_id: e.target.value } }))}
+                    >
+                      {calcTypes.map(c => <option key={c.id} value={c.type_id}>{c.type_id} — {c.type_name}</option>)}
+                    </select>
+                  </td>
+                  <td>
+                    <input className="admin-input" style={{ width: '100%', minWidth: 240 }}
+                      value={ed[nameField]}
+                      onChange={e => setEditing(prev => ({ ...prev, [item.id]: { ...prev[item.id], [nameField]: e.target.value } }))}
+                    />
+                  </td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <button className="btn-primary" style={{ fontSize: 11 }} onClick={() => handleSave(item.id)}>Зберегти</button>
+                    <button className="btn-secondary" style={{ fontSize: 11, marginLeft: 4 }} onClick={() => cancelEdit(item.id)}>Скасувати</button>
+                  </td>
+                </tr>
+              );
+              return (
+                <tr key={item.id}>
+                  <td>
+                    <span style={{ fontFamily: 'monospace', color: '#B9E42B' }}>{item[idField]}</span>
+                  </td>
+                  <td style={{ fontSize: 12, color: '#888' }}>{calcTypeLabel(item.gas_volume_calc_type_id)}</td>
+                  <td>{item[nameField]}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <button className="btn-edit" onClick={() => startEdit(item)}>Ред.</button>
+                    <button className="btn-danger" onClick={() => handleDelete(item.id)}>Видалити</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
