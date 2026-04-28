@@ -133,10 +133,13 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
         return;
       }
 
+      // Dual Y-axis for daily/hourly physical lines: left=volume, right=pressure+temperature
+      const isDualAxis = (archiveType === 'daily' || archiveType === 'hourly') && !isVirtualLine;
+
       // Create chart JSX
       const chartJSX = (
         <ResponsiveContainer width="100%" height={800}>
-          <LineChart data={sortedChartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+          <LineChart data={sortedChartData} margin={{ top: 20, right: isDualAxis ? 60 : 30, left: 20, bottom: 60 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
             <XAxis
               dataKey="period"
@@ -146,7 +149,17 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
               textAnchor="end"
               height={80}
             />
-            <YAxis stroke="#9e9e9e" />
+            <YAxis yAxisId="left" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
+            {isDualAxis && (
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                stroke="#9e9e9e"
+                domain={[(dataMin) => dataMin - 0.25, (dataMax) => dataMax + 0.25]}
+                allowDataOverflow={false}
+                tickFormatter={(v) => +v.toFixed(2)}
+              />
+            )}
             <Tooltip content={<CustomTooltip archiveType={archiveType} />} />
             <Legend />
 
@@ -161,12 +174,12 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
                   dot={{ fill: col.color, strokeWidth: 1, r: 2 }}
                   activeDot={{ r: 4, stroke: col.color, strokeWidth: 1 }}
                   name={col.label}
+                  yAxisId={col.yAxisId || 'left'}
                 />
               )
             ))}
 
-            {/* Enterprise Overlay Lines */}
-            {/* Net Volume - shown when enterprise enabled and includeNet is true */}
+            {/* Enterprise Overlay Lines — volume-based, always on left axis */}
             {enterpriseData?.includeNet && (
               <Line
                 key="enterprise-net-volume"
@@ -179,10 +192,10 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
                 activeDot={{ r: 4, stroke: "#33ff57", strokeWidth: 1 }}
                 name={t('netVolume') || 'Net Volume (Line - Enterprise)'}
                 connectNulls={true}
+                yAxisId="left"
               />
             )}
 
-            {/* Total Enterprise - shown when enterprise enabled and includeTotal is true */}
             {enterpriseData?.includeTotal && (
               <Line
                 key="enterprise-total"
@@ -194,9 +207,9 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
                 activeDot={{ r: 4, stroke: "#ff5733", strokeWidth: 1 }}
                 name={t('totalEnterpriseVolume') || 'Total Enterprise'}
                 connectNulls={true}
+                yAxisId="left"
               />
             )}
-
 
             <Brush
               dataKey="period"
@@ -288,36 +301,35 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
         // Для виртуальных линий - ТОЛЬКО volume
         if (isVirtualLine) {
           return [
-            { key: 'volume', label: t('volumeLabel'), color: '#8884d8' }
+            { key: 'volume', label: t('volumeLabel'), color: '#8884d8', yAxisId: 'left' }
           ];
         }
 
-        // Для физических линий - все параметры
+        // Для физических линий — объём и перепад на левой оси, давление и температура на правой
         return [
-          { key: 'volume', label: t('volumeLabel'), color: '#8884d8' },
-          { key: 'w_volume_dp', label: t('workingVolumeDpLabel'), color: '#82ca9d' },
-          { key: 'pressure', label: t('pressureLabel'), color: '#ffc658' },
-          { key: 'temperature', label: t('temperatureLabel'), color: '#ff7300' },
-          { key: 'density', label: t('densityLabel'), color: '#00ff00' }
+          { key: 'volume', label: t('volumeLabel'), color: '#8884d8', yAxisId: 'left' },
+          { key: 'w_volume_dp', label: t('workingVolumeDpLabel'), color: '#82ca9d', yAxisId: 'left' },
+          { key: 'pressure', label: t('pressureLabel'), color: '#ffc658', yAxisId: 'right' },
+          { key: 'temperature', label: t('temperatureLabel'), color: '#ff7300', yAxisId: 'right' },
         ];
       case 'param':
         return [
-          { key: 'density', label: t('densityLabel'), color: '#8884d8' },
-          { key: 'co2', label: t('co2Label'), color: '#82ca9d' },
-          { key: 'n2', label: t('n2Label'), color: '#ffc658' },
-          { key: 'max_p', label: t('maxPressureLabel'), color: '#ff7300' },
-          { key: 'min_p', label: t('minPressureLabel'), color: '#00ff00' },
-          { key: 'max_t', label: t('maxTemperatureLabel'), color: '#ff0000' },
-          { key: 'min_t', label: t('minTemperatureLabel'), color: '#0000ff' }
+          { key: 'density', label: t('densityLabel'), color: '#8884d8', yAxisId: 'left' },
+          { key: 'co2', label: t('co2Label'), color: '#82ca9d', yAxisId: 'left' },
+          { key: 'n2', label: t('n2Label'), color: '#ffc658', yAxisId: 'left' },
+          { key: 'max_p', label: t('maxPressureLabel'), color: '#ff7300', yAxisId: 'left' },
+          { key: 'min_p', label: t('minPressureLabel'), color: '#00ff00', yAxisId: 'left' },
+          { key: 'max_t', label: t('maxTemperatureLabel'), color: '#ff0000', yAxisId: 'left' },
+          { key: 'min_t', label: t('minTemperatureLabel'), color: '#0000ff', yAxisId: 'left' }
         ];
       case 'sys':
         return [
-          { key: 'volume', label: t('volumeLabel'), color: '#8884d8' }
+          { key: 'volume', label: t('volumeLabel'), color: '#8884d8', yAxisId: 'left' }
         ];
       case 'edit':
         return [
-          { key: 'old_value', label: t('oldValueLabel'), color: '#8884d8' },
-          { key: 'new_value', label: t('newValueLabel'), color: '#82ca9d' }
+          { key: 'old_value', label: t('oldValueLabel'), color: '#8884d8', yAxisId: 'left' },
+          { key: 'new_value', label: t('newValueLabel'), color: '#82ca9d', yAxisId: 'left' }
         ];
       default:
         return [];
