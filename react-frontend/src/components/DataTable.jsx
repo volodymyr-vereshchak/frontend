@@ -59,11 +59,12 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         const toDate   = String(sortedData[sortedData.length - 1].period).slice(0, 10);
         const periodType = archiveType === 'hourly' ? 'hourly' : 'daily';
 
-        const fetchFn = isVirtualLine
-          ? (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
-          : (lines, from, to, type) => enterpriseApi.getEnterpriseVolumes(lines, from, to, type);
-
-        const rawEnterprise = await getEnterpriseWithCache(selectedLines, fromDate, toDate, periodType, fetchFn) || [];
+        // Excel needs full per-enterprise breakdown — always fetch fresh from API
+        // (cache stores only total volumes, which is enough for the chart overlay).
+        const rawEnterprise = await (isVirtualLine
+          ? enterpriseVirtualApi.getEnterpriseVolumesVirtual(selectedLines, fromDate, toDate, periodType)
+          : enterpriseApi.getEnterpriseVolumes(selectedLines, fromDate, toDate, periodType)
+        ) || [];
 
         // Build per-period, per-enterprise breakdown
         const entByPeriod = {}; // period key -> { entName -> volume }

@@ -192,14 +192,13 @@ export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodTy
       if (cached === undefined) {
         if (!missingByLine[lineId]) missingByLine[lineId] = [];
         missingByLine[lineId].push(period);
-      } else if (cached !== null && cached.length > 0) {
-        cachedRecords.push({
-          line_id: lineId,
-          period,
-          total_volume: cached.reduce((s, d) => s + (d.volume || 0), 0),
-          device_count: cached.length,
-          devices: cached,
-        });
+      } else if (cached !== null) {
+        // Cached value is a number (total volume, current format)
+        // or legacy devices array — both emit a synthetic record for the chart overlay.
+        const vol = typeof cached === 'number'
+          ? cached
+          : Array.isArray(cached) ? cached.reduce((s, d) => s + (d.volume || 0), 0) : 0;
+        cachedRecords.push({ line_id: lineId, period, devices: [{ volume: vol }] });
       }
       // cached === null → absence is cached, nothing to add
     }
@@ -247,11 +246,12 @@ export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodTy
     for (const period of missingByLine[lineId]) {
       const devices = freshLookup[lineId]?.[period];
       const key = makeKey(periodType, lineId, period);
-      writeQueue.push({
-        key,
-        data: devices !== undefined ? devices : null,
-        period,
-      });
+      // Store only total volume (number) instead of full devices array.
+      // Reduces cache size by ~100x (300 devices × N periods fits in 3 MB now).
+      const totalVol = devices !== undefined
+        ? (devices || []).reduce((s, d) => s + (d.volume || 0), 0)
+        : null;
+      writeQueue.push({ key, data: totalVol, period });
       writeKeys.add(key);
     }
   }
