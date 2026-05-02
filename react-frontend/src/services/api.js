@@ -374,10 +374,11 @@ export const deviceCatalogApi = {
 
 // Admin: Calc types API
 export const calcTypeApi = {
-  getAll:  ()           => apiClient.get('/gas-volume-calc-types/'),
-  create:  (data)       => apiClient.post('/gas-volume-calc-types/', data),
-  update:  (id, data)   => apiClient.patch(`/gas-volume-calc-types/${id}`, data),
-  delete:  (id)         => apiClient.delete(`/gas-volume-calc-types/${id}`),
+  getAll:        ()           => apiClient.get('/gas-volume-calc-types/'),
+  create:        (data)       => apiClient.post('/gas-volume-calc-types/', data),
+  update:        (id, data)   => apiClient.patch(`/gas-volume-calc-types/${id}`, data),
+  delete:        (id)         => apiClient.delete(`/gas-volume-calc-types/${id}`),
+  exportPreload: ()           => apiClient.post('/gas-volume-calc-types/export-preload'),
 };
 
 // Admin: SysType API

@@ -272,15 +272,30 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
 export default function EventTypesTab() {
   const [calcTypes, setCalcTypes] = useState([]);
   const [section, setSection] = useState('sys');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState(null);
 
   useEffect(() => {
     calcTypeApi.getAll().then(data => setCalcTypes(Array.isArray(data) ? data : []));
   }, []);
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await calcTypeApi.exportPreload();
+      setExportStatus({ ok: true, msg: `JSON збережено: типів ${res.exported.flowtype}, аварій ${res.exported.sysname}, змін ${res.exported.editname}` });
+    } catch (err) {
+      setExportStatus({ ok: false, msg: err.message || 'Помилка збереження' });
+    } finally {
+      setIsExporting(false);
+      setTimeout(() => setExportStatus(null), 4000);
+    }
+  };
+
   return (
     <div>
-      {/* Sub-tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, borderBottom: '1px solid #2a2a2a', paddingBottom: 10 }}>
+      {/* Sub-tabs + Export button */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, borderBottom: '1px solid #2a2a2a', paddingBottom: 10, alignItems: 'center' }}>
         {[
           { id: 'sys',  label: 'Аварії' },
           { id: 'edit', label: 'Зміни параметрів' },
@@ -293,7 +308,21 @@ export default function EventTypesTab() {
             {t.label}
           </button>
         ))}
+        <button
+          className="btn-secondary"
+          onClick={handleExport}
+          disabled={isExporting}
+          title="Зберегти поточний стан БД у preload JSON-файли"
+          style={{ marginLeft: 'auto', fontSize: 12 }}
+        >
+          {isExporting ? '⏳ Зберігання…' : '💾 Зберегти в JSON'}
+        </button>
       </div>
+      {exportStatus && (
+        <div className={`admin-status ${exportStatus.ok ? 'ok' : 'error'}`} style={{ marginBottom: 10 }}>
+          {exportStatus.msg}
+        </div>
+      )}
 
       {section === 'sys' && (
         <EventTypeSection

@@ -7,6 +7,7 @@ export default function CalcTypesTab() {
   const [editing, setEditing] = useState({});
   const [form, setForm] = useState({ type_id: '', type_name: '' });
   const [status, setStatus] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const load = async () => {
     const data = await calcTypeApi.getAll();
@@ -51,6 +52,18 @@ export default function CalcTypesTab() {
     if (ok) { await load(); showStatus(true, 'Видалено'); }
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await calcTypeApi.exportPreload();
+      showStatus(true, `JSON збережено: типів ${res.exported.flowtype}, аварій ${res.exported.sysname}, змін ${res.exported.editname}`);
+    } catch (err) {
+      showStatus(false, err.message || 'Помилка збереження');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div>
       {/* Toolbar */}
@@ -63,6 +76,15 @@ export default function CalcTypesTab() {
           style={{ minWidth: 240 }}
         />
         <span style={{ color: '#555', fontSize: 12 }}>{filtered.length} / {items.length}</span>
+        <button
+          className="btn-secondary"
+          onClick={handleExport}
+          disabled={isExporting}
+          title="Зберегти поточний стан БД у preload JSON-файли"
+          style={{ marginLeft: 'auto', fontSize: 12 }}
+        >
+          {isExporting ? '⏳ Зберігання…' : '💾 Зберегти в JSON'}
+        </button>
       </div>
 
       {/* Add form */}
