@@ -127,6 +127,7 @@ export const uk = {
   selectedLine: "Обрана лінія:",
   treeSearch: "Пошук лінії...",
   collapseAll: "Згорнути все та зняти вибір",
+  calcObject: "Об'єкт",
   calcAddress: "Адреса",
   calcLine: "Лінія",
   calculator: "Обчислювач",

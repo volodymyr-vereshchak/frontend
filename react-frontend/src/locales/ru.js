@@ -127,6 +127,7 @@ export const ru = {
   selectedLine: "Выбрана линия:",
   treeSearch: "Поиск линии...",
   collapseAll: "Свернуть все и снять выбор",
+  calcObject: "Объект",
   calcAddress: "Адрес",
   calcLine: "Линия",
   calculator: "Вычислитель",

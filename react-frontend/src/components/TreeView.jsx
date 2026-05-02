@@ -352,7 +352,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
                 });
               }
               setSelectedItem(initialLineId);
-              setSelectedMeta({ name: line.name, typeName: gvc.typeName || null, address: gvc.address ?? null, line: line.line || null, is_virtual: false });
+              setSelectedMeta({ name: line.name, gvcName: gvc.name || null, typeName: gvc.typeName || null, address: gvc.address ?? null, line: line.line || null, is_virtual: false });
               setHasInitialized(true);
               return;
             }
@@ -375,6 +375,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         setSelectedItem(next);
         setSelectedMeta(next ? {
           name: line.name,
+          gvcName: gvcMeta?.name || null,
           typeName: gvcMeta?.typeName || null,
           address: gvcMeta?.address ?? null,
           line: line.line || null,
@@ -404,7 +405,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
       </div>
       {isExpanded(gvc.id) && gvc.children.length > 0 && (
         <div className="group-children">
-          {renderLines(gvc.children, { typeName: gvc.typeName, address: gvc.address })}
+          {renderLines(gvc.children, { name: gvc.name, typeName: gvc.typeName, address: gvc.address })}
         </div>
       )}
     </div>
@@ -505,6 +506,12 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
             {selectedMeta?.name || `ID ${selectedItem}`}
           </div>
           <div className="selection-details-row">
+            {selectedMeta?.gvcName && (
+              <span className="selection-chip">
+                <span className="selection-label">{t('calcObject')}:</span>
+                <span className="selection-value">{selectedMeta.gvcName}</span>
+              </span>
+            )}
             {selectedMeta?.typeName && (
               <span className="selection-chip">
                 <span className="selection-label">{t('calculator')}:</span>
