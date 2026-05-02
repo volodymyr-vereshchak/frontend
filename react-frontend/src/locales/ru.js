@@ -21,6 +21,7 @@ export const ru = {
   // Table columns
   period: "Период",
   volume: "Объем",
+  value: "Значение",
   workingVolumePressure: "Раб. объем/перепад",
   pressure: "Давление",
   temperature: "Температура",

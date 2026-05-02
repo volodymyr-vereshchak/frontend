@@ -335,7 +335,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         return [
           { key: 'period', label: t('period'), sortable: true },
           { key: 'sys_name', label: t('operationType'), sortable: true },
-          { key: 'volume', label: t('volume'), sortable: true, isSummable: true }
+          { key: 'volume', label: t('value'), sortable: true, isSummable: true }
         ];
       case 'param':
         return [
