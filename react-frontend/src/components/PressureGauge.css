@@ -34,16 +34,20 @@
 .gauge-header {
   width: 100%;
   text-align: center;
+  min-height: 2.8em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .gauge-line-name {
   font-size: 14px;
   font-weight: 600;
   color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
   max-width: 100%;
+  line-height: 1.3;
 }
 
 /* Pressure block */
