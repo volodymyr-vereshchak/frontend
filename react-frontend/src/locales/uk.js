@@ -28,10 +28,10 @@ export const uk = {
   density: "Щільність",
   editCounts: "З",
   sysCounts: "А",
-  editType: "Тип зміни",
+  editType: "Тип втручання",
   oldValue: "Старе значення",
   newValue: "Нове значення",
-  operationType: "Тип операції",
+  operationType: "Тип аварії",
 
   // Tooltips
   changesCount: "Зміни",
@@ -95,10 +95,10 @@ export const uk = {
   time: "Час",
 
   // Additional translations for DataTable
-  editType: "Тип зміни",
+  editType: "Тип втручання",
   oldValue: "Старе значення",
   newValue: "Нове значення",
-  operationType: "Тип операції",
+  operationType: "Тип аварії",
 
   // Chart labels
   chartTitle: "Графік даних",

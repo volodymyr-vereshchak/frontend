@@ -28,10 +28,10 @@ export const ru = {
   density: "Плотность",
   editCounts: "И",
   sysCounts: "А",
-  editType: "Тип изменения",
+  editType: "Тип вмешательства",
   oldValue: "Старое значение",
   newValue: "Новое значение",
-  operationType: "Тип операции",
+  operationType: "Тип аварии",
 
   // Tooltips
   changesCount: "Изменения",
@@ -95,10 +95,10 @@ export const ru = {
   time: "Время",
 
   // Additional translations for DataTable
-  editType: "Тип изменения",
+  editType: "Тип вмешательства",
   oldValue: "Старое значение",
   newValue: "Новое значение",
-  operationType: "Тип операции",
+  operationType: "Тип аварии",
 
   // Chart labels
   chartTitle: "График данных",
