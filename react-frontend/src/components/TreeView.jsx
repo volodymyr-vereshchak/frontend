@@ -352,7 +352,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
                 });
               }
               setSelectedItem(initialLineId);
-              setSelectedMeta({ name: line.name, gvcName: gvc.name || null, typeName: gvc.typeName || null, address: gvc.address ?? null, line: line.line || null, is_virtual: false });
+              setSelectedMeta({ name: line.name, branchName: node.name || null, gvcName: gvc.name || null, typeName: gvc.typeName || null, address: gvc.address ?? null, line: line.line || null, is_virtual: false });
               setHasInitialized(true);
               return;
             }
@@ -375,6 +375,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         setSelectedItem(next);
         setSelectedMeta(next ? {
           name: line.name,
+          branchName: gvcMeta?.branchName || null,
           gvcName: gvcMeta?.name || null,
           typeName: gvcMeta?.typeName || null,
           address: gvcMeta?.address ?? null,
@@ -394,7 +395,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
     </div>
   ));
 
-  const renderGvc = (gvc) => (
+  const renderGvc = (gvc, branchName) => (
     <div key={gvc.id} className="tree-group" style={{ paddingLeft: 8 }}>
       <div className="group-header" onClick={() => toggleGroup(gvc.id)}>
         <span className={`expand-icon ${isExpanded(gvc.id) ? 'expanded' : ''}`}>
@@ -405,13 +406,13 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
       </div>
       {isExpanded(gvc.id) && gvc.children.length > 0 && (
         <div className="group-children">
-          {renderLines(gvc.children, { name: gvc.name, typeName: gvc.typeName, address: gvc.address })}
+          {renderLines(gvc.children, { branchName, name: gvc.name, typeName: gvc.typeName, address: gvc.address })}
         </div>
       )}
     </div>
   );
 
-  const renderLumg = (lumg) => {
+  const renderLumg = (lumg, branchName) => {
     const hasContent = lumg.children.length > 0 || (lumg.virtualLines || []).length > 0;
     return (
       <div key={lumg.id} className="tree-group" style={{ paddingLeft: 8 }}>
@@ -424,7 +425,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         </div>
         {isExpanded(lumg.id) && hasContent && (
           <div className="group-children">
-            {lumg.children.map(gvc => renderGvc(gvc))}
+            {lumg.children.map(gvc => renderGvc(gvc, branchName))}
             {renderLines(lumg.virtualLines || [], null)}
           </div>
         )}
@@ -443,7 +444,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
       </div>
       {isExpanded(branch.id) && branch.children.length > 0 && (
         <div className="group-children">
-          {branch.children.map(lumg => renderLumg(lumg))}
+          {branch.children.map(lumg => renderLumg(lumg, branch.name))}
         </div>
       )}
     </div>
@@ -506,6 +507,12 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
             {selectedMeta?.name || `ID ${selectedItem}`}
           </div>
           <div className="selection-details-row">
+            {selectedMeta?.branchName && (
+              <span className="selection-chip">
+                <span className="selection-label">{t('branch')}:</span>
+                <span className="selection-value">{selectedMeta.branchName}</span>
+              </span>
+            )}
             {selectedMeta?.gvcName && (
               <span className="selection-chip">
                 <span className="selection-label">{t('calcObject')}:</span>
