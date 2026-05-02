@@ -82,7 +82,7 @@
 }
 
 .tree-content {
-  padding: 8px 0;
+  padding: 3px 0;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
@@ -99,13 +99,13 @@
 }
 
 .tree-group {
-  margin-bottom: 4px;
+  margin-bottom: 1px;
 }
 
 .group-header {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 4px 8px;
   cursor: pointer;
   background-color: #2a2a2a;
   border: 1px solid #3a3a3a;
@@ -121,7 +121,7 @@
 }
 
 .expand-icon {
-  margin-right: 8px;
+  margin-right: 5px;
   width: 16px;
   height: 16px;
   display: inline-flex;
@@ -148,7 +148,7 @@
 }
 
 .group-icon {
-  margin-right: 8px;
+  margin-right: 5px;
   width: 16px;
   height: 16px;
   display: inline-flex;
@@ -164,12 +164,12 @@
 .group-name {
   color: #ffffff;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .group-children {
-  margin-left: 20px;
-  margin-top: 4px;
+  margin-left: 14px;
+  margin-top: 2px;
   animation: slideDown 0.3s ease-out;
   overflow: hidden;
 }
@@ -190,11 +190,11 @@
 .tree-line {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 3px 8px;
   cursor: pointer;
   background-color: #1a1a1a;
   border: 1px solid #2a2a2a;
-  margin: 2px 4px;
+  margin: 1px 4px;
   border-radius: 4px;
   transition: all 0.2s ease;
 }
@@ -333,7 +333,7 @@
 
 /* Scrollbar styling */
 .tree-content::-webkit-scrollbar {
-  width: 8px;
+  width: 5px;
 }
 
 .tree-content::-webkit-scrollbar-track {
