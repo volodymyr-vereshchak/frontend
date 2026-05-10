@@ -30,6 +30,7 @@ class ApiClient {
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip'
       },
+      credentials: 'include',
       mode: 'cors',
       timeout: 30000
     };
@@ -142,10 +143,27 @@ class ApiClient {
   async getMe() {
     return await this._makeRequest('/auth/me', { method: 'GET' });
   }
+
+  async login(username, password, rememberMe = false) {
+    return await this._makeRequest('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, remember_me: rememberMe }),
+    });
+  }
+
+  async logout() {
+    return await this._makeRequest('/auth/logout', { method: 'POST' });
+  }
 }
 
 // Create singleton instance
 const apiClient = new ApiClient();
+
+export const authApi = {
+  me:     ()                              => apiClient.getMe(),
+  login:  (username, password, remember)  => apiClient.login(username, password, remember),
+  logout: ()                              => apiClient.logout(),
+};
 
 // Line API methods
 export const lineApi = {
