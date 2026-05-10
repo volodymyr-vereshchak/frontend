@@ -27,17 +27,13 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
 
   // Async chart rendering with cancellation
   const renderChartAsync = useCallback(async (chartData, archiveType, visibleLines, enterpriseData) => {
-    // Cancel any existing render
     if (renderCancelRef.current) {
       renderCancelRef.current.cancelled = true;
     }
-
-    // Clear any pending timeout
     if (renderTimeoutRef.current) {
       clearTimeout(renderTimeoutRef.current);
     }
 
-    // Create new cancellation token
     const cancelToken = { cancelled: false };
     renderCancelRef.current = cancelToken;
 
@@ -45,25 +41,21 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
     setRenderedChart(null);
 
     try {
-      // Defer rendering to next event loop to not block UI
       await new Promise(resolve => {
         renderTimeoutRef.current = setTimeout(resolve, 50);
       });
 
-      // Check if cancelled during timeout
       if (cancelToken.cancelled) {
         console.log('Chart rendering cancelled during timeout');
         return;
       }
 
-      // Sort data by period (date) to ensure correct chronological order in chart
       let sortedChartData = [...chartData].sort((a, b) => {
         const dateA = new Date(a.period);
         const dateB = new Date(b.period);
         return dateA - dateB;
       });
 
-      // Merge enterprise data into main chart data if available
       if (enterpriseData && enterpriseData.byPeriod) {
         console.log('Merging enterprise data into chart data', {
           chartDataPeriods: sortedChartData.length,
@@ -81,12 +73,9 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
 
           if (enterpriseValues) {
             matchedCount++;
-
-            // Calculate netVolume from actual line volume in chart data
             const lineVolume = item.volume || 0;
             const enterpriseVolume = enterpriseValues.totalEnterpriseVolume || 0;
             const netVolume = lineVolume - enterpriseVolume;
-
             return {
               ...item,
               totalEnterpriseVolume: enterpriseVolume,
@@ -106,40 +95,32 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
         });
       }
 
-      // Prepare chart components in chunks to avoid blocking
       const columns = getChartColumns();
       const chunks = [];
 
-      // Process data in chunks
       const CHUNK_SIZE = 1000;
       for (let i = 0; i < sortedChartData.length; i += CHUNK_SIZE) {
         if (cancelToken.cancelled) {
           console.log('Chart rendering cancelled during data processing');
           return;
         }
-
         const chunk = sortedChartData.slice(i, i + CHUNK_SIZE);
         chunks.push(chunk);
-
-        // Yield control periodically
         if (i > 0 && i % (CHUNK_SIZE * 5) === 0) {
           await new Promise(resolve => setTimeout(resolve, 1));
         }
       }
 
-      // Check if cancelled before final render
       if (cancelToken.cancelled) {
         console.log('Chart rendering cancelled before final render');
         return;
       }
 
-      // Dual Y-axis for daily/hourly physical lines: left=volume, right=pressure+temperature
       const isDualAxis = (archiveType === 'daily' || archiveType === 'hourly') && !isVirtualLine;
 
-      // Create chart JSX
       const chartJSX = (
         <ResponsiveContainer width="100%" height={800}>
-          <LineChart data={sortedChartData} margin={{ top: 20, right: isDualAxis ? 60 : 30, left: 20, bottom: 60 }}>
+          <LineChart data={sortedChartData} margin={{ top: 10, right: isDualAxis ? 5 : 5, left: 0, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
             <XAxis
               dataKey="period"
@@ -154,6 +135,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
               <YAxis
                 yAxisId="right"
                 orientation="right"
+                width={45}
                 stroke="#9e9e9e"
                 domain={[(dataMin) => dataMin - 0.25, (dataMax) => dataMax + 0.25]}
                 allowDataOverflow={false}
@@ -179,7 +161,6 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
               )
             ))}
 
-            {/* Enterprise Overlay Lines — volume-based, always on left axis */}
             {enterpriseData?.includeNet && (
               <Line
                 key="enterprise-net-volume"
@@ -211,17 +192,10 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
               />
             )}
 
-            <Brush
-              dataKey="period"
-              height={30}
-              stroke="#8884d8"
-              tickFormatter={formatXAxisLabel}
-            />
           </LineChart>
         </ResponsiveContainer>
       );
 
-      // Final check before setting rendered chart
       if (!cancelToken.cancelled) {
         setRenderedChart(chartJSX);
         setIsChartLoading(false);
@@ -240,31 +214,21 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
   useEffect(() => {
     if (data && data.length > 0) {
       const columns = getChartColumns();
-
-      // Try to load saved preferences from localStorage
       const storageKey = `hlviewer-chart-visible-${archiveType}`;
       const savedPreferences = localStorage.getItem(storageKey);
-
       const initialVisible = {};
 
       if (savedPreferences) {
         try {
           const saved = JSON.parse(savedPreferences);
-          // Use saved preferences but ensure all current columns are present
           columns.forEach(col => {
             initialVisible[col.key] = saved[col.key] !== undefined ? saved[col.key] : true;
           });
         } catch (e) {
-          // If parsing fails, default to all visible
-          columns.forEach(col => {
-            initialVisible[col.key] = true;
-          });
+          columns.forEach(col => { initialVisible[col.key] = true; });
         }
       } else {
-        // No saved preferences, default to all visible
-        columns.forEach(col => {
-          initialVisible[col.key] = true;
-        });
+        columns.forEach(col => { initialVisible[col.key] = true; });
       }
 
       setVisibleLines(initialVisible);
@@ -298,14 +262,11 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
     switch (archiveType) {
       case 'daily':
       case 'hourly':
-        // Для виртуальных линий - ТОЛЬКО volume
         if (isVirtualLine) {
           return [
             { key: 'volume', label: t('volumeLabel'), color: '#8884d8', yAxisId: 'left' }
           ];
         }
-
-        // Для физических линий — объём и перепад на левой оси, давление и температура на правой
         return [
           { key: 'volume', label: t('volumeLabel'), color: '#8884d8', yAxisId: 'left' },
           { key: 'w_volume_dp', label: t('workingVolumeDpLabel'), color: '#82ca9d', yAxisId: 'left' },
@@ -339,28 +300,23 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
   const formatXAxisLabel = (value) => {
     const date = new Date(value);
     const locale = getLocale();
-    // Show only date for daily and trends archives (date-only data)
     if (archiveType === 'daily' || archiveType === 'trends') {
       return date.toLocaleDateString(locale);
     } else {
-      // Show date + time for hourly, param, sys, edit archives
       return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
     }
   };
 
   const CustomTooltip = ({ active, payload, label, archiveType: tooltipArchiveType }) => {
     if (active && payload && payload.length) {
-      // Use the passed archiveType or fallback to component's archiveType
       const currentArchiveType = tooltipArchiveType || archiveType;
       const date = new Date(label);
       const locale = getLocale();
 
       let formattedLabel;
-      // Show only date for daily and trends archives (date-only data)
       if (currentArchiveType === 'daily' || currentArchiveType === 'trends') {
         formattedLabel = date.toLocaleDateString(locale);
       } else {
-        // Show date + time for hourly, param, sys, edit archives
         formattedLabel = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
       }
 
@@ -385,37 +341,26 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
         ...prev,
         [lineKey]: !prev[lineKey]
       };
-
-      // Save to localStorage
       const storageKey = `hlviewer-chart-visible-${archiveType}`;
       localStorage.setItem(storageKey, JSON.stringify(newVisibleLines));
-
       return newVisibleLines;
     });
   };
 
-  // Handle enterprise overlay data changes
   const handleEnterpriseDataChange = useCallback((data) => {
     console.log('Enterprise overlay data changed:', data);
     setEnterpriseOverlayData(data);
   }, []);
 
-
-  // Extract date range from data for EnterpriseOverlayControl
   const extractDateRange = useCallback(() => {
     if (!data || data.length === 0) return null;
-
     const sortedData = [...data].sort((a, b) => {
       const dateA = new Date(a.period);
       const dateB = new Date(b.period);
       return dateA - dateB;
     });
-
-    // Always extract date only (YYYY-MM-DD) for both daily and hourly
-    // The period_type parameter determines granularity, not date format
     const fromDate = sortedData[0].period.split('T')[0];
     const toDate = sortedData[sortedData.length - 1].period.split('T')[0];
-
     return { fromDate, toDate };
   }, [data]);
 
@@ -455,7 +400,6 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
             </button>
           ))}
 
-          {/* Enterprise Overlay Control - only for daily/hourly archives */}
           {(archiveType === 'daily' || archiveType === 'hourly') && selectedLines && extractDateRange() && (
             <SimplifiedEnterpriseControl
               selectedLines={selectedLines}

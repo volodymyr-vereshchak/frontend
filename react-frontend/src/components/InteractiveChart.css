@@ -52,7 +52,7 @@
 
 .chart-wrapper {
   position: relative;
-  padding: 20px;
+  padding: 10px 4px;
   background-color: #1a1a1a;
   min-height: 800px;
 }

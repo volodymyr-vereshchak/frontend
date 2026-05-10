@@ -75,7 +75,7 @@ function BranchConfigSection({ branch, allLumgs }) {
   const handleSaveMappings = async () => {
     try {
       const result = await branchApi.setConfigMappings(branch.id, mappings);
-      setMappings(result);
+      if (result) setMappings(result);
       setStatus({ ok: true, msg: 'Маппінг збережено' });
     } catch (err) {
       setStatus({ ok: false, msg: err?.message || 'Помилка збереження маппінгу' });
