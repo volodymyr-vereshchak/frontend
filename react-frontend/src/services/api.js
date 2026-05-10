@@ -9,7 +9,7 @@ class APIError extends Error {
   }
 }
 
-const DEFAULT_API_URL = '';
+const DEFAULT_API_URL = '/api';
 
 class ApiClient {
   constructor() {
