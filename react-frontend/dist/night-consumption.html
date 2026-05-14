@@ -413,7 +413,7 @@
             document.querySelector('#noDataText').textContent = t('noData');
         }
 
-        const API_BASE_URL = window.APP_CONFIG?.API_URL || '';
+        const API_BASE_URL = window.APP_CONFIG?.API_URL || '/api';
         let GRS_LINES = window.APP_CONFIG?.GRS_CONFIG?.TRENDS_IDS || [6, 11, 16, 17, 18, 19, 20, 21, 1001, 1002, 1003, 1004];
 
         let tableData = [];
