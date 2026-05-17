@@ -22,6 +22,12 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [showEnterprise, setShowEnterprise] = useState(false);
   const [periodType, setPeriodType]   = useState('daily'); // 'daily' | 'hourly'
 
+  // Raw volume data from last load (needed for enterprise toggle without re-fetch)
+  const [rawData, setRawData]                 = useState([]);
+  const [loadedDateRange, setLoadedDateRange] = useState(null);
+  const [loadedPeriodType, setLoadedPeriodType] = useState('daily');
+  const [loadedLines, setLoadedLines]         = useState({ phys: [], virt: [], all: [] });
+
   // Branch + lumg data
   const [branches, setBranches]       = useState([]);
   const [lumgs, setLumgs]             = useState([]);
@@ -99,6 +105,12 @@ const GRSTrends = ({ isOpen, onClose }) => {
     return map;
   }, [physicalLines, virtualLines]);
 
+  // Recalculate chart from already-fetched raw data (no new API calls for volumes)
+  const recalculate = (data, pType, lines, entData = []) => {
+    const trendsData = calculateGRSTrendsPercentages(data, lines, entData, pType);
+    setChartData(trendsData);
+  };
+
   const calculateTrends = async () => {
     if (grsLines.length === 0) {
       setError(t('noGrsLinesConfigured'));
@@ -108,7 +120,6 @@ const GRSTrends = ({ isOpen, onClose }) => {
     setError(null);
 
     try {
-      // Fetch physical + virtual data from correct endpoints
       const [physData, virtData] = await Promise.all([
         physicalLineIds.length > 0
           ? (periodType === 'daily'
@@ -127,19 +138,25 @@ const GRSTrends = ({ isOpen, onClose }) => {
       if (allData.length === 0) {
         setError(t('noDataAvailable'));
         setChartData([]);
+        setRawData([]);
         return;
       }
 
-      let enterpriseData = [];
+      // Store raw data and context for enterprise toggle
+      setRawData(allData);
+      setLoadedDateRange({ ...dateRange });
+      setLoadedPeriodType(periodType);
+      setLoadedLines({ phys: physicalLineIds, virt: virtualLineIds, all: grsLines });
+
+      let entData = [];
       if (showEnterprise) {
-        enterpriseData = await getEnterpriseWithCache(
+        entData = await getEnterpriseWithCache(
           grsLines, dateRange.fromDate, dateRange.toDate, periodType,
           (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
         ) || [];
       }
 
-      const trendsData = calculateGRSTrendsPercentages(allData, grsLines, enterpriseData);
-      setChartData(trendsData);
+      recalculate(allData, periodType, grsLines, entData);
     } catch (err) {
       setError(t('errorLoadingData'));
       console.error('Error calculating GRS trends:', err);
@@ -148,8 +165,32 @@ const GRSTrends = ({ isOpen, onClose }) => {
     }
   };
 
-  const calculateGRSTrendsPercentages = (data, lineIds, enterpriseData = []) => {
-    const keyLen = periodType === 'hourly' ? 13 : 10;
+  // Enterprise checkbox handler — immediately recalculates without re-fetching volumes
+  const handleEnterpriseChange = async (e) => {
+    const checked = e.target.checked;
+    setShowEnterprise(checked);
+
+    if (rawData.length === 0 || !loadedDateRange) return; // no data loaded yet
+
+    setIsLoading(true);
+    try {
+      let entData = [];
+      if (checked) {
+        entData = await getEnterpriseWithCache(
+          loadedLines.all, loadedDateRange.fromDate, loadedDateRange.toDate, loadedPeriodType,
+          (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
+        ) || [];
+      }
+      recalculate(rawData, loadedPeriodType, loadedLines.all, entData);
+    } catch (err) {
+      console.error('Error loading enterprise data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const calculateGRSTrendsPercentages = (data, lineIds, enterpriseData = [], pType = periodType) => {
+    const keyLen = pType === 'hourly' ? 13 : 10;
 
     const lineDataMap = {};
     data.forEach(record => {
@@ -226,7 +267,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
               <select
                 style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
                 value={selectedBranchId || ''}
-                onChange={e => { setSelectedBranchId(Number(e.target.value)); setChartData([]); }}
+                onChange={e => { setSelectedBranchId(Number(e.target.value)); setChartData([]); setRawData([]); setShowEnterprise(false); }}
               >
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
@@ -295,7 +336,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
                 selectedLines={grsLines}
                 lineNames={lineNames}
                 trendsEnterpriseChecked={showEnterprise}
-                onTrendsEnterpriseChange={e => setShowEnterprise(e.target.checked)}
+                onTrendsEnterpriseChange={handleEnterpriseChange}
               />
             </div>
           )}
