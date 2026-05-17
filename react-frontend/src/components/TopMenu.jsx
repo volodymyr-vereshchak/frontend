@@ -79,7 +79,7 @@ const AdminIcon = ({ color = "#B9E42B" }) => (
   </svg>
 );
 
-const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtualLine, activeArchiveType }) => {
+const TopMenu = ({ onArchiveTypeChange, archiveType, isVirtualLine, activeArchiveType }) => {
   const { currentLanguage, changeLanguage, t } = useLanguage();
   const { user } = useUser();
   const [activeButton, setActiveButton] = useState(archiveType ?
@@ -180,14 +180,7 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
     }
   };
 
-  const handleGRSReportClick = () => {
-    setIsReportsDropdownOpen(false);
-    if (onGRSReportClick) {
-      onGRSReportClick();
-    }
-  };
-
-  const handleGRSTrendsClick = () => {
+const handleGRSTrendsClick = () => {
     setIsReportsDropdownOpen(false);
     setActiveButton(null);
     if (onArchiveTypeChange) onArchiveTypeChange('grs-trends');
@@ -249,14 +242,6 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
 
           {isReportsDropdownOpen && (
             <div className="dropdown-menu">
-              <button
-                className="dropdown-item"
-                onClick={handleGRSReportClick}
-                title={t('grsReportCalculations')}
-              >
-                <span className="dropdown-item-icon">📊</span>
-                <span className="dropdown-item-text">{t('grsReportCalculations')}</span>
-              </button>
               <button
                 className="dropdown-item"
                 onClick={handleGRSTrendsClick}

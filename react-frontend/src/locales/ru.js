@@ -66,8 +66,7 @@ export const ru = {
 
   // GRS Report
   grsReport: "Отчет ГРС",
-  grsReportCalculations: "Отчет за 24 часа",
-  grsTrends: "Тренды ГРС",
+grsTrends: "Тренды ГРС",
   nightConsumption: "Ночные расходы",
   nightConsumptionDescription: "Минимальный расход газа с 00:00 до 05:00 по каждой ГРС",
   nightConsumptionNetDescription: "Минимальный NET объем (без промышленности) с 00:00 до 05:00 по каждой ГРС",
@@ -265,11 +264,6 @@ export const ru = {
   noLinesData: "Не удалось получить данные линий",
   noTimeBoundsError: "Не удалось определить временные границы данных",
 
-  // GRS Report modal
-  grsReportModalTitle: "Отчет по объемам газа за последние 24 часа",
-  loadingReport: "Загрузка отчета...",
-  getReport: "Получить отчет",
-  clickToGetReport: "Нажмите «Получить отчет» для загрузки данных",
 
   // Enterprise control
   enterpriseSettings: "Настройки промышленности",

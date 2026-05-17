@@ -5,7 +5,6 @@ import DateTimePickers from './components/DateTimePickers'
 import TreeView from './components/TreeView'
 import DataTable from './components/DataTable'
 import InteractiveChart from './components/InteractiveChart'
-import GRSReport from './components/GRSReport'
 import OverviewTab from './components/OverviewTab'
 import EnterprisePollAnalysis from './components/EnterprisePollAnalysis'
 import AdminPanel from './components/AdminPanel/AdminPanel'
@@ -141,8 +140,7 @@ function AppContent({ user }) {
   const [isDateFilterEnabled, setIsDateFilterEnabled] = useState(initialState.isDateFilterEnabled);
   const [archiveType, setArchiveType] = useState(initialState.archiveType);
   const [chartData, setChartData] = useState([]);
-  const [isGRSReportOpen, setIsGRSReportOpen] = useState(false);
-  const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
+const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
   const [selectedLineIsVirtual, setSelectedLineIsVirtual] = useState(false);
 
   // Clean expired enterprise cache entries on app startup
@@ -219,22 +217,13 @@ function AppContent({ user }) {
     setChartData(data || []);
   }, []);
 
-  const handleGRSReportOpen = useCallback(() => {
-    setIsGRSReportOpen(true);
-  }, []);
-
-  const handleGRSReportClose = useCallback(() => {
-    setIsGRSReportOpen(false);
-  }, []);
-
   return (
       <div className="App">
       <div className="app-container">
         <TopMenu
           onArchiveTypeChange={handleArchiveTypeChange}
           archiveType={archiveType}
-          onGRSReportClick={handleGRSReportOpen}
-          isVirtualLine={selectedLineIsVirtual}
+isVirtualLine={selectedLineIsVirtual}
         />
         <hr className="separator" />
 
@@ -311,12 +300,7 @@ function AppContent({ user }) {
         )}
       </div>
 
-      {/* GRS Report Modal */}
-      <GRSReport
-        isOpen={isGRSReportOpen}
-        onClose={handleGRSReportClose}
-      />
-      </div>
+</div>
   )
 }
 
