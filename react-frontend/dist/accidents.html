@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Отчет по авариям</title>
+    <title>Звіт по аваріях</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
@@ -346,8 +346,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚠️ Отчет по авариям</h1>
-            <p>Анализ аварийных событий по линиям за выбранный период</p>
+            <h1>⚠️ Звіт по аваріях</h1>
+            <p>Аналіз аварійних подій по лініях за обраний період</p>
         </div>
 
         <div class="controls">
@@ -360,66 +360,62 @@
                 </div>
 
                 <div class="control-group select-group">
-                    <label for="calcSelect">Вычислитель</label>
+                    <label for="calcSelect">Обчислювач</label>
                     <select id="calcSelect" onchange="handleCalcChange()">
-                        <option value="">Загрузка...</option>
+                        <option value="">Завантаження...</option>
                     </select>
                 </div>
 
                 <div class="control-group select-group">
-                    <label for="lineSelect">Линия</label>
+                    <label for="lineSelect">Лінія</label>
                     <select id="lineSelect">
-                        <option value="">Загрузка...</option>
+                        <option value="">Завантаження...</option>
                     </select>
                 </div>
 
                 <div class="control-group">
-                    <label for="fromDate">От</label>
+                    <label for="fromDate">З</label>
                     <input type="date" id="fromDate" />
                 </div>
 
                 <div class="control-group">
-                    <label for="toDate">До</label>
+                    <label for="toDate">По</label>
                     <input type="date" id="toDate" />
                 </div>
 
                 <button class="btn btn-primary" id="loadDataBtn" onclick="loadAccidentsData()">
-                    Загрузить данные
+                    Завантажити дані
                 </button>
 
                 <button class="btn btn-secondary" id="exportBtn" onclick="exportToExcel()" disabled>
-                    📊 Экспорт в Excel
+                    📊 Експорт в Excel
                 </button>
             </div>
         </div>
 
         <div class="stats" id="statsContainer" style="display: none;">
             <div class="stat-card">
-                <div class="stat-label">Всего аварий</div>
+                <div class="stat-label">Всього аварій</div>
                 <div class="stat-value" id="totalAccidents">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Типов аварий</div>
+                <div class="stat-label">Типів аварій</div>
                 <div class="stat-value" id="accidentTypes">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Общая длительность</div>
+                <div class="stat-label">Загальна тривалість</div>
                 <div class="stat-value" id="totalDuration">00:00:00</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Общий объем</div>
-                <div class="stat-value" id="totalVolume">0</div>
             </div>
         </div>
 
         <div class="table-container">
             <div class="table-header">
-                <h3>Данные по авариям</h3>
+                <h3>Дані по аваріях</h3>
             </div>
 
             <div id="loadingContainer" class="loading">
                 <div class="spinner"></div>
-                <p>Загрузка данных...</p>
+                <p>Завантаження даних...</p>
             </div>
 
             <div id="errorContainer" style="display: none;"></div>
@@ -428,10 +424,11 @@
                 <table id="accidentsTable">
                     <thead>
                         <tr>
-                            <th>Тип аварии</th>
-                            <th>Количество случаев</th>
-                            <th>Общая длительность</th>
-                            <th>Общий объем (м³)</th>
+                            <th>Тип аварії</th>
+                            <th>З</th>
+                            <th>По</th>
+                            <th>Випадків</th>
+                            <th>Тривалість</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
@@ -440,7 +437,7 @@
             </div>
 
             <div id="noDataContainer" class="no-data" style="display: none;">
-                <p>Нет данных для отображения</p>
+                <p>Немає даних для відображення</p>
             </div>
         </div>
     </div>
@@ -682,8 +679,8 @@
                 });
                 updateCalcSelect();
             } catch (error) {
-                console.error('Ошибка загрузки данных:', error);
-                showError('Ошибка загрузки списка вычислителей и линий');
+                console.error('Помилка завантаження даних:', error);
+                showError('Помилка завантаження списку обчислювачів і ліній');
             }
         }
 
@@ -704,11 +701,11 @@
                 : allCalcs;
 
             const calcSelect = document.getElementById('calcSelect');
-            calcSelect.innerHTML = '<option value="">Все вычислители</option>';
+            calcSelect.innerHTML = '<option value="">Всі обчислювачі</option>';
             filteredCalcs.forEach(calc => {
                 const option = document.createElement('option');
                 option.value = calc.id;
-                option.textContent = calc.name || `Вычислитель ${calc.id}`;
+                option.textContent = calc.name || `Обчислювач ${calc.id}`;
                 calcSelect.appendChild(option);
             });
 
@@ -725,7 +722,7 @@
             const branchId = document.getElementById('branchSelect').value;
             const lineSelect = document.getElementById('lineSelect');
 
-            lineSelect.innerHTML = '<option value="">Все линии</option>';
+            lineSelect.innerHTML = '<option value="">Всі лінії</option>';
 
             let filteredLines = allLines;
 
@@ -741,7 +738,7 @@
             filteredLines.forEach(line => {
                 const option = document.createElement('option');
                 option.value = line.id;
-                option.textContent = line.name || `Линия ${line.id}`;
+                option.textContent = line.name || `Лінія ${line.id}`;
                 lineSelect.appendChild(option);
             });
         }
@@ -828,62 +825,95 @@
                     document.getElementById('exportBtn').disabled = false;
                 }
             } catch (error) {
-                console.error('Ошибка загрузки данных:', error);
-                showError('Ошибка при загрузке данных: ' + error.message);
+                console.error('Помилка завантаження даних:', error);
+                showError('Помилка при завантаженні даних: ' + error.message);
             }
         }
 
-        // Отображение данных в таблице
+        // Групування випадків аварії по лінії
+        function groupOccurrencesByLine(occurrences) {
+            const byLine = {};
+            occurrences.forEach(occ => {
+                const lid = occ.line_id;
+                if (!byLine[lid]) {
+                    byLine[lid] = { line_id: lid, occurrences: [] };
+                }
+                byLine[lid].occurrences.push(occ);
+            });
+            return Object.values(byLine).map(entry => {
+                const starts = entry.occurrences.map(o => parseLocalDateTime(o.startTime));
+                const ends   = entry.occurrences.map(o => parseLocalDateTime(o.endTime));
+                const minStart = new Date(Math.min(...starts));
+                const maxEnd   = new Date(Math.max(...ends));
+                const totalMs  = entry.occurrences.reduce((s, o) =>
+                    s + (parseLocalDateTime(o.endTime) - parseLocalDateTime(o.startTime)), 0);
+                const lineName = (() => {
+                    const l = allLines.find(l => l.id === entry.line_id);
+                    return l ? (l.name || `Лінія ${entry.line_id}`) : `Лінія ${entry.line_id}`;
+                })();
+                return {
+                    line_id:    entry.line_id,
+                    line_name:  lineName,
+                    firstStart: minStart,
+                    lastEnd:    maxEnd,
+                    count:      entry.occurrences.length,
+                    totalMs,
+                    durationFormatted: formatDurationMs(totalMs),
+                };
+            });
+        }
+
+        function formatDurationMs(ms) {
+            if (ms <= 0) return '00:00:00';
+            const h = Math.floor(ms / 3600000);
+            const m = Math.floor((ms % 3600000) / 60000);
+            const s = Math.floor((ms % 60000) / 1000);
+            return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+
+        // Відображення даних у таблиці
         function displayData(groupedData) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
             groupedData.forEach((group, index) => {
-                // Строка группы
+                const isExpanded = expandedRows.has(index);
+
+                // Мін/макс по всіх випадках
+                const allStarts = group.occurrences.map(o => parseLocalDateTime(o.startTime));
+                const allEnds   = group.occurrences.map(o => parseLocalDateTime(o.endTime));
+                const groupFirst = new Date(Math.min(...allStarts));
+                const groupLast  = new Date(Math.max(...allEnds));
+
                 const groupRow = document.createElement('tr');
                 groupRow.className = 'group-row';
                 groupRow.dataset.groupId = index;
                 groupRow.onclick = () => toggleGroup(index);
-
-                const isExpanded = expandedRows.has(index);
 
                 groupRow.innerHTML = `
                     <td>
                         <span class="expand-icon ${isExpanded ? 'expanded' : ''}">▶</span>
                         ${group.sys_name}
                     </td>
+                    <td>${formatDateTime(groupFirst)}</td>
+                    <td>${formatDateTime(groupLast)}</td>
                     <td>${group.totalCount}</td>
                     <td>${group.totalDurationFormatted}</td>
-                    <td>${(Number(group.totalVolume) || 0).toFixed(2)}</td>
                 `;
-
                 tbody.appendChild(groupRow);
 
-                // Строки деталей
                 if (isExpanded) {
-                    group.occurrences.forEach((occurrence, occIndex) => {
+                    const lineGroups = groupOccurrencesByLine(group.occurrences);
+                    lineGroups.forEach(lg => {
                         const detailRow = document.createElement('tr');
                         detailRow.className = 'detail-row';
-                        detailRow.dataset.groupId = index;
-
-                        const startDate = parseLocalDateTime(occurrence.startTime);
-                        const endDate = parseLocalDateTime(occurrence.endTime);
-
-                        const typeBadge = occurrence.type === 'full'
-                            ? '<span class="badge badge-full">Полная</span>'
-                            : occurrence.type === 'start_only'
-                            ? '<span class="badge badge-start">Только начало</span>'
-                            : '<span class="badge badge-end">Только конец</span>';
-
-                        const lineName = getLineName(occurrence.line_id);
-
                         detailRow.innerHTML = `
-                            <td>${typeBadge} <strong>${lineName}</strong> — ${formatDateTime(startDate)} - ${formatDateTime(endDate)}</td>
-                            <td>—</td>
-                            <td>${occurrence.duration}</td>
-                            <td>${(Number(occurrence.volume) || 0).toFixed(2)}</td>
+                            <td><strong>${lg.line_name}</strong></td>
+                            <td>${formatDateTime(lg.firstStart)}</td>
+                            <td>${formatDateTime(lg.lastEnd)}</td>
+                            <td>${lg.count}</td>
+                            <td>${lg.durationFormatted}</td>
                         `;
-
                         tbody.appendChild(detailRow);
                     });
                 }
@@ -893,12 +923,6 @@
             document.getElementById('errorContainer').style.display = 'none';
             document.getElementById('noDataContainer').style.display = 'none';
             document.getElementById('tableContainer').style.display = 'block';
-        }
-
-        // Получение названия линии по ID
-        function getLineName(lineId) {
-            const line = allLines.find(l => l.id === lineId);
-            return line ? (line.name || `Линия ${lineId}`) : `Линия ${lineId}`;
         }
 
         // Переключение раскрытия группы
@@ -911,109 +935,83 @@
             displayData(groupedAccidents);
         }
 
-        // Обновление статистики
+        // Оновлення статистики
         function updateStats(groupedData, allAccidents) {
             const totalAccidents = allAccidents.length;
             const accidentTypes = groupedData.length;
 
             let totalDurationMs = 0;
-            let totalVolume = 0;
-
             groupedData.forEach(group => {
                 totalDurationMs += (Number(group.totalDuration) || 0);
-                totalVolume += (Number(group.totalVolume) || 0);
             });
-
-            const hours = Math.floor(totalDurationMs / (1000 * 60 * 60));
-            const minutes = Math.floor((totalDurationMs % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((totalDurationMs % (1000 * 60)) / 1000);
-            const totalDuration = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
             document.getElementById('totalAccidents').textContent = totalAccidents;
             document.getElementById('accidentTypes').textContent = accidentTypes;
-            document.getElementById('totalDuration').textContent = totalDuration;
-            document.getElementById('totalVolume').textContent = (Number(totalVolume) || 0).toFixed(2);
-
+            document.getElementById('totalDuration').textContent = formatDurationMs(totalDurationMs);
             document.getElementById('statsContainer').style.display = 'grid';
         }
 
-        // Экспорт в Excel
+        // Експорт в Excel
         function exportToExcel() {
             if (!currentData || !groupedAccidents.length) {
-                alert('Нет данных для экспорта');
+                alert('Немає даних для експорту');
                 return;
             }
 
             const excelData = [];
 
-            // Заголовок
-            excelData.push(['Отчет по авариям']);
+            excelData.push(['Звіт по аваріях']);
             excelData.push([]);
 
             const calcId = currentData.calcId;
             const lineId = currentData.lineId;
-
             const calcName = calcId
-                ? allCalcs.find(c => c.id == calcId)?.name || `Вычислитель ${calcId}`
-                : 'Все вычислители';
-
+                ? allCalcs.find(c => c.id == calcId)?.name || `Обчислювач ${calcId}`
+                : 'Всі обчислювачі';
             const lineName = lineId
-                ? allLines.find(l => l.id == lineId)?.name || `Линия ${lineId}`
-                : 'Все линии';
+                ? allLines.find(l => l.id == lineId)?.name || `Лінія ${lineId}`
+                : 'Всі лінії';
 
-            excelData.push(['Вычислитель:', calcName]);
-            excelData.push(['Линия:', lineName]);
-            excelData.push(['Период:', `${document.getElementById('fromDate').value} - ${document.getElementById('toDate').value}`]);
+            excelData.push(['Обчислювач:', calcName]);
+            excelData.push(['Лінія:', lineName]);
+            excelData.push(['Період:', `${document.getElementById('fromDate').value} - ${document.getElementById('toDate').value}`]);
             excelData.push([]);
 
-            // Таблица
-            excelData.push(['Тип аварии', 'Количество случаев', 'Общая длительность', 'Общий объем (м³)']);
+            excelData.push(['Тип аварії', 'З', 'По', 'Випадків', 'Тривалість']);
 
             groupedAccidents.forEach(group => {
+                const allStarts = group.occurrences.map(o => parseLocalDateTime(o.startTime));
+                const allEnds   = group.occurrences.map(o => parseLocalDateTime(o.endTime));
+                const groupFirst = new Date(Math.min(...allStarts));
+                const groupLast  = new Date(Math.max(...allEnds));
+
                 excelData.push([
                     group.sys_name,
+                    formatDateTime(groupFirst),
+                    formatDateTime(groupLast),
                     group.totalCount,
                     group.totalDurationFormatted,
-                    (Number(group.totalVolume) || 0).toFixed(2)
                 ]);
 
-                // Детали
-                group.occurrences.forEach(occurrence => {
-                    const typeText = occurrence.type === 'full'
-                        ? 'Полная'
-                        : occurrence.type === 'start_only'
-                        ? 'Только начало'
-                        : 'Только конец';
-
-                    const lineName = getLineName(occurrence.line_id);
-
+                const lineGroups = groupOccurrencesByLine(group.occurrences);
+                lineGroups.forEach(lg => {
                     excelData.push([
-                        `  ${typeText}: ${lineName} — ${formatDateTime(parseLocalDateTime(occurrence.startTime))} - ${formatDateTime(parseLocalDateTime(occurrence.endTime))}`,
-                        '',
-                        occurrence.duration,
-                        (Number(occurrence.volume) || 0).toFixed(2)
+                        `  ${lg.line_name}`,
+                        formatDateTime(lg.firstStart),
+                        formatDateTime(lg.lastEnd),
+                        lg.count,
+                        lg.durationFormatted,
                     ]);
                 });
 
                 excelData.push([]);
             });
 
-            // Создание workbook
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(excelData);
+            ws['!cols'] = [{ wch: 60 }, { wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 14 }];
+            XLSX.utils.book_append_sheet(wb, ws, 'Аварії');
 
-            // Автоширина колонок
-            const colWidths = [
-                { wch: 60 },
-                { wch: 20 },
-                { wch: 20 },
-                { wch: 20 }
-            ];
-            ws['!cols'] = colWidths;
-
-            XLSX.utils.book_append_sheet(wb, ws, 'Аварии');
-
-            // Скачивание
             const timestamp = new Date().toISOString().slice(0, 10);
             XLSX.writeFile(wb, `accidents_${timestamp}.xlsx`);
         }
