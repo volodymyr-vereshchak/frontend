@@ -79,7 +79,7 @@ const AdminIcon = ({ color = "#B9E42B" }) => (
   </svg>
 );
 
-const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtualLine }) => {
+const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtualLine, activeArchiveType }) => {
   const { currentLanguage, changeLanguage, t } = useLanguage();
   const { user } = useUser();
   const [activeButton, setActiveButton] = useState(archiveType ?
@@ -201,8 +201,8 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
 
   const handleAccidentsClick = () => {
     setIsReportsDropdownOpen(false);
-    // Open Accidents report in new tab
-    window.open('/accidents.html', '_blank');
+    setActiveButton(null);
+    if (onArchiveTypeChange) onArchiveTypeChange('accidents');
   };
 
   const handleLanguageChange = (languageCode) => {

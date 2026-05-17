@@ -9,6 +9,7 @@ import GRSReport from './components/GRSReport'
 import OverviewTab from './components/OverviewTab'
 import EnterprisePollAnalysis from './components/EnterprisePollAnalysis'
 import AdminPanel from './components/AdminPanel/AdminPanel'
+import AccidentsPage from './components/AccidentsPage'
 import LoginPage from './components/LoginPage/LoginPage'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { UserProvider } from './contexts/UserContext'
@@ -159,7 +160,9 @@ function AppContent({ user }) {
   }, []);
 
   useEffect(() => {
-    safeSetItem('hlv-active-tab', archiveType);
+    if (archiveType !== 'accidents') {
+      safeSetItem('hlv-active-tab', archiveType);
+    }
   }, [archiveType]);
 
   useEffect(() => {
@@ -171,7 +174,7 @@ function AppContent({ user }) {
     if (selectedLineIsVirtual) {
       // Виртуальные линии поддерживают только daily, hourly, overview, poll, admin
       if (archiveType !== 'daily' && archiveType !== 'hourly' && archiveType !== 'overview' &&
-          archiveType !== 'poll' && archiveType !== 'admin') {
+          archiveType !== 'poll' && archiveType !== 'admin' && archiveType !== 'accidents') {
         setArchiveType('daily');
       }
     }
@@ -237,8 +240,11 @@ function AppContent({ user }) {
           <AdminPanel />
         )}
 
-        {/* Hide DateTimePickers and TreeView when Overview, Poll, or Admin is active */}
-        {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' && (
+        {/* Accidents report — full width */}
+        {archiveType === 'accidents' && <AccidentsPage />}
+
+        {/* Hide DateTimePickers and TreeView when Overview, Poll, Admin or Accidents is active */}
+        {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' && archiveType !== 'accidents' && (
           <>
             <DateTimePickers
               onDateRangeChange={handleDateRangeChange}
@@ -262,7 +268,7 @@ function AppContent({ user }) {
         )}
 
         {/* Standard layout for other archive types */}
-        {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' && (
+        {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' && archiveType !== 'accidents' && (
           <>
             <div className="main-layout">
               <div className="sidebar">
