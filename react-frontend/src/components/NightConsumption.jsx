@@ -174,19 +174,18 @@ const NightConsumption = ({ isOpen, onClose }) => {
   };
 
   const calculateMinNightFlow = (hourlyData, lineIds, enterpriseData = []) => {
-    // STEP 1: Create enterprise lookup map with FULL datetime for exact hourly matching
-    // Structure: {line_id: {datetime: total_volume}}
+    // STEP 1: Create enterprise lookup map normalized to YYYY-MM-DDTHH (13 chars)
+    // API returns "2025-12-01T03:00:00", cache returns "2025-12-01T03" — normalize both
     const enterpriseMap = {};
 
     enterpriseData.forEach(entry => {
       const lineId = entry.line_id;
-      const datetime = entry.period; // Keep full datetime: "2025-12-01T03:00:00"
+      const normalizedPeriod = String(entry.period || '').replace(' ', 'T').slice(0, 13);
 
       if (!enterpriseMap[lineId]) {
         enterpriseMap[lineId] = {};
       }
 
-      // Sum up all device volumes for this period
       let totalVolume = 0;
       if (entry.devices && Array.isArray(entry.devices)) {
         entry.devices.forEach(device => {
@@ -196,7 +195,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
         totalVolume = entry.total_volume;
       }
 
-      enterpriseMap[lineId][datetime] = totalVolume;
+      enterpriseMap[lineId][normalizedPeriod] = totalVolume;
     });
 
     // STEP 2: Group hourly data by date and line for night period (0-5 hours)
@@ -240,8 +239,10 @@ const NightConsumption = ({ isOpen, onClose }) => {
         const fullDatetime = periodStr; // Keep full datetime for enterprise lookup
 
         // STEP 3: Calculate NET = MAX(0, GS Volume - Enterprise Volume)
+        // Normalize to 13 chars to match enterprise map key (YYYY-MM-DDTHH)
+        const normalizedPeriod = fullDatetime.replace(' ', 'T').slice(0, 13);
         const gsVolume = record.volume !== undefined ? record.volume : (record.flow || 0);
-        const enterpriseVolume = (enterpriseMap[lineId]?.[fullDatetime]) || 0;
+        const enterpriseVolume = (enterpriseMap[lineId]?.[normalizedPeriod]) || 0;
         const netVolume = Math.max(0, gsVolume - enterpriseVolume);
 
         if (!dataByDateAndLine[date]) {

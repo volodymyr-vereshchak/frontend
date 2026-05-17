@@ -204,7 +204,13 @@ const GRSTrends = ({ isOpen, onClose }) => {
       const lid = entry.line_id;
       const key = String(entry.period || '').replace(' ', 'T').slice(0, keyLen);
       if (!enterpriseMap[lid]) enterpriseMap[lid] = {};
-      enterpriseMap[lid][key] = entry.total_volume;
+      // API returns total_volume; cache returns devices array — handle both
+      const vol = entry.total_volume !== undefined
+        ? entry.total_volume
+        : Array.isArray(entry.devices)
+          ? entry.devices.reduce((s, d) => s + (d.volume || 0), 0)
+          : 0;
+      enterpriseMap[lid][key] = vol;
     });
 
     const lineTotals = {};
