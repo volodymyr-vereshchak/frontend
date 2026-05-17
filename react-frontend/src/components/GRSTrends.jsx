@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  virtualLinesApi,
+  archiveDataApi,
   archiveDataVirtualApi,
   enterpriseVirtualApi,
   branchApi,
+  lumgApi,
+  lineApi,
 } from '../services/api';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -13,129 +15,116 @@ import './GRSTrends.css';
 
 const GRSTrends = ({ isOpen, onClose }) => {
   const { t } = useLanguage();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [chartData, setChartData] = useState([]);
-  const [visibleLines, setVisibleLines] = useState([]);
+  const [isLoading, setIsLoading]     = useState(false);
+  const [error, setError]             = useState(null);
+  const [chartData, setChartData]     = useState([]);
   const [linesLoading, setLinesLoading] = useState(false);
   const [showEnterprise, setShowEnterprise] = useState(false);
+  const [periodType, setPeriodType]   = useState('daily'); // 'daily' | 'hourly'
 
-  // Branch selector
-  const [branches, setBranches] = useState([]);
+  // Branch + lumg data
+  const [branches, setBranches]       = useState([]);
+  const [lumgs, setLumgs]             = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState(null);
 
-  // Get initial date range (first day of current month to today)
+  // Physical and virtual lines for selected branch
+  const [physicalLines, setPhysicalLines] = useState([]);
+  const [virtualLines,  setVirtualLines]  = useState([]);
+
   const getInitialDateRange = () => {
     const today = new Date();
-    const year = today.getFullYear();
+    const year  = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-
-    // First day of current month
-    const startDate = `${year}-${month}-01`;
-
-    // Current date
-    const endDate = `${year}-${month}-${day}`;
-
-    return {
-      fromDate: startDate,
-      toDate: endDate,
-      startHour: 7,
-      endHour: 6
-    };
+    const day   = String(today.getDate()).padStart(2, '0');
+    return { fromDate: `${year}-${month}-01`, toDate: `${year}-${month}-${day}`, startHour: 7, endHour: 6 };
   };
 
   const [dateRange, setDateRange] = useState(getInitialDateRange);
 
-  // Load branches on open
+  // Load branches + lumgs on open
   useEffect(() => {
     if (!isOpen) return;
-    branchApi.getAll().then(data => {
-      const list = Array.isArray(data) ? data : [];
-      setBranches(list);
-      if (list.length > 0) setSelectedBranchId(list[0].id);
-    }).catch(err => console.error('Failed to load branches:', err));
+    Promise.all([branchApi.getAll(), lumgApi.getAll()])
+      .then(([branchData, lumgData]) => {
+        const list = Array.isArray(branchData) ? branchData : [];
+        setBranches(list);
+        setLumgs(Array.isArray(lumgData) ? lumgData : []);
+        if (list.length > 0) setSelectedBranchId(list[0].id);
+      })
+      .catch(err => console.error('Failed to load branches/lumgs:', err));
   }, [isOpen]);
 
-  // Load visible lines on component mount
+  // Load lines per branch (include_in_trends only)
   useEffect(() => {
-    const loadVisibleLines = async () => {
+    if (!isOpen || !selectedBranchId) return;
+
+    const load = async () => {
       setLinesLoading(true);
       try {
-        const lines = await virtualLinesApi.getVisibleLines();
-        if (lines && lines.length > 0) {
-          setVisibleLines(lines);
-        } else {
-          // Fallback to hardcoded config if API returns empty
-          if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
-            const fallbackLines = window.APP_CONFIG.GRS_CONFIG.LINES_IDS.map(id => ({
-              id: id,
-              name: `Line ${id}`,
-              is_virtual: false
-            }));
-            setVisibleLines(fallbackLines);
-          } else {
-            // Default fallback
-            const defaultLines = [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11].map(id => ({
-              id: id,
-              name: `Line ${id}`,
-              is_virtual: false
-            }));
-            setVisibleLines(defaultLines);
-          }
+        const branchLumgIds = lumgs.filter(l => l.branch_id === selectedBranchId).map(l => l.id);
+
+        // Physical lines with include_in_trends=true
+        let phys = [];
+        if (branchLumgIds.length > 0) {
+          const arrays = await Promise.all(branchLumgIds.map(lid => lineApi.getLinesByLumg(lid)));
+          phys = arrays.flat().filter(l => l && l.include_in_trends);
         }
+
+        // Virtual lines with include_in_trends=true for this branch
+        const virt = await fetch(
+          `${(window.APP_CONFIG?.API_URL || '/api')}/virtual_lines/?include_in_trends=true&branch_id=${selectedBranchId}`,
+          { credentials: 'include' }
+        ).then(r => r.ok ? r.json() : []).catch(() => []);
+
+        setPhysicalLines(phys);
+        setVirtualLines(virt);
       } catch (err) {
-        console.error('Error loading visible lines:', err);
-        // Fallback to hardcoded config on error
-        if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
-          const fallbackLines = window.APP_CONFIG.GRS_CONFIG.LINES_IDS.map(id => ({
-            id: id,
-            name: `Line ${id}`,
-            is_virtual: false
-          }));
-          setVisibleLines(fallbackLines);
-        } else {
-          // Default fallback
-          const defaultLines = [1, 4, 5, 21, 20, 19, 18, 16, 6, 8, 15, 17, 12, 10, 11].map(id => ({
-            id: id,
-            name: `Line ${id}`,
-            is_virtual: false
-          }));
-          setVisibleLines(defaultLines);
-        }
+        console.error('Error loading lines for branch:', err);
       } finally {
         setLinesLoading(false);
       }
     };
 
-    if (isOpen) {
-      loadVisibleLines();
-    }
-  }, [isOpen]);
+    load();
+  }, [isOpen, selectedBranchId, lumgs]);
 
-  // Extract line IDs filtered by selected branch; fall back to all lines when
-  // virtual lines have no branch_id (they won't match the branch filter)
-  const grsLines = useMemo(() => {
-    if (!selectedBranchId) return visibleLines.map(l => l.id);
-    const filtered = visibleLines.filter(l => l.branch_id === selectedBranchId);
-    return (filtered.length > 0 ? filtered : visibleLines).map(l => l.id);
-  }, [visibleLines, selectedBranchId]);
+  const physicalLineIds = useMemo(() => physicalLines.map(l => l.id), [physicalLines]);
+  const virtualLineIds  = useMemo(() => virtualLines.map(l => l.id),  [virtualLines]);
+  const grsLines        = useMemo(() => [...physicalLineIds, ...virtualLineIds], [physicalLineIds, virtualLineIds]);
+
+  // Line names map
+  const lineNames = useMemo(() => {
+    const map = {};
+    [...physicalLines, ...virtualLines].forEach(l => { map[l.id] = l.name || `Лінія ${l.id}`; });
+    return map;
+  }, [physicalLines, virtualLines]);
 
   const calculateTrends = async () => {
     if (grsLines.length === 0) {
       setError(t('noGrsLinesConfigured'));
       return;
     }
-
     setIsLoading(true);
     setError(null);
 
     try {
-      const dailyData = await archiveDataVirtualApi.getDailyDataVirtual(
-        grsLines, dateRange.fromDate, dateRange.toDate
-      );
+      // Fetch physical + virtual data from correct endpoints
+      const [physData, virtData] = await Promise.all([
+        physicalLineIds.length > 0
+          ? (periodType === 'daily'
+              ? archiveDataApi.getDailyData(physicalLineIds, dateRange.fromDate, dateRange.toDate)
+              : archiveDataApi.getHourlyData(physicalLineIds, dateRange.fromDate, dateRange.toDate))
+          : Promise.resolve([]),
+        virtualLineIds.length > 0
+          ? (periodType === 'daily'
+              ? archiveDataVirtualApi.getDailyDataVirtual(virtualLineIds, dateRange.fromDate, dateRange.toDate)
+              : archiveDataVirtualApi.getHourlyDataVirtual(virtualLineIds, dateRange.fromDate, dateRange.toDate))
+          : Promise.resolve([]),
+      ]);
 
-      if (!dailyData || dailyData.length === 0) {
+      const allData = [...(physData || []), ...(virtData || [])];
+
+      if (allData.length === 0) {
         setError(t('noDataAvailable'));
         setChartData([]);
         return;
@@ -144,14 +133,13 @@ const GRSTrends = ({ isOpen, onClose }) => {
       let enterpriseData = [];
       if (showEnterprise) {
         enterpriseData = await getEnterpriseWithCache(
-          grsLines, dateRange.fromDate, dateRange.toDate, 'daily',
+          grsLines, dateRange.fromDate, dateRange.toDate, periodType,
           (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
         ) || [];
       }
 
-      const trendsData = calculateGRSTrendsPercentages(dailyData, grsLines, enterpriseData);
+      const trendsData = calculateGRSTrendsPercentages(allData, grsLines, enterpriseData);
       setChartData(trendsData);
-
     } catch (err) {
       setError(t('errorLoadingData'));
       console.error('Error calculating GRS trends:', err);
@@ -160,106 +148,64 @@ const GRSTrends = ({ isOpen, onClose }) => {
     }
   };
 
-  const calculateGRSTrendsPercentages = (dailyData, lineIds, enterpriseData = []) => {
-    // Group data by line_id
-    const lineDataMap = {};
+  const calculateGRSTrendsPercentages = (data, lineIds, enterpriseData = []) => {
+    const keyLen = periodType === 'hourly' ? 13 : 10;
 
-    dailyData.forEach(record => {
-      const lineId = record.line_id;
-      if (!lineDataMap[lineId]) {
-        lineDataMap[lineId] = [];
-      }
-      lineDataMap[lineId].push(record);
+    const lineDataMap = {};
+    data.forEach(record => {
+      const lid = record.line_id;
+      if (!lineDataMap[lid]) lineDataMap[lid] = [];
+      lineDataMap[lid].push(record);
     });
 
-    // Create enterprise volume lookup map: {line_id: {date: total_volume}}
     const enterpriseMap = {};
     enterpriseData.forEach(entry => {
-      const lineId = entry.line_id;
-      const date = String(entry.period || '').replace(' ', 'T').slice(0, 10);
-
-      if (!enterpriseMap[lineId]) {
-        enterpriseMap[lineId] = {};
-      }
-      enterpriseMap[lineId][date] = entry.total_volume;
+      const lid = entry.line_id;
+      const key = String(entry.period || '').replace(' ', 'T').slice(0, keyLen);
+      if (!enterpriseMap[lid]) enterpriseMap[lid] = {};
+      enterpriseMap[lid][key] = entry.total_volume;
     });
 
-    // Calculate total NET volume per line (GS - Enterprise) for the entire period
     const lineTotals = {};
-    Object.keys(lineDataMap).forEach(lineId => {
-      const lineData = lineDataMap[lineId];
-      const totalVolume = lineData.reduce((sum, record) => {
-        const date = String(record.period || '').replace(' ', 'T').slice(0, 10);
-        const gsVolume = record.volume || 0;
-
-        // Subtract enterprise volume if exists for this line and date
-        const enterpriseVolume = (enterpriseMap[lineId] && enterpriseMap[lineId][date]) || 0;
-        const netVolume = Math.max(0, gsVolume - enterpriseVolume);
-
-        return sum + netVolume;
+    Object.keys(lineDataMap).forEach(lid => {
+      lineTotals[lid] = lineDataMap[lid].reduce((sum, rec) => {
+        const key = String(rec.period || '').replace(' ', 'T').slice(0, keyLen);
+        const gs  = rec.volume || 0;
+        const ent = (enterpriseMap[lid] && enterpriseMap[lid][key]) || 0;
+        return sum + Math.max(0, gs - ent);
       }, 0);
-      lineTotals[lineId] = totalVolume;
     });
 
-    // Create chart data with percentages for each day
     const chartDataMap = {};
-
-    Object.keys(lineDataMap).forEach(lineId => {
-      const lineData = lineDataMap[lineId];
-      const totalVolume = lineTotals[lineId];
-
-      if (totalVolume > 0) {
-        lineData.forEach(record => {
-          const date = String(record.period || '').replace(' ', 'T').slice(0, 10);
-          const gsVolume = record.volume || 0;
-
-          // Subtract enterprise volume
-          const enterpriseVolume = (enterpriseMap[lineId] && enterpriseMap[lineId][date]) || 0;
-          const netVolume = Math.max(0, gsVolume - enterpriseVolume);
-
-          const percentage = (netVolume / totalVolume) * 100;
-
-          if (!chartDataMap[date]) {
-            chartDataMap[date] = { period: date };
-          }
-
-          chartDataMap[date][`line_${lineId}`] = percentage;
-          chartDataMap[date][`line_${lineId}_volume`] = netVolume;
-          chartDataMap[date][`line_${lineId}_enterprise`] = enterpriseVolume;
-        });
-      }
+    Object.keys(lineDataMap).forEach(lid => {
+      const total = lineTotals[lid];
+      if (total <= 0) return;
+      lineDataMap[lid].forEach(rec => {
+        const key = String(rec.period || '').replace(' ', 'T').slice(0, keyLen);
+        const gs  = rec.volume || 0;
+        const ent = (enterpriseMap[lid] && enterpriseMap[lid][key]) || 0;
+        const net = Math.max(0, gs - ent);
+        const pct = (net / total) * 100;
+        if (!chartDataMap[key]) chartDataMap[key] = { period: key };
+        chartDataMap[key][`line_${lid}`]            = pct;
+        chartDataMap[key][`line_${lid}_volume`]     = net;
+        chartDataMap[key][`line_${lid}_enterprise`] = ent;
+      });
     });
 
-    // Convert to array and sort by date
-    const trendsArray = Object.values(chartDataMap).sort((a, b) =>
-      new Date(a.period) - new Date(b.period)
-    );
-
-    return trendsArray;
+    return Object.values(chartDataMap).sort((a, b) => a.period.localeCompare(b.period));
   };
 
-  const handleDateRangeChange = (newDateRange) => {
-    setDateRange(newDateRange);
+  const handleLoad = () => {
+    if (!linesLoading && grsLines.length > 0) calculateTrends();
   };
 
-  const handleRefresh = () => {
-    calculateTrends();
-  };
-
-  // Auto-calculate when date range, branch or enterprise toggle changes
-  // Wait until lines are loaded to avoid "no lines configured" error
+  // Re-calculate when enterprise cache is cleared
   useEffect(() => {
-    if (isOpen && !linesLoading && visibleLines.length > 0 && dateRange.fromDate && dateRange.toDate && selectedBranchId) {
-      calculateTrends();
-    }
-  }, [dateRange, isOpen, selectedBranchId, showEnterprise, linesLoading, visibleLines.length]);
-
-  // Re-calculate when enterprise cache is cleared (Ctrl+Shift+E)
-  useEffect(() => {
-    const handler = () => { if (isOpen) calculateTrends(); };
+    const handler = () => { if (isOpen && chartData.length > 0) calculateTrends(); };
     window.addEventListener('enterprise-cache-cleared', handler);
     return () => window.removeEventListener('enterprise-cache-cleared', handler);
-  }, [isOpen, dateRange, selectedBranchId, showEnterprise]);
+  }, [isOpen, dateRange, selectedBranchId, showEnterprise, periodType]);
 
   if (!isOpen) return null;
 
@@ -268,14 +214,13 @@ const GRSTrends = ({ isOpen, onClose }) => {
       <div className="modal-content grs-trends-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title">{t('grsTrends')}</h3>
-          <button className="close-button" onClick={onClose}>
-            ×
-          </button>
+          <button className="close-button" onClick={onClose}>×</button>
         </div>
 
         <div className="grs-trends-modal-body">
-          {/* Branch selector + Enterprise checkbox */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12, flexWrap: 'wrap' }}>
+          {/* Controls row */}
+          <div className="grs-controls-row">
+            {/* Branch */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>{t('branch')}:</label>
               <select
@@ -286,29 +231,42 @@ const GRSTrends = ({ isOpen, onClose }) => {
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </div>
-            <label className="trends-enterprise-checkbox">
-              <input
-                type="checkbox"
-                checked={showEnterprise}
-                onChange={e => setShowEnterprise(e.target.checked)}
-                disabled={isLoading}
-              />
-              <span>{t('enterpriseOverlay')}</span>
-            </label>
-          </div>
 
-          {/* Date Range Picker */}
-          <div className="date-picker-section">
-            <h4>{t('selectPeriod')}</h4>
+            {/* Period toggle */}
+            <div className="grs-period-toggle">
+              <button
+                className={`grs-toggle-btn ${periodType === 'daily' ? 'active' : ''}`}
+                onClick={() => setPeriodType('daily')}
+              >
+                Добові
+              </button>
+              <button
+                className={`grs-toggle-btn ${periodType === 'hourly' ? 'active' : ''}`}
+                onClick={() => setPeriodType('hourly')}
+              >
+                Годинні
+              </button>
+            </div>
+
+            {/* Date pickers */}
             <DateTimePickers
-              onDateRangeChange={handleDateRangeChange}
-              onDateFilterToggle={() => {}} // Not used in modal
+              onDateRangeChange={setDateRange}
+              onDateFilterToggle={() => {}}
               archiveType="daily"
               initialDateRange={dateRange}
             />
+
+            {/* Load button */}
+            <button
+              className="btn btn-primary grs-load-btn"
+              onClick={handleLoad}
+              disabled={isLoading || linesLoading}
+            >
+              {isLoading ? t('loading') : 'Завантажити'}
+            </button>
           </div>
 
-          {/* Loading State */}
+          {/* Loading */}
           {isLoading && (
             <div className="loading-container">
               <div className="loading-spinner"></div>
@@ -316,7 +274,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
             </div>
           )}
 
-          {/* Error State */}
+          {/* Error */}
           {error && (
             <div className="error-container">
               <div className="error-icon">⚠️</div>
@@ -335,30 +293,23 @@ const GRSTrends = ({ isOpen, onClose }) => {
                 data={chartData}
                 archiveType="trends"
                 selectedLines={grsLines}
-                trendsMode={true}
+                lineNames={lineNames}
+                trendsEnterpriseChecked={showEnterprise}
+                onTrendsEnterpriseChange={e => setShowEnterprise(e.target.checked)}
               />
             </div>
           )}
 
-          {/* No Data State */}
+          {/* No data */}
           {!isLoading && !error && chartData.length === 0 && (
             <div className="no-data-container">
-              <p>{t('noDataForPeriod')}</p>
+              <p>{t('selectPeriod')}</p>
             </div>
           )}
         </div>
 
         <div className="modal-footer">
-          <button
-            className="btn btn-primary"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            {isLoading ? t('loading') : t('refresh')}
-          </button>
-          <button className="btn btn-secondary" onClick={onClose}>
-            {t('close')}
-          </button>
+          <button className="btn btn-secondary" onClick={onClose}>{t('close')}</button>
         </div>
       </div>
     </div>

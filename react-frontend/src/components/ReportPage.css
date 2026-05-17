@@ -112,6 +112,7 @@
 .report-page .night-consumption-modal-body,
 .report-page .grs-trends-modal-body {
   background: #1a1a2e;
+  overflow: visible;
 }
 
 /* Controls row: branch + date pickers + load button inline */
@@ -227,6 +228,28 @@
 }
 .report-page .export-button:hover {
   background: #236034 !important;
+}
+
+/* Controls row in page mode */
+.report-page .grs-controls-row {
+  padding: 12px 20px;
+  background: #141424;
+  border-bottom: 1px solid #2a2a3e;
+  margin-bottom: 0;
+}
+
+/* Load button in page mode */
+.report-page .grs-load-btn {
+  background: #B9E42B !important;
+  color: #111 !important;
+  border: none;
+}
+.report-page .grs-load-btn:hover:not(:disabled) { background: #a8d126 !important; }
+.report-page .grs-load-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Chart section in page mode */
+.report-page .chart-section {
+  padding: 16px 20px;
 }
 
 /* Hide footer entirely in page mode (load button is inline) */

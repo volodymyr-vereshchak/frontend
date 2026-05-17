@@ -3,7 +3,6 @@
   border: 1px solid #2a2a2a;
   border-radius: 4px;
   margin-top: 20px;
-  overflow: hidden;
 }
 
 .chart-header {
@@ -157,4 +156,126 @@
 
 .recharts-brush-texts .recharts-text {
   fill: #9e9e9e;
+}
+/* Enterprise checkbox in chart header (trends mode) */
+.chart-enterprise-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  background-color: #2a2a2a;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  color: #d0d0d0;
+}
+
+.chart-enterprise-checkbox:hover {
+  border-color: #4CAF50;
+  background-color: #2f2f2f;
+}
+
+.chart-enterprise-checkbox input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #4CAF50;
+  flex-shrink: 0;
+}
+
+/* Lines dropdown (trends mode) */
+.lines-dropdown {
+  position: relative;
+}
+
+.lines-dropdown-trigger {
+  padding: 6px 14px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.lines-dropdown-trigger:hover:not(:disabled) {
+  background: #333;
+  color: #B9E42B;
+  border-color: #B9E42B;
+}
+
+.lines-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 9999;
+  background: #1e1e2e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 8px 0;
+  min-width: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.lines-dropdown-actions {
+  display: flex;
+  gap: 6px;
+  padding: 4px 10px 8px;
+  border-bottom: 1px solid #2a2a3e;
+  margin-bottom: 4px;
+}
+
+.lines-dropdown-actions button {
+  flex: 1;
+  padding: 4px 8px;
+  background: #2a2a3e;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.lines-dropdown-actions button:hover {
+  background: #333350;
+  color: #ccc;
+}
+
+.lines-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: #ccc;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.lines-dropdown-item:hover {
+  background: #252535;
+}
+
+.lines-dropdown-item input[type="checkbox"] {
+  accent-color: #B9E42B;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.lines-dropdown-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }

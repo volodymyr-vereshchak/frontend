@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -14,7 +14,12 @@ import './InteractiveChart.css';
 import { useLanguage } from '../contexts/LanguageContext';
 import SimplifiedEnterpriseControl from './SimplifiedEnterpriseControl';
 
-const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) => {
+function generateTrendColor(index, total) {
+  const hue = Math.round((index * 360) / total);
+  return `hsl(${hue}, 70%, 60%)`;
+}
+
+const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lineNames = {}, trendsEnterpriseChecked = false, onTrendsEnterpriseChange = null }) => {
   const { t, getLocale } = useLanguage();
   const [visibleLines, setVisibleLines] = useState({});
   const [yAxisDomain, setYAxisDomain] = useState(['dataMin', 'dataMax']);
@@ -22,6 +27,8 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
   const [renderedChart, setRenderedChart] = useState(null);
   const [enterpriseOverlayData, setEnterpriseOverlayData] = useState(null);
 
+  const [linesDropdownOpen, setLinesDropdownOpen] = useState(false);
+  const linesDropdownRef = useRef(null);
   const renderCancelRef = useRef(null);
   const renderTimeoutRef = useRef(null);
 
@@ -258,8 +265,30 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
     };
   }, []);
 
+  // Close lines dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (linesDropdownRef.current && !linesDropdownRef.current.contains(e.target)) {
+        setLinesDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const getChartColumns = () => {
     switch (archiveType) {
+      case 'trends': {
+        if (!data || data.length === 0) return [];
+        const lineKeys = Object.keys(data[0]).filter(
+          k => k.startsWith('line_') && !k.endsWith('_volume') && !k.endsWith('_enterprise')
+        );
+        return lineKeys.map((key, idx) => {
+          const lineId = key.replace('line_', '');
+          const label = lineNames[lineId] || lineNames[Number(lineId)] || `Лінія ${lineId}`;
+          return { key, label, color: generateTrendColor(idx, lineKeys.length), yAxisId: 'left' };
+        });
+      }
       case 'daily':
       case 'hourly':
         if (isVirtualLine) {
@@ -384,21 +413,78 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine }) =
       <div className="chart-header">
         <h3>{t('chartTitle')}</h3>
         <div className="chart-controls">
-          {columns.map((col) => (
-            <button
-              key={col.key}
-              className={`line-toggle ${visibleLines[col.key] ? 'active' : ''}`}
-              style={{
-                borderColor: col.color,
-                backgroundColor: visibleLines[col.key] ? col.color : 'transparent',
-                color: visibleLines[col.key] ? 'white' : col.color
-              }}
-              onClick={() => toggleLine(col.key)}
-              disabled={isChartLoading}
-            >
-              {col.label}
-            </button>
-          ))}
+          {archiveType === 'trends' && onTrendsEnterpriseChange && (
+            <label className="chart-enterprise-checkbox">
+              <input
+                type="checkbox"
+                checked={trendsEnterpriseChecked}
+                onChange={onTrendsEnterpriseChange}
+                disabled={isChartLoading}
+              />
+              <span>{t('enterpriseOverlay')}</span>
+            </label>
+          )}
+
+          {archiveType === 'trends' ? (
+            /* Dropdown for trends — can have many lines */
+            <div className="lines-dropdown" ref={linesDropdownRef}>
+              <button
+                className="lines-dropdown-trigger"
+                onClick={() => setLinesDropdownOpen(o => !o)}
+                disabled={isChartLoading}
+              >
+                Лінії ({Object.values(visibleLines).filter(Boolean).length}/{columns.length})
+                <span style={{ marginLeft: 6 }}>{linesDropdownOpen ? '▲' : '▼'}</span>
+              </button>
+              {linesDropdownOpen && (
+                <div className="lines-dropdown-menu">
+                  <div className="lines-dropdown-actions">
+                    <button onClick={() => {
+                      const all = {};
+                      columns.forEach(c => { all[c.key] = true; });
+                      setVisibleLines(all);
+                    }}>Всі</button>
+                    <button onClick={() => {
+                      const none = {};
+                      columns.forEach(c => { none[c.key] = false; });
+                      setVisibleLines(none);
+                    }}>Жодної</button>
+                  </div>
+                  {columns.map(col => (
+                    <label key={col.key} className="lines-dropdown-item">
+                      <input
+                        type="checkbox"
+                        checked={!!visibleLines[col.key]}
+                        onChange={() => toggleLine(col.key)}
+                      />
+                      <span
+                        className="lines-dropdown-color"
+                        style={{ background: col.color }}
+                      />
+                      {col.label}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Regular toggle buttons for daily/hourly/etc */
+            columns.map((col) => (
+              <button
+                key={col.key}
+                className={`line-toggle ${visibleLines[col.key] ? 'active' : ''}`}
+                style={{
+                  borderColor: col.color,
+                  backgroundColor: visibleLines[col.key] ? col.color : 'transparent',
+                  color: visibleLines[col.key] ? 'white' : col.color
+                }}
+                onClick={() => toggleLine(col.key)}
+                disabled={isChartLoading}
+              >
+                {col.label}
+              </button>
+            ))
+          )}
 
           {(archiveType === 'daily' || archiveType === 'hourly') && selectedLines && extractDateRange() && (
             <SimplifiedEnterpriseControl
