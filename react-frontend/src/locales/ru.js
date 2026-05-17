@@ -80,7 +80,7 @@ export const ru = {
   totalVolume: "Общий объем",
   accidentDetails: "Детали аварии",
   startTime: "Время начала",
-  endTime: "Время конца",
+  endTime: "Время окончания",
   duration: "Длительность",
   noAccidentsFound: "Аварий не найдено",
   loadAccidentsData: "Загрузить данные",

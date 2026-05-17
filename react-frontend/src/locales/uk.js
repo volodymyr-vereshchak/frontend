@@ -80,7 +80,7 @@ export const uk = {
   totalVolume: "Загальний об'єм",
   accidentDetails: "Деталі аварії",
   startTime: "Час початку",
-  endTime: "Час кінця",
+  endTime: "Час завершення",
   duration: "Тривалість",
   noAccidentsFound: "Аварій не знайдено",
   loadAccidentsData: "Завантажити дані",
