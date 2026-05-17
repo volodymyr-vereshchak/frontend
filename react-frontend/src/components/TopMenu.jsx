@@ -189,14 +189,14 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, onGRSReportClick, isVirtual
 
   const handleGRSTrendsClick = () => {
     setIsReportsDropdownOpen(false);
-    // Open GRS Trends in new tab
-    window.open('/grs-trends.html', '_blank');
+    setActiveButton(null);
+    if (onArchiveTypeChange) onArchiveTypeChange('grs-trends');
   };
 
   const handleNightConsumptionClick = () => {
     setIsReportsDropdownOpen(false);
-    // Open Night Consumption in new tab
-    window.open('/night-consumption.html', '_blank');
+    setActiveButton(null);
+    if (onArchiveTypeChange) onArchiveTypeChange('night-consumption');
   };
 
   const handleAccidentsClick = () => {

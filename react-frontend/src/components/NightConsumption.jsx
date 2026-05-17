@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   archiveDataApi,
-  dataApi,
-  virtualLinesApi,
   archiveDataVirtualApi,
   enterpriseVirtualApi,
-  virtualLinesHelper,
   branchApi,
+  lumgApi,
+  lineApi,
 } from '../services/api';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -28,11 +27,15 @@ const NightConsumption = ({ isOpen, onClose }) => {
   const [error, setError] = useState(null);
   const [tableData, setTableData] = useState([]);
   const [lineNames, setLineNames] = useState({});
-  const [visibleLines, setVisibleLines] = useState([]);
   const [linesLoading, setLinesLoading] = useState(false);
 
-  // Branch selector
+  // Physical and virtual lines loaded per branch
+  const [physicalLines, setPhysicalLines] = useState([]);
+  const [virtualLines, setVirtualLines] = useState([]);
+
+  // Branch + lumg data
   const [branches, setBranches] = useState([]);
+  const [lumgs, setLumgs] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState(null);
 
   // Get initial date range (first day of current month to today)
@@ -55,121 +58,64 @@ const NightConsumption = ({ isOpen, onClose }) => {
 
   const [dateRange, setDateRange] = useState(getInitialDateRange);
 
-  // Load branches on open
+  // Load branches + lumgs on open
   useEffect(() => {
     if (!isOpen) return;
-    branchApi.getAll().then(data => {
-      const list = Array.isArray(data) ? data : [];
-      setBranches(list);
-      if (list.length > 0) setSelectedBranchId(list[0].id);
-    }).catch(err => console.error('Failed to load branches:', err));
+    Promise.all([branchApi.getAll(), lumgApi.getAll()])
+      .then(([branchData, lumgData]) => {
+        const branchList = Array.isArray(branchData) ? branchData : [];
+        setBranches(branchList);
+        setLumgs(Array.isArray(lumgData) ? lumgData : []);
+        if (branchList.length > 0) setSelectedBranchId(branchList[0].id);
+      })
+      .catch(err => console.error('Failed to load branches/lumgs:', err));
   }, [isOpen]);
 
-  // Load visible lines on component mount
+  // Load lines for selected branch (include_in_trends only)
   useEffect(() => {
-    const loadVisibleLines = async () => {
-      if (!isOpen) return;
+    if (!isOpen || !selectedBranchId) return;
 
+    const loadLinesByBranch = async () => {
       setLinesLoading(true);
       try {
-        const allLines = await virtualLinesApi.getVisibleLines();
+        const branchLumgIds = lumgs.filter(l => l.branch_id === selectedBranchId).map(l => l.id);
 
-        // CRITICAL: Filter lines by GRS_TRENDS_IDS from config
-        // API returns ALL lines, but we need only those in TRENDS_IDS
-        const trendsIds = (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.TRENDS_IDS)
-          ? window.APP_CONFIG.GRS_CONFIG.TRENDS_IDS
-          : null;
-
-        const lines = trendsIds
-          ? allLines.filter(line => trendsIds.includes(line.id))
-          : allLines;
-
-        if (lines && lines.length > 0) {
-          setVisibleLines(lines);
-
-          // Extract line names from visible lines
-          const namesMap = {};
-          lines.forEach(line => {
-            namesMap[line.id] = line.name || `Line ${line.id}`;
-          });
-          setLineNames(namesMap);
-        } else {
-          // Fallback to hardcoded config if API returns empty
-          if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
-            const fallbackLines = window.APP_CONFIG.GRS_CONFIG.LINES_IDS.map(id => ({
-              id: id,
-              name: `Line ${id}`,
-              is_virtual: false
-            }));
-            setVisibleLines(fallbackLines);
-
-            // Fetch line names for fallback
-            try {
-              const linesData = await dataApi.getLines();
-              const namesMap = {};
-              linesData.forEach(line => {
-                namesMap[line.id] = line.name || `Line ${line.id}`;
-              });
-              setLineNames(namesMap);
-            } catch (err) {
-              console.error('Error fetching line names:', err);
-              const namesMap = {};
-              fallbackLines.forEach(line => {
-                namesMap[line.id] = line.name;
-              });
-              setLineNames(namesMap);
-            }
-          } else {
-            // Default fallback - use TRENDS_IDS from config
-            const defaultLineIds = (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.TRENDS_IDS)
-              ? window.APP_CONFIG.GRS_CONFIG.TRENDS_IDS
-              : [6, 11, 16, 17, 18, 19, 20, 21, 1001, 1002, 1003, 1004];
-
-            const defaultLines = defaultLineIds.map(id => ({
-              id: id,
-              name: `Line ${id}`,
-              is_virtual: id >= 1000
-            }));
-            setVisibleLines(defaultLines);
-
-            const namesMap = {};
-            defaultLines.forEach(line => {
-              namesMap[line.id] = line.name;
-            });
-            setLineNames(namesMap);
-          }
+        // Physical lines with include_in_trends=true
+        let phys = [];
+        if (branchLumgIds.length > 0) {
+          const arrays = await Promise.all(
+            branchLumgIds.map(lid => lineApi.getLinesByLumg(lid))
+          );
+          phys = arrays.flat().filter(l => l && l.include_in_trends);
         }
+
+        // Virtual lines with include_in_trends=true for this branch
+        const virt = await lumgApi.getAll()
+          .then(() => fetch(
+            `${(window.APP_CONFIG?.API_URL || '/api')}/virtual_lines/?include_in_trends=true&branch_id=${selectedBranchId}`,
+            { credentials: 'include' }
+          ).then(r => r.ok ? r.json() : []))
+          .catch(() => []);
+
+        setPhysicalLines(phys);
+        setVirtualLines(virt);
+
+        const namesMap = {};
+        [...phys, ...virt].forEach(l => { namesMap[l.id] = l.name || `Лінія ${l.id}`; });
+        setLineNames(namesMap);
       } catch (err) {
-        console.error('Error loading visible lines:', err);
-        // Fallback on error
-        if (typeof window !== 'undefined' && window.APP_CONFIG?.GRS_CONFIG?.LINES_IDS) {
-          const fallbackLines = window.APP_CONFIG.GRS_CONFIG.LINES_IDS.map(id => ({
-            id: id,
-            name: `Line ${id}`,
-            is_virtual: false
-          }));
-          setVisibleLines(fallbackLines);
-
-          const namesMap = {};
-          fallbackLines.forEach(line => {
-            namesMap[line.id] = line.name;
-          });
-          setLineNames(namesMap);
-        }
+        console.error('Error loading lines for branch:', err);
       } finally {
         setLinesLoading(false);
       }
     };
 
-    loadVisibleLines();
-  }, [isOpen]);
+    loadLinesByBranch();
+  }, [isOpen, selectedBranchId, lumgs]);
 
-  // Extract line IDs filtered by selected branch
-  const grsLines = useMemo(() => {
-    return visibleLines
-      .filter(line => !selectedBranchId || line.branch_id === selectedBranchId)
-      .map(line => line.id);
-  }, [visibleLines, selectedBranchId]);
+  const physicalLineIds = useMemo(() => physicalLines.map(l => l.id), [physicalLines]);
+  const virtualLineIds  = useMemo(() => virtualLines.map(l => l.id),  [virtualLines]);
+  const grsLines        = useMemo(() => [...physicalLineIds, ...virtualLineIds], [physicalLineIds, virtualLineIds]);
 
   const calculateNightConsumption = async () => {
     if (grsLines.length === 0) {
@@ -185,18 +131,20 @@ const NightConsumption = ({ isOpen, onClose }) => {
       const commercialFrom = `${dateRange.fromDate}T07:00:00`;
       const commercialTo = `${dateRange.toDate}T06:00:00`;
 
-      // Fetch hourly data and enterprise data in parallel using VIRTUAL endpoints
-      const [hourlyData, enterpriseData] = await Promise.all([
-        archiveDataVirtualApi.getHourlyDataVirtual(
-          grsLines,
-          commercialFrom,
-          commercialTo
-        ),
+      // Fetch physical and virtual hourly data from separate endpoints (like old HTML page)
+      const [physHourly, virtHourly, enterpriseData] = await Promise.all([
+        physicalLineIds.length > 0
+          ? archiveDataApi.getHourlyData(physicalLineIds, commercialFrom, commercialTo)
+          : Promise.resolve([]),
+        virtualLineIds.length > 0
+          ? archiveDataVirtualApi.getHourlyDataVirtual(virtualLineIds, commercialFrom, commercialTo)
+          : Promise.resolve([]),
         getEnterpriseWithCache(
           grsLines, commercialFrom, commercialTo, 'hourly',
           (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
         )
       ]);
+      const hourlyData = [...(physHourly || []), ...(virtHourly || [])];
 
       if (!hourlyData || hourlyData.length === 0) {
         setError(t('noDataAvailable'));
@@ -384,12 +332,11 @@ const NightConsumption = ({ isOpen, onClose }) => {
     }
   };
 
-  // Auto-calculate when date range or branch changes
-  useEffect(() => {
-    if (isOpen && dateRange.fromDate && dateRange.toDate && selectedBranchId) {
+  const handleLoad = () => {
+    if (!linesLoading && grsLines.length > 0 && dateRange.fromDate && dateRange.toDate) {
       calculateNightConsumption();
     }
-  }, [dateRange, isOpen, selectedBranchId]);
+  };
 
   // Re-calculate when enterprise cache is cleared (Ctrl+Shift+E)
   useEffect(() => {
@@ -411,26 +358,35 @@ const NightConsumption = ({ isOpen, onClose }) => {
         </div>
 
         <div className="night-consumption-modal-body">
-          {/* Branch selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>{t('branch')}:</label>
-            <select
-              style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
-              value={selectedBranchId || ''}
-              onChange={e => { setSelectedBranchId(Number(e.target.value)); setTableData([]); }}
-            >
-              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          </div>
+          {/* Controls row: branch + dates + load button */}
+          <div className="nc-controls-row">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>{t('branch')}:</label>
+              <select
+                style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
+                value={selectedBranchId || ''}
+                onChange={e => { setSelectedBranchId(Number(e.target.value)); setTableData([]); }}
+              >
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
 
-          {/* Date Range Picker */}
-          <div className="date-picker-section">
-            <DateTimePickers
-              onDateRangeChange={handleDateRangeChange}
-              onDateFilterToggle={() => {}}
-              archiveType="daily"
-              initialDateRange={dateRange}
-            />
+            <div className="date-picker-section" style={{ marginBottom: 0, flex: 1 }}>
+              <DateTimePickers
+                onDateRangeChange={handleDateRangeChange}
+                onDateFilterToggle={() => {}}
+                archiveType="daily"
+                initialDateRange={dateRange}
+              />
+            </div>
+
+            <button
+              className="btn btn-primary nc-load-btn"
+              onClick={handleLoad}
+              disabled={isLoading || linesLoading}
+            >
+              {isLoading ? t('loading') : 'Завантажити'}
+            </button>
           </div>
 
           {/* Loading State */}
@@ -498,7 +454,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
           {/* No Data State */}
           {!isLoading && !error && tableData.length === 0 && (
             <div className="no-data-container">
-              <p>{t('noDataForPeriod')}</p>
+              <p>{t('selectPeriod')}</p>
             </div>
           )}
         </div>

@@ -1,0 +1,235 @@
+/* Overrides modal-overlay/modal-content to render as a full-width page tab */
+
+.report-page {
+  padding: 16px;
+}
+
+/* ── Layout overrides ──────────────────────────────────────────────────── */
+.report-page .modal-overlay {
+  position: static;
+  background: transparent;
+  padding: 0;
+  display: block;
+  z-index: auto;
+}
+
+.report-page .modal-content {
+  max-width: 100%;
+  max-height: none;
+  height: auto;
+  width: 100%;
+  border-radius: 8px;
+  margin: 0;
+  overflow: visible;
+  box-shadow: none;
+  border: 1px solid #2a2a3e;
+  background: #1a1a2e;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+.report-page .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #2a2a3e;
+  background: #141424;
+  border-radius: 8px 8px 0 0;
+}
+
+.report-page .modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #B9E42B;
+}
+
+/* Hide close (×) button — no modal to close */
+.report-page .close-button {
+  display: none;
+}
+
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.report-page .btn-primary,
+.report-page .grs-trends-modal .btn-primary,
+.report-page .night-consumption-modal .btn-primary {
+  background: #B9E42B !important;
+  color: #111 !important;
+  border: none;
+}
+.report-page .btn-primary:hover:not(:disabled) {
+  background: #a8d126 !important;
+}
+
+/* ── Date picker section ───────────────────────────────────────────────── */
+.report-page .date-picker-section {
+  background: #141424 !important;
+  border: 1px solid #2a2a3e !important;
+}
+.report-page .date-picker-section h4 {
+  color: #B9E42B !important;
+}
+
+/* ── Chart description ─────────────────────────────────────────────────── */
+.report-page .chart-description {
+  background: #0d1a2a !important;
+  border-left-color: #B9E42B !important;
+}
+.report-page .chart-description p {
+  color: #8ab4c8 !important;
+}
+
+/* ── Section headings ──────────────────────────────────────────────────── */
+.report-page .chart-section h4,
+.report-page .table-section h4 {
+  color: #B9E42B !important;
+}
+
+/* ── Loading ───────────────────────────────────────────────────────────── */
+.report-page .loading-spinner {
+  border: 4px solid #2a2a3e !important;
+  border-top-color: #B9E42B !important;
+}
+.report-page .loading-container p {
+  color: #888 !important;
+}
+
+/* ── Error ─────────────────────────────────────────────────────────────── */
+.report-page .error-container {
+  background: rgba(220, 50, 50, 0.1) !important;
+  border-color: rgba(220, 50, 50, 0.3) !important;
+}
+.report-page .error-message {
+  color: #e07070 !important;
+}
+
+/* ── No data ───────────────────────────────────────────────────────────── */
+.report-page .no-data-container p {
+  color: #666 !important;
+}
+
+/* ── NightConsumption body ─────────────────────────────────────────────── */
+.report-page .night-consumption-modal-body,
+.report-page .grs-trends-modal-body {
+  background: #1a1a2e;
+}
+
+/* Controls row: branch + date pickers + load button inline */
+.report-page .nc-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  background: #141424;
+  border-bottom: 1px solid #2a2a3e;
+  margin-bottom: 16px;
+}
+
+.report-page .nc-load-btn {
+  white-space: nowrap;
+  padding: 8px 20px;
+  background: #B9E42B !important;
+  color: #111 !important;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: center;
+}
+.report-page .nc-load-btn:hover:not(:disabled) { background: #a8d126 !important; }
+.report-page .nc-load-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Table section */
+.report-page .table-section {
+  padding: 0 20px 20px;
+}
+
+.report-page .table-header {
+  border-bottom: 1px solid #2a2a3e !important;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.report-page .table-header h4 {
+  color: #B9E42B !important;
+}
+
+/* Table wrapper — dark background, not white */
+.report-page .table-wrapper {
+  background: #0f0f1a !important;
+  border: 1px solid #2a2a3e !important;
+  border-radius: 6px;
+  overflow-x: auto;
+  max-height: calc(100vh - 320px);
+  overflow-y: auto;
+}
+
+.report-page .night-consumption-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.report-page .night-consumption-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.report-page .night-consumption-table thead th {
+  background: #141424 !important;
+  color: #B9E42B !important;
+  border-bottom: 2px solid #B9E42B !important;
+  border-right: 1px solid #2a2a3e !important;
+  padding: 8px 10px !important;
+  text-align: center !important;
+  white-space: nowrap;
+}
+
+.report-page .night-consumption-table tbody td {
+  color: #ccc !important;
+  border-bottom: 1px solid #1e1e2e !important;
+  border-right: 1px solid #1e1e2e !important;
+  padding: 6px 10px !important;
+  text-align: center !important;
+  font-family: 'Courier New', monospace;
+}
+
+.report-page .night-consumption-table tbody td:first-child {
+  color: #B9E42B !important;
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.report-page .night-consumption-table tbody tr:nth-child(even) td {
+  background: #141424 !important;
+}
+.report-page .night-consumption-table tbody tr:nth-child(odd) td {
+  background: #1a1a2e !important;
+}
+.report-page .night-consumption-table tbody tr:hover td {
+  background: #20203a !important;
+}
+.report-page .night-consumption-table tbody td:first-child {
+  background: inherit !important;
+  color: #B9E42B !important;
+  font-weight: 500;
+  font-family: inherit !important;
+}
+
+/* Export button */
+.report-page .export-button {
+  background: #2a6e3e !important;
+  color: #fff !important;
+}
+.report-page .export-button:hover {
+  background: #236034 !important;
+}
+
+/* Hide footer entirely in page mode (load button is inline) */
+.report-page .modal-footer {
+  display: none !important;
+}

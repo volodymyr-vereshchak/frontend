@@ -113,11 +113,12 @@ const GRSTrends = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // Extract line IDs filtered by selected branch
+  // Extract line IDs filtered by selected branch; fall back to all lines when
+  // virtual lines have no branch_id (they won't match the branch filter)
   const grsLines = useMemo(() => {
-    return visibleLines
-      .filter(line => !selectedBranchId || line.branch_id === selectedBranchId)
-      .map(line => line.id);
+    if (!selectedBranchId) return visibleLines.map(l => l.id);
+    const filtered = visibleLines.filter(l => l.branch_id === selectedBranchId);
+    return (filtered.length > 0 ? filtered : visibleLines).map(l => l.id);
   }, [visibleLines, selectedBranchId]);
 
   const calculateTrends = async () => {
@@ -246,11 +247,12 @@ const GRSTrends = ({ isOpen, onClose }) => {
   };
 
   // Auto-calculate when date range, branch or enterprise toggle changes
+  // Wait until lines are loaded to avoid "no lines configured" error
   useEffect(() => {
-    if (isOpen && dateRange.fromDate && dateRange.toDate && selectedBranchId) {
+    if (isOpen && !linesLoading && visibleLines.length > 0 && dateRange.fromDate && dateRange.toDate && selectedBranchId) {
       calculateTrends();
     }
-  }, [dateRange, isOpen, selectedBranchId, showEnterprise]);
+  }, [dateRange, isOpen, selectedBranchId, showEnterprise, linesLoading, visibleLines.length]);
 
   // Re-calculate when enterprise cache is cleared (Ctrl+Shift+E)
   useEffect(() => {

@@ -10,6 +10,8 @@ import OverviewTab from './components/OverviewTab'
 import EnterprisePollAnalysis from './components/EnterprisePollAnalysis'
 import AdminPanel from './components/AdminPanel/AdminPanel'
 import AccidentsPage from './components/AccidentsPage'
+import GRSTrendsPage from './components/GRSTrendsPage'
+import NightConsumptionPage from './components/NightConsumptionPage'
 import LoginPage from './components/LoginPage/LoginPage'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { UserProvider } from './contexts/UserContext'
@@ -160,7 +162,7 @@ function AppContent({ user }) {
   }, []);
 
   useEffect(() => {
-    if (archiveType !== 'accidents') {
+    if (archiveType !== 'accidents' && archiveType !== 'grs-trends' && archiveType !== 'night-consumption') {
       safeSetItem('hlv-active-tab', archiveType);
     }
   }, [archiveType]);
@@ -174,7 +176,8 @@ function AppContent({ user }) {
     if (selectedLineIsVirtual) {
       // Виртуальные линии поддерживают только daily, hourly, overview, poll, admin
       if (archiveType !== 'daily' && archiveType !== 'hourly' && archiveType !== 'overview' &&
-          archiveType !== 'poll' && archiveType !== 'admin' && archiveType !== 'accidents') {
+          archiveType !== 'poll' && archiveType !== 'admin' && archiveType !== 'accidents' &&
+          archiveType !== 'grs-trends' && archiveType !== 'night-consumption') {
         setArchiveType('daily');
       }
     }
@@ -243,8 +246,15 @@ function AppContent({ user }) {
         {/* Accidents report — full width */}
         {archiveType === 'accidents' && <AccidentsPage />}
 
-        {/* Hide DateTimePickers and TreeView when Overview, Poll, Admin or Accidents is active */}
-        {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' && archiveType !== 'accidents' && (
+        {/* GRS Trends — full width */}
+        {archiveType === 'grs-trends' && <GRSTrendsPage />}
+
+        {/* Night Consumption — full width */}
+        {archiveType === 'night-consumption' && <NightConsumptionPage />}
+
+        {/* Hide DateTimePickers and TreeView when Overview, Poll, Admin or report pages are active */}
+        {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' &&
+         archiveType !== 'accidents' && archiveType !== 'grs-trends' && archiveType !== 'night-consumption' && (
           <>
             <DateTimePickers
               onDateRangeChange={handleDateRangeChange}
@@ -268,7 +278,8 @@ function AppContent({ user }) {
         )}
 
         {/* Standard layout for other archive types */}
-        {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' && archiveType !== 'accidents' && (
+        {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' &&
+         archiveType !== 'accidents' && archiveType !== 'grs-trends' && archiveType !== 'night-consumption' && (
           <>
             <div className="main-layout">
               <div className="sidebar">
