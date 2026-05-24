@@ -2,29 +2,28 @@
  * Утилиты для обработки и анализа аварий из системного архива
  */
 
-/**
- * Определяет, является ли событие началом аварии
- * @param {number} sys_type_id - ID типа системного события
- * @returns {boolean} true если начало аварии, false если конец
- */
+// Коди 1–74: кінець аварії (парний до 129–202)
+// Коди 128–200: початок аварії (парний до 1–72... тобто code-128)
+// Коди 75–127, 201–254: standalone-сповіщення без пари
 export function isAccidentStart(sys_type_id) {
-  return (sys_type_id % 256) >= 128;
+  const code = sys_type_id & 0xFF;
+  return code >= 128 && code <= 200;
 }
 
-/**
- * Получает код конца аварии по коду начала
- * @param {number} startCode - Код начала аварии
- * @returns {number} Код конца аварии (на 128 меньше)
- */
+export function isAccidentEnd(sys_type_id) {
+  const code = sys_type_id & 0xFF;
+  return code >= 1 && code <= 74;
+}
+
+export function isStandaloneCode(sys_type_id) {
+  const code = sys_type_id & 0xFF;
+  return (code >= 75 && code <= 127) || code >= 201;
+}
+
 export function getAccidentEndCode(startCode) {
   return startCode - 128;
 }
 
-/**
- * Получает код начала аварии по коду конца
- * @param {number} endCode - Код конца аварии
- * @returns {number} Код начала аварии (на 128 больше)
- */
 export function getAccidentStartCode(endCode) {
   return endCode + 128;
 }
@@ -67,40 +66,50 @@ export function pairAccidents(sysData, dateRange) {
   );
 
   const accidents = [];
-  const openAccidents = new Map(); // Хранит незакрытые аварии по коду
+  const openAccidents = new Map();
+
+  // Карта sys_type_id → sys_name для пошуку назви стартового коду при end_only
+  const nameByTypeId = new Map(sysData.map(r => [r.sys_type_id, r.sys_name]));
 
   const periodStart = new Date(dateRange.fromDate);
   const periodEnd = new Date(dateRange.toDate);
 
   sortedData.forEach(record => {
     const sys_type_id = record.sys_type_id;
-    const isStart = isAccidentStart(sys_type_id);
 
-    if (isStart) {
-      // Начало аварии
-      const startCode = sys_type_id;
-      const endCode = getAccidentEndCode(startCode);
-
-      // Сохраняем открытую аварию
+    if (isStandaloneCode(sys_type_id)) {
+      // Standalone-сповіщення: без пари, без тривалості
+      accidents.push({
+        sys_type_id,
+        sys_name: record.sys_name,
+        startTime: record.period,
+        endTime: record.period,
+        startVolume: record.volume,
+        endVolume: record.volume,
+        line_id: record.line_id,
+        type: 'standalone',
+      });
+    } else if (isAccidentStart(sys_type_id)) {
+      // Початок аварії — зберігаємо як відкриту
+      const endCode = getAccidentEndCode(sys_type_id);
       if (!openAccidents.has(endCode)) {
         openAccidents.set(endCode, []);
       }
       openAccidents.get(endCode).push({
-        sys_type_id: sys_type_id,
+        sys_type_id,
         sys_name: record.sys_name,
         startTime: record.period,
         startVolume: record.volume,
-        line_id: record.line_id
+        line_id: record.line_id,
       });
     } else {
-      // Конец аварии
+      // Кінець аварії (код 1–74)
       const endCode = sys_type_id;
       const openList = openAccidents.get(endCode);
 
       if (openList && openList.length > 0) {
-        // Есть открытая авария - создаем полную пару
+        // Є відкрита авария — повна пара
         const openAccident = openList.shift();
-
         accidents.push({
           sys_type_id: openAccident.sys_type_id,
           sys_name: openAccident.sys_name,
@@ -109,25 +118,25 @@ export function pairAccidents(sysData, dateRange) {
           startVolume: openAccident.startVolume,
           endVolume: record.volume,
           line_id: record.line_id,
-          type: 'full' // Полная пара
+          type: 'full',
         });
-
         if (openList.length === 0) {
           openAccidents.delete(endCode);
         }
       } else {
-        // Нет открытой аварии - только конец (авария началась до выбранного периода)
-        const startCode = getAccidentStartCode(endCode);
-
+        // Немає відкритої — авария почалась до початку періоду
+        const startTypeId = getAccidentStartCode(endCode);
+        // Назва завжди від стартового коду; якщо його немає в даних — беремо з кінцевого
+        const startName = nameByTypeId.get(startTypeId) ?? record.sys_name;
         accidents.push({
-          sys_type_id: startCode,
-          sys_name: record.sys_name,
+          sys_type_id: startTypeId,
+          sys_name: startName,
           startTime: periodStart.toISOString(),
           endTime: record.period,
           startVolume: 0,
           endVolume: record.volume,
           line_id: record.line_id,
-          type: 'end_only' // Только конец
+          type: 'end_only',
         });
       }
     }
@@ -264,45 +273,46 @@ export function groupAccidentsByType(accidents, dailyData = []) {
 
   accidents.forEach(accident => {
     const key = accident.sys_type_id;
+    const standalone = accident.type === 'standalone';
 
     if (!grouped[key]) {
       grouped[key] = {
         sys_type_id: accident.sys_type_id,
         sys_name: accident.sys_name,
+        isStandalone: standalone,
         occurrences: [],
         totalCount: 0,
         totalDuration: 0,
-        totalVolume: 0
+        totalVolume: 0,
       };
     }
 
-    // Рассчитываем параметры для этого случая
-    const duration = calculateDuration(accident.startTime, accident.endTime);
-    const durationMs = new Date(accident.endTime) - new Date(accident.startTime);
+    const durationMs = standalone ? 0 : (new Date(accident.endTime) - new Date(accident.startTime));
+    const duration = standalone ? '—' : calculateDuration(accident.startTime, accident.endTime);
     const volume = calculateAccidentVolume(accident, dailyData);
 
-    // Добавляем детали случая
     grouped[key].occurrences.push({
       startTime: accident.startTime,
       endTime: accident.endTime,
-      duration: duration,
-      volume: volume,
+      duration,
+      volume,
       type: accident.type,
-      line_id: accident.line_id
+      line_id: accident.line_id,
     });
 
-    // Обновляем итоги
     grouped[key].totalCount++;
     grouped[key].totalDuration += durationMs;
     grouped[key].totalVolume += volume;
   });
 
-  // Форматируем общую длительность
   Object.values(grouped).forEach(group => {
+    if (group.isStandalone) {
+      group.totalDurationFormatted = '—';
+      return;
+    }
     const hours = Math.floor(group.totalDuration / (1000 * 60 * 60));
     const minutes = Math.floor((group.totalDuration % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((group.totalDuration % (1000 * 60)) / 1000);
-
     group.totalDurationFormatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   });
 

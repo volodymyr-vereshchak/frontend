@@ -25,7 +25,7 @@ function formatDateTime(dateStr) {
   return `${dd}.${mm}.${yyyy} ${hh}:${min}:${ss}`;
 }
 
-function groupOccurrencesByLine(occurrences, allLines) {
+function groupOccurrencesByLine(occurrences, allLines, isStandalone) {
   const byLine = {};
   occurrences.forEach(occ => {
     const lid = occ.line_id;
@@ -35,7 +35,7 @@ function groupOccurrencesByLine(occurrences, allLines) {
   return Object.entries(byLine).map(([lid, occs]) => {
     const starts = occs.map(o => new Date(o.startTime).getTime());
     const ends   = occs.map(o => new Date(o.endTime).getTime());
-    const totalMs = occs.reduce((s, o) =>
+    const totalMs = isStandalone ? 0 : occs.reduce((s, o) =>
       s + (new Date(o.endTime) - new Date(o.startTime)), 0);
     const line = allLines.find(l => l.id === Number(lid));
     return {
@@ -44,7 +44,7 @@ function groupOccurrencesByLine(occurrences, allLines) {
       firstStart: new Date(Math.min(...starts)).toISOString(),
       lastEnd:    new Date(Math.max(...ends)).toISOString(),
       count:      occs.length,
-      durationFormatted: formatDurationMs(totalMs),
+      durationFormatted: isStandalone ? '—' : formatDurationMs(totalMs),
     };
   });
 }
@@ -148,7 +148,7 @@ export default function AccidentsPage() {
       setGroupedAccidents(grouped);
       setDataLoaded(true);
 
-      const totalMs = grouped.reduce((s, g) => s + g.totalDuration, 0);
+      const totalMs = grouped.reduce((s, g) => g.isStandalone ? s : s + g.totalDuration, 0);
       setStats({
         total:    paired.length,
         types:    grouped.length,
@@ -176,15 +176,11 @@ export default function AccidentsPage() {
     groupedAccidents.forEach(group => {
       const allStarts = group.occurrences.map(o => new Date(o.startTime).getTime());
       const allEnds   = group.occurrences.map(o => new Date(o.endTime).getTime());
-      rows.push([
-        group.sys_name,
-        formatDateTime(new Date(Math.min(...allStarts)).toISOString()),
-        formatDateTime(new Date(Math.max(...allEnds)).toISOString()),
-        group.totalCount,
-        group.totalDurationFormatted,
-      ]);
-      groupOccurrencesByLine(group.occurrences, lines).forEach(lg => {
-        rows.push([`  ${lg.line_name}`, formatDateTime(lg.firstStart), formatDateTime(lg.lastEnd), lg.count, lg.durationFormatted]);
+      const firstStr = group.isStandalone ? '—' : formatDateTime(new Date(Math.min(...allStarts)).toISOString());
+      const lastStr  = group.isStandalone ? '—' : formatDateTime(new Date(Math.max(...allEnds)).toISOString());
+      rows.push([group.sys_name, firstStr, lastStr, group.totalCount, group.totalDurationFormatted]);
+      groupOccurrencesByLine(group.occurrences, lines, group.isStandalone).forEach(lg => {
+        rows.push([`  ${lg.line_name}`, lg.durationFormatted === '—' ? '—' : formatDateTime(lg.firstStart), lg.durationFormatted === '—' ? '—' : formatDateTime(lg.lastEnd), lg.count, lg.durationFormatted]);
       });
       rows.push([]);
     });
@@ -311,16 +307,16 @@ export default function AccidentsPage() {
                         <span className="acc-expand">{isOpen ? '▼' : '▶'}</span>
                         {group.sys_name}
                       </td>
-                      <td className="acc-col-time">{groupFirst}</td>
-                      <td className="acc-col-time">{groupLast}</td>
+                      <td className="acc-col-time">{group.isStandalone ? '—' : groupFirst}</td>
+                      <td className="acc-col-time">{group.isStandalone ? '—' : groupLast}</td>
                       <td className="acc-col-num">{group.totalCount}</td>
                       <td className="acc-col-dur">{group.totalDurationFormatted}</td>
                     </tr>
-                    {isOpen && groupOccurrencesByLine(group.occurrences, lines).map(lg => (
+                    {isOpen && groupOccurrencesByLine(group.occurrences, lines, group.isStandalone).map(lg => (
                       <tr key={`${index}_${lg.line_id}`} className="acc-detail-row">
                         <td className="acc-col-name acc-detail-name">{lg.line_name}</td>
-                        <td className="acc-col-time">{formatDateTime(lg.firstStart)}</td>
-                        <td className="acc-col-time">{formatDateTime(lg.lastEnd)}</td>
+                        <td className="acc-col-time">{group.isStandalone ? '—' : formatDateTime(lg.firstStart)}</td>
+                        <td className="acc-col-time">{group.isStandalone ? '—' : formatDateTime(lg.lastEnd)}</td>
                         <td className="acc-col-num">{lg.count}</td>
                         <td className="acc-col-dur">{lg.durationFormatted}</td>
                       </tr>
