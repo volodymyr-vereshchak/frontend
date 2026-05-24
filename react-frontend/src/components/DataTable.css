@@ -160,10 +160,20 @@
 .custom-table {
   width: 100%; /* Default table width */
   border-collapse: collapse;
+  border-spacing: 0;
   background-color: #1a1a1a;
   color: #ffffff;
   font-size: 13px;
   table-layout: fixed; /* Fixed layout for consistent column distribution */
+  border: none;
+  outline: none;
+}
+
+.custom-table thead,
+.custom-table tbody,
+.custom-table tr {
+  border: none;
+  outline: none;
 }
 
 /* Wide table for parameters archive only */
