@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DataTable.css';
 import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper, enterpriseApi, enterpriseVirtualApi } from '../services/api';
+import { formatEditValue } from '../utils/valueConverter';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import * as XLSX from 'xlsx';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -177,6 +178,9 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         return columns.map(col => {
           let value = row[col.key];
           if (col.key === 'period' && value) return formatPeriodForExcel(value);
+          if (archiveType === 'edit' && (col.key === 'old_value' || col.key === 'new_value')) {
+            return formatEditValue(value, row.edit_name ?? '');
+          }
           if (typeof value === 'number') return value;
           return value || '';
         });
@@ -658,20 +662,18 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const formatNumber = (value, key) => {
     if (typeof value !== 'number' || isNaN(value)) return value;
 
-    // Special formatting for edit archive values (4 decimal places)
-    if (archiveType === 'edit' && (key === 'old_value' || key === 'new_value')) {
-      const formatted = value.toFixed(4);
-      const [integerPart, decimalPart] = formatted.split('.');
-      return integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '.' + decimalPart;
-    }
-
-    // Default formatting with 2 decimal places and add spaces between thousands
+    // Default formatting with 2 decimal places and spaces between thousands
     const formatted = value.toFixed(2);
     const [integerPart, decimalPart] = formatted.split('.');
     return integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '.' + decimalPart;
   };
 
-  const formatValue = (value, key) => {
+  const formatValue = (value, key, row = {}) => {
+    // Edit archive: smart-format raw int values (handles enums, small coefficients, time, floats)
+    if (archiveType === 'edit' && (key === 'old_value' || key === 'new_value')) {
+      return formatEditValue(value, row?.edit_name ?? '');
+    }
+
     if (key === 'period') {
       const date = new Date(value);
       const locale = getLocale();
@@ -890,7 +892,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
                             onClick={() => archiveType === 'daily' && column.key === 'volume' && handleVolumeClick(row)}
                             style={archiveType === 'daily' && column.key === 'volume' ? { cursor: 'pointer' } : {}}
                           >
-                            {formatValue(row[column.key], column.key)}
+                            {formatValue(row[column.key], column.key, row)}
                           </td>
                         ))}
                       </tr>

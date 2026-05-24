@@ -43,20 +43,43 @@ export function convertIntArrayToFloatArray(intArray) {
 }
 
 /**
- * Process edit archive data by converting old_value and new_value from int to float
- * Replicates Python logic from update_table_edit function
+ * Format a raw int from the edit archive into a human-readable string.
  *
- * @param {Object[]} editData - Array of edit archive records
- * @returns {Object[]} - Processed data with converted values (4 decimal places)
+ * Cases (in order):
+ *  - |v| <= 32767 → enum/flag, display as integer (e.g. sensor type 0, 1, 2)
+ *  - editName contains "час"/"время" → float is seconds → display as HH:MM:SS
+ *  - |float| < 0.001 → coefficient, scientific notation (e.g. "1.6214e-5")
+ *  - |float| >= 100000 → 2 decimal places
+ *  - otherwise → 4 decimal places
+ *
+ * @param {number} rawInt   - Original integer value from DB
+ * @param {string} editName - Name of the edit type (used for time detection)
+ * @returns {string}
  */
-export function processEditArchiveData(editData) {
-  if (!Array.isArray(editData)) {
-    return [];
+export function formatEditValue(rawInt, editName = '') {
+  if (rawInt === null || rawInt === undefined) return '—';
+
+  if (rawInt >= -32767 && rawInt <= 32767) return String(rawInt);
+
+  const buffer = new ArrayBuffer(4);
+  const view = new DataView(buffer);
+  view.setInt32(0, rawInt, false);
+  const f = view.getFloat32(0, false);
+
+  if (!isFinite(f) || isNaN(f)) return String(rawInt);
+
+  // Time field: name contains "час" or "время" → seconds since midnight → HH:MM:SS
+  if (/час|время/i.test(editName)) {
+    const totalSec = Math.round(Math.abs(f));
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   }
 
-  return editData.map(record => ({
-    ...record,
-    old_value: Number(convertIntToHexToFloat(record.old_value).toFixed(4)),
-    new_value: Number(convertIntToHexToFloat(record.new_value).toFixed(4))
-  }));
+  const abs = Math.abs(f);
+  if (abs === 0) return '0';
+  if (abs < 0.001) return f.toExponential(4);
+  if (abs >= 100000) return f.toFixed(2);
+  return f.toFixed(4);
 }

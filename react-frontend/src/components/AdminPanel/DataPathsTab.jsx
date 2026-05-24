@@ -110,7 +110,7 @@ function BranchConfigSection({ branch, allLumgs }) {
               style={{ flex: 1, minWidth: 280 }}
               value={editForm.path}
               onChange={e => setEditForm(prev => ({ ...prev, path: e.target.value }))}
-              placeholder="backend/data/askcfgs/ZP/askroc.CFG"
+              placeholder="backend/data/askcfgs/ZP/ask.CFG"
               onKeyDown={e => e.key === 'Enter' && handleSavePath()}
             />
             <label style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#aaa', fontSize: 12 }}>
