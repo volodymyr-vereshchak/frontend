@@ -421,7 +421,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
                 </button>
               </div>
 
-              <div className="table-wrapper">
+              <div className="night-table-wrapper">
                 <table className="night-consumption-table">
                   <thead>
                     <tr>
