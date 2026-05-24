@@ -112,6 +112,7 @@
   overflow-y: auto;
   overflow-x: auto; /* Enable horizontal scroll */
   min-height: 0; /* Allow flex child to shrink */
+  background-color: #1a1a1a;
 }
 
 .body-table {
