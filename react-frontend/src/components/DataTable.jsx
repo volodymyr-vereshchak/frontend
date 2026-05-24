@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import './DataTable.css';
 import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper, enterpriseApi, enterpriseVirtualApi } from '../services/api';
 import { formatEditValue } from '../utils/valueConverter';
+
+const EDIT_CHANNEL_NAMES = ["P", "T", "dP", "dPL", "Густ"];
+
+function resolveEditName(editName, rawOldValue) {
+  if (!editName || !editName.includes('%s')) return editName;
+  const idx = typeof rawOldValue === 'number' ? rawOldValue : Number(rawOldValue);
+  const channelName = (Number.isInteger(idx) && idx >= 0 && idx < EDIT_CHANNEL_NAMES.length)
+    ? EDIT_CHANNEL_NAMES[idx]
+    : String(rawOldValue ?? '?');
+  return editName.replace('%s', channelName);
+}
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import * as XLSX from 'xlsx';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -178,8 +189,11 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         return columns.map(col => {
           let value = row[col.key];
           if (col.key === 'period' && value) return formatPeriodForExcel(value);
+          if (archiveType === 'edit' && col.key === 'edit_name') {
+            return resolveEditName(value, row.old_value) || '';
+          }
           if (archiveType === 'edit' && (col.key === 'old_value' || col.key === 'new_value')) {
-            return formatEditValue(value, row.edit_name ?? '');
+            return formatEditValue(value, resolveEditName(row.edit_name ?? '', row.old_value));
           }
           if (typeof value === 'number') return value;
           return value || '';
@@ -669,9 +683,13 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   };
 
   const formatValue = (value, key, row = {}) => {
+    // Edit archive: resolve %s channel template in edit_name based on old_value
+    if (archiveType === 'edit' && key === 'edit_name') {
+      return resolveEditName(value, row?.old_value);
+    }
     // Edit archive: smart-format raw int values (handles enums, small coefficients, time, floats)
     if (archiveType === 'edit' && (key === 'old_value' || key === 'new_value')) {
-      return formatEditValue(value, row?.edit_name ?? '');
+      return formatEditValue(value, resolveEditName(row?.edit_name ?? '', row?.old_value));
     }
 
     if (key === 'period') {
