@@ -409,7 +409,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
           {/* Table */}
           {!isLoading && !error && tableData.length > 0 && (
             <div className="table-section">
-              <div className="table-header">
+              <div className="night-table-header">
                 <h4>{t('nightConsumptionNetDescription')}</h4>
                 <button
                   className="export-button"

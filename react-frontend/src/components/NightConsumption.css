@@ -28,7 +28,7 @@
   margin-top: 20px;
 }
 
-.table-header {
+.night-table-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -37,7 +37,7 @@
   border-bottom: 2px solid #e9ecef;
 }
 
-.table-header h4 {
+.night-table-header h4 {
   margin: 0;
   color: #343a40;
   font-size: 18px;
@@ -278,7 +278,7 @@
     padding: 10px;
   }
 
-  .table-header {
+  .night-table-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
