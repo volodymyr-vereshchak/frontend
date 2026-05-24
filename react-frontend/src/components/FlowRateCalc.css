@@ -1,0 +1,335 @@
+.flow-calc-page {
+  padding: 16px;
+  min-height: 100vh;
+  background-color: #141414;
+}
+
+.flow-calc-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.flow-calc-header h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.flow-calc-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .flow-calc-body { grid-template-columns: 1fr; }
+}
+
+/* ─── Panel ────────────────────────────────────────────────────────────────── */
+.flow-panel {
+  background-color: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.flow-panel-header {
+  background-color: #2a2a2a;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #B9E42B;
+  border-bottom: 1px solid #3a3a3a;
+  letter-spacing: 0.3px;
+}
+
+.flow-panel-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ─── Device type radio ─────────────────────────────────────────────────────── */
+.cf-device-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.cf-device-label {
+  font-size: 12px;
+  color: #888888;
+}
+
+.cf-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #cccccc;
+  cursor: pointer;
+}
+
+.cf-radio input[type="radio"] {
+  accent-color: #B9E42B;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* ─── General params 2-column grid ─────────────────────────────────────────── */
+.cf-general-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+
+.cf-orifice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+}
+
+@media (max-width: 600px) {
+  .cf-general-grid,
+  .cf-orifice-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── Field row ─────────────────────────────────────────────────────────────── */
+.cf-row {
+  display: grid;
+  grid-template-columns: max-content minmax(50px, 1fr) max-content;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  margin-bottom: 4px;
+}
+
+.cf-row-unit {
+  grid-template-columns: max-content minmax(50px, 1fr) 72px;
+}
+
+.cf-row-empty {
+  opacity: 0.3;
+}
+
+.cf-label {
+  font-size: 12px;
+  color: #bbbbbb;
+  white-space: nowrap;
+}
+
+.cf-input {
+  background-color: #252525;
+  border: 1px solid #383838;
+  border-radius: 3px;
+  color: #ffffff;
+  font-size: 12px;
+  padding: 4px 7px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: right;
+}
+
+.cf-input:focus {
+  outline: none;
+  border-color: #B9E42B;
+}
+
+.cf-input.error {
+  border-color: #f44336;
+}
+
+.cf-input-placeholder {
+  font-size: 12px;
+  color: #444;
+  text-align: right;
+}
+
+.cf-unit {
+  font-size: 11px;
+  color: #777777;
+  white-space: nowrap;
+  min-width: 30px;
+}
+
+.cf-unit-select {
+  background-color: #252525;
+  border: 1px solid #383838;
+  border-radius: 3px;
+  color: #aaaaaa;
+  font-size: 11px;
+  padding: 4px 3px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.cf-unit-select:focus {
+  outline: none;
+  border-color: #B9E42B;
+}
+
+.cf-select {
+  background-color: #252525;
+  border: 1px solid #383838;
+  border-radius: 3px;
+  color: #ffffff;
+  font-size: 12px;
+  padding: 4px 6px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.cf-select:focus {
+  outline: none;
+  border-color: #B9E42B;
+}
+
+.cf-error {
+  font-size: 11px;
+  color: #f44336;
+  margin-top: -2px;
+  margin-bottom: 2px;
+  padding-left: 4px;
+}
+
+/* ─── Buttons ───────────────────────────────────────────────────────────────── */
+.fc-btn-calc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 20px;
+  background: linear-gradient(135deg, #B9E42B, #A5D323);
+  border: none;
+  border-radius: 4px;
+  color: #000000;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.fc-btn-calc:hover {
+  background: linear-gradient(135deg, #c8f030, #B9E42B);
+  transform: translateY(-1px);
+}
+
+.fc-btn-reset {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 7px 14px;
+  transition: all 0.15s;
+}
+
+.fc-btn-reset:hover {
+  border-color: #555;
+  color: #bbb;
+}
+
+/* ─── Results ───────────────────────────────────────────────────────────────── */
+.cf-res-group {
+  font-size: 10px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid #222;
+  margin-bottom: 2px;
+}
+
+.cf-res-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid #1e1e1e;
+  gap: 8px;
+}
+
+.cf-res-row:last-child {
+  border-bottom: none;
+}
+
+.cf-res-label {
+  font-size: 12px;
+  color: #999999;
+  flex: 1;
+}
+
+.cf-res-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #B9E42B;
+  text-align: right;
+  min-width: 80px;
+}
+
+.cf-res-unit {
+  font-size: 11px;
+  color: #555555;
+  min-width: 50px;
+  text-align: right;
+}
+
+.cf-res-highlight {
+  background: #0d1a00;
+  border-radius: 4px;
+  padding: 8px 10px !important;
+  margin-top: 6px;
+  border-bottom: none !important;
+}
+
+.cf-res-highlight .cf-res-label {
+  color: #cccccc;
+  font-weight: 600;
+}
+
+.cf-res-highlight .cf-res-value {
+  font-size: 17px;
+}
+
+/* ─── Placeholder ───────────────────────────────────────────────────────────── */
+.fc-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 20px;
+  color: #555555;
+  text-align: center;
+  gap: 10px;
+}
+
+.fc-placeholder-icon {
+  font-size: 36px;
+  opacity: 0.35;
+}
+
+.fc-placeholder p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* ─── Info box ──────────────────────────────────────────────────────────────── */
+.fc-info-box {
+  background-color: #0a1a0a;
+  border: 1px solid #1e3a1e;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #6a9a6a;
+  line-height: 1.5;
+}

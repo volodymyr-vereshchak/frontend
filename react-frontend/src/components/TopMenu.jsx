@@ -198,6 +198,12 @@ const handleGRSTrendsClick = () => {
     if (onArchiveTypeChange) onArchiveTypeChange('accidents');
   };
 
+  const handleFlowCalcClick = () => {
+    setIsReportsDropdownOpen(false);
+    setActiveButton(null);
+    if (onArchiveTypeChange) onArchiveTypeChange('flow-calc');
+  };
+
   const handleLanguageChange = (languageCode) => {
     changeLanguage(languageCode);
     setIsLanguageDropdownOpen(false);
@@ -265,6 +271,14 @@ const handleGRSTrendsClick = () => {
               >
                 <span className="dropdown-item-icon">⚠️</span>
                 <span className="dropdown-item-text">{t('accidents')}</span>
+              </button>
+              <button
+                className="dropdown-item"
+                onClick={handleFlowCalcClick}
+                title="Розрахунок витрати"
+              >
+                <span className="dropdown-item-icon">⚙</span>
+                <span className="dropdown-item-text">Розрахунок витрати</span>
               </button>
             </div>
           )}

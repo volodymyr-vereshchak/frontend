@@ -11,6 +11,7 @@ import AdminPanel from './components/AdminPanel/AdminPanel'
 import AccidentsPage from './components/AccidentsPage'
 import GRSTrendsPage from './components/GRSTrendsPage'
 import NightConsumptionPage from './components/NightConsumptionPage'
+import FlowRateCalcPage from './components/FlowRateCalcPage'
 import LoginPage from './components/LoginPage/LoginPage'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { UserProvider } from './contexts/UserContext'
@@ -160,7 +161,7 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
   }, []);
 
   useEffect(() => {
-    if (archiveType !== 'accidents' && archiveType !== 'grs-trends' && archiveType !== 'night-consumption') {
+    if (archiveType !== 'accidents' && archiveType !== 'grs-trends' && archiveType !== 'night-consumption' && archiveType !== 'flow-calc') {
       safeSetItem('hlv-active-tab', archiveType);
     }
   }, [archiveType]);
@@ -175,7 +176,7 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
       // Виртуальные линии поддерживают только daily, hourly, overview, poll, admin
       if (archiveType !== 'daily' && archiveType !== 'hourly' && archiveType !== 'overview' &&
           archiveType !== 'poll' && archiveType !== 'admin' && archiveType !== 'accidents' &&
-          archiveType !== 'grs-trends' && archiveType !== 'night-consumption') {
+          archiveType !== 'grs-trends' && archiveType !== 'night-consumption' && archiveType !== 'flow-calc') {
         setArchiveType('daily');
       }
     }
@@ -241,9 +242,13 @@ isVirtualLine={selectedLineIsVirtual}
         {/* Night Consumption — full width */}
         {archiveType === 'night-consumption' && <NightConsumptionPage />}
 
+        {/* Flow Rate Calculation — full width */}
+        {archiveType === 'flow-calc' && <FlowRateCalcPage />}
+
         {/* Hide DateTimePickers and TreeView when Overview, Poll, Admin or report pages are active */}
         {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' &&
-         archiveType !== 'accidents' && archiveType !== 'grs-trends' && archiveType !== 'night-consumption' && (
+         archiveType !== 'accidents' && archiveType !== 'grs-trends' && archiveType !== 'night-consumption' &&
+         archiveType !== 'flow-calc' && (
           <>
             <DateTimePickers
               onDateRangeChange={handleDateRangeChange}
@@ -268,7 +273,8 @@ isVirtualLine={selectedLineIsVirtual}
 
         {/* Standard layout for other archive types */}
         {archiveType !== 'overview' && archiveType !== 'poll' && archiveType !== 'admin' &&
-         archiveType !== 'accidents' && archiveType !== 'grs-trends' && archiveType !== 'night-consumption' && (
+         archiveType !== 'accidents' && archiveType !== 'grs-trends' && archiveType !== 'night-consumption' &&
+         archiveType !== 'flow-calc' && (
           <>
             <div className="main-layout">
               <div className="sidebar">
