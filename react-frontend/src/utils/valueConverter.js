@@ -42,21 +42,24 @@ export function convertIntArrayToFloatArray(intArray) {
   return intArray.map(convertIntToHexToFloat);
 }
 
+// edit_type_ids that store time-of-day as seconds since midnight
+const TIME_EDIT_TYPE_IDS = new Set([28, 29, 30, 31, 128]);
+
 /**
  * Format a raw int from the edit archive into a human-readable string.
  *
  * Cases (in order):
  *  - |v| <= 32767 → enum/flag, display as integer (e.g. sensor type 0, 1, 2)
- *  - editName contains "час"/"время" → float is seconds → display as HH:MM:SS
+ *  - editTypeId in TIME_EDIT_TYPE_IDS → float is seconds → display as HH:MM:SS
  *  - |float| < 0.001 → coefficient, scientific notation (e.g. "1.6214e-5")
  *  - |float| >= 100000 → 2 decimal places
  *  - otherwise → 4 decimal places
  *
- * @param {number} rawInt   - Original integer value from DB
- * @param {string} editName - Name of the edit type (used for time detection)
+ * @param {number} rawInt      - Original integer value from DB
+ * @param {number} editTypeId  - edit_type_id from the record (used for time detection)
  * @returns {string}
  */
-export function formatEditValue(rawInt, editName = '') {
+export function formatEditValue(rawInt, editTypeId = null) {
   if (rawInt === null || rawInt === undefined) return '—';
 
   if (rawInt >= -32767 && rawInt <= 32767) return String(rawInt);
@@ -68,8 +71,8 @@ export function formatEditValue(rawInt, editName = '') {
 
   if (!isFinite(f) || isNaN(f)) return String(rawInt);
 
-  // Time field: name contains "час" or "время" → seconds since midnight → HH:MM:SS
-  if (/час|время/i.test(editName)) {
+  // Time field: known edit_type_ids that store seconds since midnight → HH:MM:SS
+  if (TIME_EDIT_TYPE_IDS.has(editTypeId)) {
     const totalSec = Math.round(Math.abs(f));
     const h = Math.floor(totalSec / 3600);
     const m = Math.floor((totalSec % 3600) / 60);
