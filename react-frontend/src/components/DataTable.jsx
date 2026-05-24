@@ -5,12 +5,14 @@ import { formatEditValue } from '../utils/valueConverter';
 
 const EDIT_CHANNEL_NAMES = ["P", "T", "dP", "dPL", "Густ"];
 
-function resolveEditName(editName, rawOldValue) {
+function resolveEditName(editName, rawOldValue, rawNewValue) {
   if (!editName || !editName.includes('%s')) return editName;
-  const idx = typeof rawOldValue === 'number' ? rawOldValue : Number(rawOldValue);
-  const channelName = (Number.isInteger(idx) && idx >= 0 && idx < EDIT_CHANNEL_NAMES.length)
-    ? EDIT_CHANNEL_NAMES[idx]
-    : String(rawOldValue ?? '?');
+  const isChannelIdx = (v) =>
+    typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < EDIT_CHANNEL_NAMES.length;
+  const idx = isChannelIdx(rawOldValue) ? rawOldValue
+             : isChannelIdx(rawNewValue) ? rawNewValue
+             : null;
+  const channelName = idx !== null ? EDIT_CHANNEL_NAMES[idx] : String(rawOldValue ?? '?');
   return editName.replace('%s', channelName);
 }
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
@@ -190,10 +192,10 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
           let value = row[col.key];
           if (col.key === 'period' && value) return formatPeriodForExcel(value);
           if (archiveType === 'edit' && col.key === 'edit_name') {
-            return resolveEditName(value, row.old_value) || '';
+            return resolveEditName(value, row.old_value, row.new_value) || '';
           }
           if (archiveType === 'edit' && (col.key === 'old_value' || col.key === 'new_value')) {
-            return formatEditValue(value, resolveEditName(row.edit_name ?? '', row.old_value));
+            return formatEditValue(value, resolveEditName(row.edit_name ?? '', row.old_value, row.new_value));
           }
           if (typeof value === 'number') return value;
           return value || '';
@@ -685,11 +687,11 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const formatValue = (value, key, row = {}) => {
     // Edit archive: resolve %s channel template in edit_name based on old_value
     if (archiveType === 'edit' && key === 'edit_name') {
-      return resolveEditName(value, row?.old_value);
+      return resolveEditName(value, row?.old_value, row?.new_value);
     }
     // Edit archive: smart-format raw int values (handles enums, small coefficients, time, floats)
     if (archiveType === 'edit' && (key === 'old_value' || key === 'new_value')) {
-      return formatEditValue(value, resolveEditName(row?.edit_name ?? '', row?.old_value));
+      return formatEditValue(value, resolveEditName(row?.edit_name ?? '', row?.old_value, row?.new_value));
     }
 
     if (key === 'period') {
