@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { branchApi, lumgApi } from '../../services/api';
 
 // ─── Branch Config Section ────────────────────────────────────────────────────
@@ -213,17 +213,17 @@ function BranchConfigSection({ branch, allLumgs }) {
 
 // ─── Single LUMG Row ──────────────────────────────────────────────────────────
 
-function LumgRow({ lumg, initialDp, initialEis }) {
+function LumgRow({ lumg, initialDp, eisCodes, allUsedElsewhere, onAddEis, onDeleteEis }) {
   const [dp, setDp] = useState(initialDp ?? null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ path: '', active: true });
   const [status, setStatus] = useState(null);
-  const [eisCodes, setEisCodes] = useState(initialEis ?? []);
   const [eisOpen, setEisOpen] = useState(false);
   const [eisInput, setEisInput] = useState('');
   const [eisStatus, setEisStatus] = useState(null);
   const [scan, setScan] = useState(null); // null | 'loading' | string[]
   const [scanSelected, setScanSelected] = useState(new Set());
+  const [scanSearch, setScanSearch] = useState('');
 
   const startEdit = () => {
     setEditForm({ path: dp?.path || '', active: dp?.active ?? true });
@@ -253,22 +253,34 @@ function LumgRow({ lumg, initialDp, initialEis }) {
   };
 
   const handleAddEis = async () => {
-    const code = eisInput.trim();
+    const code = eisInput.trim().toUpperCase();
     if (!code) return;
+    if (eisCodes.some(e => e.eis_code === code)) {
+      setEisStatus({ ok: false, msg: `Код ${code} вже додано до цього ЛУМГ` });
+      return;
+    }
+    if (allUsedElsewhere.has(code)) {
+      setEisStatus({ ok: false, msg: `Код ${code} вже прив'язаний до іншого ЛУМГ` });
+      return;
+    }
     try {
       const result = await lumgApi.addEisCode(lumg.id, { eis_code: code });
-      setEisCodes(prev => [...prev, result]);
+      onAddEis(lumg.id, result);
       setEisInput('');
       setEisStatus({ ok: true, msg: 'Додано' });
     } catch (err) {
-      setEisStatus({ ok: false, msg: err?.message || 'Помилка' });
+      // Fallback: code was taken by another session between check and save
+      const msg = err?.message?.includes('already assigned')
+        ? `Код ${code} вже зайнятий (інший ЛУМГ)`
+        : err?.message || 'Помилка';
+      setEisStatus({ ok: false, msg });
     }
   };
 
   const handleDeleteEis = async (code) => {
     try {
       await lumgApi.deleteEisCode(lumg.id, code);
-      setEisCodes(prev => prev.filter(e => e.eis_code !== code));
+      onDeleteEis(lumg.id, code);
     } catch (err) {
       setEisStatus({ ok: false, msg: err?.message || 'Помилка видалення' });
     }
@@ -276,11 +288,14 @@ function LumgRow({ lumg, initialDp, initialEis }) {
 
   const handleScan = async () => {
     setScan('loading');
+    setScanSearch('');
+    setScanSelected(new Set());
     try {
       const result = await lumgApi.scanEis(lumg.id);
       if (Array.isArray(result)) {
-        const existing = new Set(eisCodes.map(e => e.eis_code));
-        const newOnes = result.filter(r => !existing.has(r));
+        const existingOwn = new Set(eisCodes.map(e => e.eis_code));
+        // Filter out codes already assigned to this lumg OR any other lumg
+        const newOnes = result.filter(r => !existingOwn.has(r) && !allUsedElsewhere.has(r));
         setScan(newOnes);
         setScanSelected(new Set(newOnes));
       } else {
@@ -298,13 +313,51 @@ function LumgRow({ lumg, initialDp, initialEis }) {
     for (const code of scanSelected) {
       try {
         const result = await lumgApi.addEisCode(lumg.id, { eis_code: code });
-        setEisCodes(prev => [...prev, result]);
+        onAddEis(lumg.id, result);
         added++;
       } catch {}
     }
     setScan(null);
+    setScanSearch('');
     setEisStatus({ ok: true, msg: `Додано ${added} кодів` });
   };
+
+  const filteredScan = useMemo(() => {
+    if (!Array.isArray(scan)) return scan;
+    if (!scanSearch.trim()) return scan;
+    const q = scanSearch.trim().toUpperCase();
+    return scan.filter(c => c.toUpperCase().includes(q));
+  }, [scan, scanSearch]);
+
+  const handleToggleScan = (code) => {
+    setScanSelected(prev => {
+      const s = new Set(prev);
+      s.has(code) ? s.delete(code) : s.add(code);
+      return s;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (!Array.isArray(filteredScan)) return;
+    setScanSelected(prev => {
+      const s = new Set(prev);
+      filteredScan.forEach(c => s.add(c));
+      return s;
+    });
+  };
+
+  const handleDeselectAll = () => {
+    if (!Array.isArray(filteredScan)) return;
+    setScanSelected(prev => {
+      const s = new Set(prev);
+      filteredScan.forEach(c => s.delete(c));
+      return s;
+    });
+  };
+
+  const selectedInFiltered = Array.isArray(filteredScan)
+    ? filteredScan.filter(c => scanSelected.has(c)).length
+    : 0;
 
   return (
     <div style={{ padding: '12px 14px', background: '#2a2a2a', borderRadius: 6, border: '1px solid #3E3E3E', marginBottom: 8 }}>
@@ -393,24 +446,60 @@ function LumgRow({ lumg, initialDp, initialEis }) {
               )}
             </div>
 
+            {/* Scan results */}
             {Array.isArray(scan) && scan.length > 0 && (
               <div style={{ background: '#222', borderRadius: 6, padding: 10, marginBottom: 8 }}>
-                <div style={{ fontSize: 12, color: '#aaa', marginBottom: 6 }}>
-                  Знайдено нових папок ({scan.length}):
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, color: '#aaa' }}>
+                    Знайдено нових папок ({scan.length}):
+                  </span>
+                  <input
+                    className="admin-input"
+                    style={{ flex: 1, fontSize: 12, padding: '3px 8px' }}
+                    placeholder="Пошук коду…"
+                    value={scanSearch}
+                    onChange={e => setScanSearch(e.target.value)}
+                  />
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                  {scan.map(code => (
+
+                {/* Select/deselect controls */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: 11, padding: '2px 8px' }}
+                    onClick={handleSelectAll}
+                    disabled={!filteredScan || filteredScan.length === 0}
+                  >
+                    Вибрати всі ({filteredScan?.length ?? 0})
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: 11, padding: '2px 8px' }}
+                    onClick={handleDeselectAll}
+                    disabled={selectedInFiltered === 0}
+                  >
+                    Зняти вибір
+                  </button>
+                  {scanSearch && (
+                    <span style={{ fontSize: 11, color: '#888', alignSelf: 'center' }}>
+                      Показано: {filteredScan?.length ?? 0} / {scan.length}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8, maxHeight: 200, overflowY: 'auto' }}>
+                  {(filteredScan || []).map(code => (
                     <label key={code} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12, color: '#ccc' }}>
                       <input type="checkbox" checked={scanSelected.has(code)}
-                        onChange={() => setScanSelected(prev => {
-                          const s = new Set(prev);
-                          s.has(code) ? s.delete(code) : s.add(code);
-                          return s;
-                        })} />
+                        onChange={() => handleToggleScan(code)} />
                       {code}
                     </label>
                   ))}
+                  {filteredScan && filteredScan.length === 0 && (
+                    <span style={{ color: '#666', fontSize: 12 }}>Нічого не знайдено</span>
+                  )}
                 </div>
+
                 <button className="btn-primary" style={{ fontSize: 12 }}
                   disabled={scanSelected.size === 0} onClick={handleAddSelected}>
                   Додати вибрані ({scanSelected.size})
@@ -433,7 +522,7 @@ function LumgRow({ lumg, initialDp, initialEis }) {
 
 function LumgPathsSection({ lumgs }) {
   const [paths, setPaths] = useState({});
-  const [eisCodes, setEisCodes] = useState({});
+  const [eisMap, setEisMap] = useState({}); // { lumgId: EisCode[] }
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -451,10 +540,31 @@ function LumgPathsSection({ lumgs }) {
       const pm = {}, em = {};
       results.forEach(r => { pm[r.id] = r.dp; em[r.id] = r.eis; });
       setPaths(pm);
-      setEisCodes(em);
+      setEisMap(em);
       setLoading(false);
     });
   }, [lumgs.map(l => l.id).join(',')]);
+
+  const handleAddEis = useCallback((lumgId, eisCode) => {
+    setEisMap(prev => ({
+      ...prev,
+      [lumgId]: [...(prev[lumgId] || []), eisCode],
+    }));
+  }, []);
+
+  const handleDeleteEis = useCallback((lumgId, code) => {
+    setEisMap(prev => ({
+      ...prev,
+      [lumgId]: (prev[lumgId] || []).filter(e => e.eis_code !== code),
+    }));
+  }, []);
+
+  // Set of ALL assigned EIS codes across all lumgs
+  const allEisSet = useMemo(() => {
+    const s = new Set();
+    Object.values(eisMap).forEach(codes => codes.forEach(e => s.add(e.eis_code)));
+    return s;
+  }, [eisMap]);
 
   if (!lumgs.length) return (
     <div style={{ color: '#666', fontSize: 13, padding: '16px 0' }}>У цій філії немає ЛУМГ</div>
@@ -469,14 +579,23 @@ function LumgPathsSection({ lumgs }) {
       <div style={{ color: '#aaa', fontSize: 12, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
         Шляхи архівних даних — ЛУМГ
       </div>
-      {lumgs.map(lumg => (
-        <LumgRow
-          key={lumg.id}
-          lumg={lumg}
-          initialDp={paths[lumg.id]}
-          initialEis={eisCodes[lumg.id]}
-        />
-      ))}
+      {lumgs.map(lumg => {
+        const ownCodes = eisMap[lumg.id] || [];
+        const ownSet = new Set(ownCodes.map(e => e.eis_code));
+        // Codes used by all OTHER lumgs (not this one)
+        const usedElsewhere = new Set([...allEisSet].filter(c => !ownSet.has(c)));
+        return (
+          <LumgRow
+            key={lumg.id}
+            lumg={lumg}
+            initialDp={paths[lumg.id]}
+            eisCodes={ownCodes}
+            allUsedElsewhere={usedElsewhere}
+            onAddEis={handleAddEis}
+            onDeleteEis={handleDeleteEis}
+          />
+        );
+      })}
     </div>
   );
 }
