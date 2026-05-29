@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './DataTable.css';
 import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper, enterpriseApi, enterpriseVirtualApi } from '../services/api';
 import { formatEditValue } from '../utils/valueConverter';
@@ -37,6 +37,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const [itemsPerPage] = useState(50);
   const [exportWithEnterprise, setExportWithEnterprise] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const fetchCountRef = useRef(0);
 
   // Format period value for Excel export
   const formatPeriodForExcel = (value) => {
@@ -390,6 +391,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const columns = getColumns();
 
   const fetchData = async (abortController) => {
+    const myFetchId = ++fetchCountRef.current;
     if (!selectedLines || selectedLines.length === 0) {
       setRowData([]);
       setLoading(false);
@@ -442,7 +444,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
           );
         }
 
-        if (abortController?.signal?.aborted) return;
+        if (abortController?.signal?.aborted || fetchCountRef.current !== myFetchId) return;
 
         setRowData(archiveData || []);
         if (onDataChange) onDataChange(archiveData || []);
@@ -455,6 +457,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       if (archiveType === 'edit') {
         const data = await editArchiveApi.getEditData(selectedLines, dateRange.fromDate, dateRange.toDate);
 
+        if (fetchCountRef.current !== myFetchId) return;
         setRowData(data || []);
         if (onDataChange) {
           onDataChange(data || []);
@@ -480,6 +483,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
         const data = await apiClient.get(`/${archiveType}/`, params);
 
+        if (fetchCountRef.current !== myFetchId) return;
         setRowData(data || []);
         if (onDataChange) {
           onDataChange(data || []);
@@ -504,7 +508,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
       const [archiveData, editCountsData, sysCountsData] = await Promise.all(promises);
 
-      if (abortController?.signal?.aborted) {
+      if (abortController?.signal?.aborted || fetchCountRef.current !== myFetchId) {
         return;
       }
 
@@ -581,7 +585,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       }
 
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error.name === 'AbortError' || fetchCountRef.current !== myFetchId) {
         return;
       }
       console.error('Error fetching data:', error);
@@ -591,7 +595,9 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         onDataChange([]);
       }
     } finally {
-      setLoading(false);
+      if (fetchCountRef.current === myFetchId) {
+        setLoading(false);
+      }
     }
   };
 
