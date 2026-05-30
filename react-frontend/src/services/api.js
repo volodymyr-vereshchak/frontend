@@ -24,23 +24,33 @@ class ApiClient {
 
   async _makeRequest(endpoint, options = {}) {
     const url = `${this.baseUrl}${endpoint}`;
-    const defaultOptions = {
+    const { timeout = 30000, headers, ...rest } = options;
+    const method = (rest.method || 'GET').toUpperCase();
+    // Only idempotent methods are safe to retry on network/5xx errors.
+    // POST/PATCH are NOT retried — a network blip after the server already
+    // processed the request would otherwise cause a duplicate submission.
+    const isIdempotent = method === 'GET' || method === 'PUT' || method === 'DELETE' || method === 'HEAD';
+
+    const requestOptions = {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Accept-Encoding': 'gzip'
+        'Accept-Encoding': 'gzip',
+        ...(headers || {}),
       },
       credentials: 'include',
       mode: 'cors',
-      timeout: 30000
+      ...rest,
     };
 
-    const requestOptions = { ...defaultOptions, ...options };
-
-
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      // Real per-request timeout: native fetch ignores a `timeout` option, so we
+      // enforce it with an AbortController — otherwise a hung request never ends.
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
       try {
-        const response = await fetch(url, requestOptions);
+        const response = await fetch(url, { ...requestOptions, signal: controller.signal });
+        clearTimeout(timer);
 
         if (!response.ok) {
           let detail = response.statusText;
@@ -48,38 +58,39 @@ class ApiClient {
             const body = await response.json();
             if (body.detail) detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
           } catch (_) {}
-          const err = new APIError(detail, response.status, url);
-          // Don't retry client errors (4xx)
-          if (response.status >= 400 && response.status < 500) throw err;
-          throw err;
+          throw new APIError(detail, response.status, url);
         }
 
         if (response.status === 204 || response.headers.get('content-length') === '0') {
           return true;
         }
-        const data = await response.json();
-        return data;
+        return await response.json();
 
       } catch (error) {
+        clearTimeout(timer);
+
         // Never retry client errors (4xx) — re-throw immediately
         if (error instanceof APIError && error.status >= 400 && error.status < 500) {
           throw error;
         }
 
-        console.error(`Request attempt ${attempt} failed:`, error);
+        const isTimeout = error.name === 'AbortError';
+        const canRetry = isIdempotent && attempt < this.maxRetries;
 
-        if (attempt === this.maxRetries) {
+        if (!canRetry) {
+          if (isTimeout) throw new APIError(`Request timed out after ${timeout}ms`, null, url);
           if (error instanceof APIError) throw error;
           if (error.name === 'TypeError' && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
             throw new APIError(`Connection failed - check if backend is running: ${error.message}`, null, url);
           }
-          if (error.message.includes('CORS')) {
+          if (error.message && error.message.includes('CORS')) {
             throw new APIError(`CORS error - check backend CORS settings: ${error.message}`, null, url);
           }
-          throw new APIError(`Request failed after ${this.maxRetries} attempts: ${error.message}`, null, url);
+          throw new APIError(`Request failed: ${error.message || error}`, null, url);
         }
 
-        // Wait before retry with exponential backoff (only for network/5xx errors)
+        console.warn(`Request attempt ${attempt} failed (${method} ${endpoint}), retrying:`, error.message || error);
+        // Exponential backoff (only for idempotent network/5xx/timeout errors)
         await new Promise(resolve => setTimeout(resolve, this.retryDelay * attempt));
       }
     }
