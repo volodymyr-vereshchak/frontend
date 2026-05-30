@@ -8,6 +8,7 @@ import {
   lineApi,
 } from '../services/api';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
+import { commercialHourlyRange, commercialDayOf } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
 import * as XLSX from 'xlsx';
@@ -127,9 +128,11 @@ const NightConsumption = ({ isOpen, onClose }) => {
     setError(null);
 
     try {
-      // Commercial day: 07:00 of fromDate to 06:00 of toDate
-      const commercialFrom = `${dateRange.fromDate}T07:00:00`;
-      const commercialTo = `${dateRange.toDate}T06:00:00`;
+      // Commercial day: covers commercial days fromDate..toDate, i.e. the hourly
+      // range 07:00 of fromDate to 06:00 of (toDate+1). The night of commercial
+      // day toDate is the 00:00–05:00 of the next calendar morning.
+      const { from: commercialFrom, to: commercialTo } =
+        commercialHourlyRange(dateRange.fromDate, dateRange.toDate);
 
       // Fetch physical and virtual hourly data from separate endpoints (like old HTML page)
       const [physHourly, virtHourly, enterpriseData] = await Promise.all([
@@ -238,6 +241,10 @@ const NightConsumption = ({ isOpen, onClose }) => {
         const lineId = record.line_id;
         const fullDatetime = periodStr; // Keep full datetime for enterprise lookup
 
+        // Attribute these early-morning hours to the COMMERCIAL day they belong to:
+        // 00:00–06:00 of calendar date C is part of commercial day C−1.
+        const commDate = commercialDayOf(date, hour);
+
         // STEP 3: Calculate NET = MAX(0, GS Volume - Enterprise Volume)
         // Normalize to 13 chars to match enterprise map key (YYYY-MM-DDTHH)
         const normalizedPeriod = fullDatetime.replace(' ', 'T').slice(0, 13);
@@ -245,16 +252,16 @@ const NightConsumption = ({ isOpen, onClose }) => {
         const enterpriseVolume = (enterpriseMap[lineId]?.[normalizedPeriod]) || 0;
         const netVolume = Math.max(0, gsVolume - enterpriseVolume);
 
-        if (!dataByDateAndLine[date]) {
-          dataByDateAndLine[date] = {};
+        if (!dataByDateAndLine[commDate]) {
+          dataByDateAndLine[commDate] = {};
         }
 
-        if (!dataByDateAndLine[date][lineId]) {
-          dataByDateAndLine[date][lineId] = [];
+        if (!dataByDateAndLine[commDate][lineId]) {
+          dataByDateAndLine[commDate][lineId] = [];
         }
 
         // Store NET volume instead of raw GS volume
-        dataByDateAndLine[date][lineId].push(netVolume);
+        dataByDateAndLine[commDate][lineId].push(netVolume);
       }
     });
 

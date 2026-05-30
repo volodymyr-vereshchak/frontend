@@ -8,6 +8,7 @@ import {
   lineApi,
 } from '../services/api';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
+import { commercialHourlyRange } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
 import InteractiveChart from './InteractiveChart';
@@ -119,17 +120,23 @@ const GRSTrends = ({ isOpen, onClose }) => {
     setIsLoading(true);
     setError(null);
 
+    // Hourly trends use commercial-day boundaries (07:00→07:00): a selected range
+    // [from, to] maps to [from 07:00, (to+1) 06:00]. Daily stays calendar-based.
+    const range = periodType === 'hourly'
+      ? commercialHourlyRange(dateRange.fromDate, dateRange.toDate)
+      : { from: dateRange.fromDate, to: dateRange.toDate };
+
     try {
       const [physData, virtData] = await Promise.all([
         physicalLineIds.length > 0
           ? (periodType === 'daily'
-              ? archiveDataApi.getDailyData(physicalLineIds, dateRange.fromDate, dateRange.toDate)
-              : archiveDataApi.getHourlyData(physicalLineIds, dateRange.fromDate, dateRange.toDate))
+              ? archiveDataApi.getDailyData(physicalLineIds, range.from, range.to)
+              : archiveDataApi.getHourlyData(physicalLineIds, range.from, range.to))
           : Promise.resolve([]),
         virtualLineIds.length > 0
           ? (periodType === 'daily'
-              ? archiveDataVirtualApi.getDailyDataVirtual(virtualLineIds, dateRange.fromDate, dateRange.toDate)
-              : archiveDataVirtualApi.getHourlyDataVirtual(virtualLineIds, dateRange.fromDate, dateRange.toDate))
+              ? archiveDataVirtualApi.getDailyDataVirtual(virtualLineIds, range.from, range.to)
+              : archiveDataVirtualApi.getHourlyDataVirtual(virtualLineIds, range.from, range.to))
           : Promise.resolve([]),
       ]);
 
@@ -151,7 +158,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
       let entData = [];
       if (showEnterprise) {
         entData = await getEnterpriseWithCache(
-          grsLines, dateRange.fromDate, dateRange.toDate, periodType,
+          grsLines, range.from, range.to, periodType,
           (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
         ) || [];
       }
@@ -176,8 +183,11 @@ const GRSTrends = ({ isOpen, onClose }) => {
     try {
       let entData = [];
       if (checked) {
+        const range = loadedPeriodType === 'hourly'
+          ? commercialHourlyRange(loadedDateRange.fromDate, loadedDateRange.toDate)
+          : { from: loadedDateRange.fromDate, to: loadedDateRange.toDate };
         entData = await getEnterpriseWithCache(
-          loadedLines.all, loadedDateRange.fromDate, loadedDateRange.toDate, loadedPeriodType,
+          loadedLines.all, range.from, range.to, loadedPeriodType,
           (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
         ) || [];
       }

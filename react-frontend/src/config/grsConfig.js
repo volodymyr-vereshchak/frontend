@@ -7,6 +7,11 @@ export const grsConfig = (() => {
 
   // Fallback to default values if runtime config is not available
   return {
+    // Contract hour = commercial-day start (07:00 → 07:00). Global for the whole
+    // project: a commercial day runs from CONTRACT_HOUR to CONTRACT_HOUR next day.
+    // Overridable at runtime via window.APP_CONFIG.GRS_CONFIG.CONTRACT_HOUR.
+    CONTRACT_HOUR: 7,
+
     // LUMG ID to use in Overview tab
     LUMG_ID: 2,
 

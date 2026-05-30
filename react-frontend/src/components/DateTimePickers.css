@@ -38,6 +38,13 @@
   border-color: #0d6efd;
 }
 
+/* Date-only mode (daily / reports): no time part, so the input is narrower. */
+.datetime-pickers.date-only .datetime-picker,
+.datetime-pickers.date-only .react-datepicker-wrapper,
+.datetime-pickers.date-only .react-datepicker__input-container input {
+  width: 120px;
+}
+
 /* React DatePicker dark theme styles */
 .react-datepicker-wrapper {
   width: 180px;

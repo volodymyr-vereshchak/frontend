@@ -182,6 +182,9 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, i
 
   const currentLocale = language === 'uk' ? 'uk' : 'ru';
 
+  // Daily mode ignores time entirely (commercial-day reports), so show date-only pickers.
+  const dateOnly = archiveType === 'daily';
+
   // Highlight today's date
   const getTodayClassName = (date) => {
     const today = new Date();
@@ -262,21 +265,21 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, i
   };
 
   return (
-    <div className="datetime-pickers">
+    <div className={`datetime-pickers${dateOnly ? ' date-only' : ''}`}>
       <div className="picker-row">
         <label className="picker-label">{t('periodStart')}</label>
         <DatePicker
           ref={startPickerRef}
           selected={startDateTime}
           onChange={handleStartDateTimeChange}
-          showTimeSelect
+          showTimeSelect={!dateOnly}
           timeIntervals={60}
           timeFormat="HH:mm"
-          dateFormat="dd.MM.yyyy HH:mm"
+          dateFormat={dateOnly ? 'dd.MM.yyyy' : 'dd.MM.yyyy HH:mm'}
           className="datetime-picker"
           locale={currentLocale}
           placeholderText={t('selectDateTime')}
-          shouldCloseOnSelect={false}
+          shouldCloseOnSelect={dateOnly}
           onSelect={handleStartDateSelect}
           dayClassName={getTodayClassName}
           renderCustomHeader={renderCustomHeader}
@@ -288,15 +291,15 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, i
           ref={endPickerRef}
           selected={endDateTime}
           onChange={handleEndDateTimeChange}
-          showTimeSelect
+          showTimeSelect={!dateOnly}
           timeIntervals={60}
           timeFormat="HH:mm"
-          dateFormat="dd.MM.yyyy HH:mm"
+          dateFormat={dateOnly ? 'dd.MM.yyyy' : 'dd.MM.yyyy HH:mm'}
           className="datetime-picker"
           locale={currentLocale}
           placeholderText={t('selectDateTime')}
           minDate={startDateTime}
-          shouldCloseOnSelect={false}
+          shouldCloseOnSelect={dateOnly}
           onSelect={handleEndDateSelect}
           dayClassName={getTodayClassName}
           renderCustomHeader={renderCustomHeader}

@@ -19,6 +19,23 @@ function generateTrendColor(index, total) {
   return `hsl(${hue}, 70%, 60%)`;
 }
 
+// Parse a period string to a LOCAL Date without timezone shift. Handles all the
+// shapes that flow through here: 'YYYY-MM-DD', 'YYYY-MM-DDTHH' (13-char trend
+// key — note: no minutes, so new Date() would return Invalid Date),
+// 'YYYY-MM-DDTHH:MM[:SS]' and 'YYYY-MM-DD HH:MM:SS'. Returns null if unparseable.
+function parsePeriod(value) {
+  const m = String(value ?? '').replace(' ', 'T')
+    .match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2})(?::(\d{2}))?)?/);
+  if (!m) return null;
+  const [, y, mo, d, h = '0', mi = '0'] = m;
+  return new Date(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi));
+}
+
+// Does a period string carry an hour component (hourly) vs date-only (daily)?
+function periodHasTime(value) {
+  return /T\d{2}/.test(String(value ?? '').replace(' ', 'T'));
+}
+
 const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lineNames = {}, trendsEnterpriseChecked = false, onTrendsEnterpriseChange = null }) => {
   const { t, getLocale } = useLanguage();
   const [visibleLines, setVisibleLines] = useState({});
@@ -57,11 +74,11 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
         return;
       }
 
-      let sortedChartData = [...chartData].sort((a, b) => {
-        const dateA = new Date(a.period);
-        const dateB = new Date(b.period);
-        return dateA - dateB;
-      });
+      // Sort by ISO-like period string (correct order; avoids Invalid Date on the
+      // 13-char 'YYYY-MM-DDTHH' hourly-trend key).
+      let sortedChartData = [...chartData].sort((a, b) =>
+        String(a.period).localeCompare(String(b.period))
+      );
 
       if (enterpriseData && enterpriseData.byPeriod) {
         console.log('Merging enterprise data into chart data', {
@@ -327,26 +344,34 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
   };
 
   const formatXAxisLabel = (value) => {
-    const date = new Date(value);
+    const date = parsePeriod(value);
     const locale = getLocale();
-    if (archiveType === 'daily' || archiveType === 'trends') {
+    if (!date) return String(value);
+    // Date-only for daily / daily-trend; date+time when the period carries an hour
+    // (hourly trend or hourly archive).
+    const dateOnly = (archiveType === 'daily' || archiveType === 'trends') && !periodHasTime(value);
+    if (dateOnly) {
       return date.toLocaleDateString(locale);
-    } else {
-      return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
     }
+    return date.toLocaleDateString(locale) + ' ' +
+      date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
   };
 
   const CustomTooltip = ({ active, payload, label, archiveType: tooltipArchiveType }) => {
     if (active && payload && payload.length) {
       const currentArchiveType = tooltipArchiveType || archiveType;
-      const date = new Date(label);
+      const date = parsePeriod(label);
       const locale = getLocale();
 
       let formattedLabel;
-      if (currentArchiveType === 'daily' || currentArchiveType === 'trends') {
-        formattedLabel = date.toLocaleDateString(locale);
+      if (!date) {
+        formattedLabel = String(label);
       } else {
-        formattedLabel = date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale);
+        const dateOnly = (currentArchiveType === 'daily' || currentArchiveType === 'trends') && !periodHasTime(label);
+        formattedLabel = dateOnly
+          ? date.toLocaleDateString(locale)
+          : date.toLocaleDateString(locale) + ' ' +
+            date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
       }
 
       return (
@@ -383,11 +408,11 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
 
   const extractDateRange = useCallback(() => {
     if (!data || data.length === 0) return null;
-    const sortedData = [...data].sort((a, b) => {
-      const dateA = new Date(a.period);
-      const dateB = new Date(b.period);
-      return dateA - dateB;
-    });
+    // ISO-like period strings sort correctly as plain strings (avoids new Date()
+    // returning Invalid Date for the 13-char 'YYYY-MM-DDTHH' trend key).
+    const sortedData = [...data].sort((a, b) =>
+      String(a.period).localeCompare(String(b.period))
+    );
     const fromDate = sortedData[0].period.split('T')[0];
     const toDate = sortedData[sortedData.length - 1].period.split('T')[0];
     return { fromDate, toDate };

@@ -66,17 +66,26 @@
 /* Period toggle buttons */
 .grs-period-toggle {
   display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  height: 30px;              /* match the other controls in the row */
   border: 1px solid #404040;
   border-radius: 6px;
   overflow: hidden;
 }
 
 .grs-toggle-btn {
-  padding: 6px 14px;
+  min-width: 78px;           /* equal width for both, so the active (bold) one doesn't shift */
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   background: transparent;
   color: #9e9e9e;
   border: none;
   font-size: 13px;
+  line-height: 1;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
