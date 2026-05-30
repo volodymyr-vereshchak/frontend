@@ -107,7 +107,7 @@ export default function UpdateTab() {
       startPolling();
     } catch (err) {
       if (err.status === 429) {
-        setBlockedMsg('Оновлення вже запущено іншим адміністратором');
+        setBlockedMsg('Оновлення вже виконується. Зачекайте завершення.');
         // Sync actual state from backend
         const s = await updateApi.getStatus();
         if (s) { setAllJob(s); startPolling(); }
@@ -115,15 +115,24 @@ export default function UpdateTab() {
     }
   };
 
+  const handleResetStatus = async () => {
+    try {
+      const s = await updateApi.resetStatus();
+      if (s) setAllJob(s);
+      setBlockedMsg(null);
+    } catch (_) {}
+  };
+
   const handleUpdateLumg = async (id) => {
     setBlockedMsg(null);
     try {
       await updateApi.updateLumg(id);
-      setAllJob(prev => ({ ...prev, status: 'running', lumgs: { ...prev.lumgs, [id]: 'running' } }));
+      // Start fresh: clear old statuses so only this LUMG shows progress
+      setAllJob(prev => ({ ...prev, status: 'running', lumgs: { [id]: 'running' } }));
       startPolling();
     } catch (err) {
       if (err.status === 429) {
-        setBlockedMsg('Оновлення вже запущено іншим адміністратором');
+        setBlockedMsg('Оновлення вже виконується. Зачекайте завершення.');
         const s = await updateApi.getStatus();
         if (s) { setAllJob(s); startPolling(); }
       }
@@ -138,7 +147,7 @@ export default function UpdateTab() {
       startPolling();
     } catch (err) {
       if (err.status === 429) {
-        setBlockedMsg('Оновлення вже запущено іншим адміністратором');
+        setBlockedMsg('Оновлення вже виконується. Зачекайте завершення.');
         const s = await updateApi.getStatus();
         if (s) { setAllJob(s); startPolling(); }
       }
@@ -161,7 +170,7 @@ export default function UpdateTab() {
   };
 
   const lumgStatusCell = (lumgId) => {
-    const jobActive = allJob.status === 'running' || allJob.status === 'done';
+    const jobActive = allJob.status === 'running' || allJob.status === 'done' || allJob.status === 'error';
     const s = jobActive ? allJob.lumgs?.[lumgId] : null;
     if (!s) return null;
     const cfg = LUMG_STATUS_LABEL[s];
@@ -184,6 +193,16 @@ export default function UpdateTab() {
           Оновити всі
         </button>
         {allStatusLabel()}
+        {isRunning && (
+          <button
+            className="btn-edit"
+            style={{ marginLeft: 'auto', background: '#333', color: '#aaa', fontSize: 12 }}
+            onClick={handleResetStatus}
+            title="Скинути статус якщо оновлення зависло"
+          >
+            Скинути
+          </button>
+        )}
       </div>
 
       <table className="admin-table">

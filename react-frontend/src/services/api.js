@@ -182,6 +182,7 @@ export const updateApi = {
   updateLumg:   (id)            => apiClient.post(`/update_data/${id}`),
   updateDirect: (lumg_id, path) => apiClient.post('/update_data/direct', { lumg_id, path }),
   getStatus:    ()              => apiClient.get('/update_data/status'),
+  resetStatus:  ()              => apiClient.post('/update_data/reset'),
 };
 
 // Gas Volume Calculation API methods
