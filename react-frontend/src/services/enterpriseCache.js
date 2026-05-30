@@ -11,15 +11,22 @@
  */
 
 const TTL = 60 * 60 * 1000; // 1 hour
-const PREFIX = 'ent2_'; // v2: local-time keys (v1 used UTC, caused cache poisoning)
+const PREFIX = 'ent3_'; // v3: fixed commercial-day null-poisoning of 00:00–06:00 hours
 const BUDGET_BYTES = 3 * 1024 * 1024; // 3 MB UTF-16 (out of ~5 MB Chrome quota)
-const ALL_PREFIXES = ['ent2_', 'ent_']; // ent_ — legacy, evicted naturally as oldest
+const ALL_PREFIXES = ['ent3_', 'ent2_', 'ent_']; // older — legacy, evicted naturally as oldest
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeKey(periodType, lineId, period) {
   const t = periodType === 'hourly' ? 'h' : 'd';
   return `${PREFIX}${t}_${lineId}_${period}`;
+}
+
+// Shift a 'YYYY-MM-DD' string by `delta` days (pure UTC math, no timezone/DST).
+function shiftDateStr(dateStr, delta) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + delta));
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
 }
 
 function entrySize(key, value) {
@@ -213,7 +220,12 @@ export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodTy
 
   // ── 2. Determine minimal fetch range ───────────────────────────────────────
   const allMissingPeriods = Object.values(missingByLine).flat().sort();
-  const fetchFrom = allMissingPeriods[0].slice(0, 10);
+  const firstDate = allMissingPeriods[0].slice(0, 10);
+  // Enterprise (DPD) data is commercial-day aligned: from_date=D returns periods
+  // starting at D 07:00, so a date's 00:00–06:00 hours belong to the PREVIOUS
+  // commercial day. For hourly, fetch one day earlier to cover the first date's
+  // early hours — otherwise they'd be wrongly cached as "no data" (null).
+  const fetchFrom = periodType === 'hourly' ? shiftDateStr(firstDate, -1) : firstDate;
   const fetchTo   = allMissingPeriods[allMissingPeriods.length - 1].slice(0, 10);
 
   console.log(

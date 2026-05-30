@@ -16,6 +16,7 @@ function resolveEditName(editName, rawOldValue, rawNewValue) {
   return editName.replace('%s', channelName);
 }
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
+import { addDays } from '../utils/commercialDay';
 import * as XLSX from 'xlsx';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -70,9 +71,13 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       if (exportWithEnterprise && (archiveType === 'daily' || archiveType === 'hourly') && selectedLines && selectedLines.length > 0) {
         // Sort data chronologically
         const sortedData = [...rowData].sort((a, b) => new Date(a.period) - new Date(b.period));
-        const fromDate = String(sortedData[0].period).slice(0, 10);
+        const firstDate = String(sortedData[0].period).slice(0, 10);
         const toDate   = String(sortedData[sortedData.length - 1].period).slice(0, 10);
         const periodType = archiveType === 'hourly' ? 'hourly' : 'daily';
+        // Enterprise is commercial-day aligned (07:00 start); for hourly fetch a day
+        // earlier so the first date's 00:00–06:00 hours (tail of the previous
+        // commercial day) are included.
+        const fromDate = periodType === 'hourly' ? addDays(firstDate, -1) : firstDate;
 
         // Excel needs full per-enterprise breakdown — always fetch fresh from API
         // (cache stores only total volumes, which is enough for the chart overlay).
