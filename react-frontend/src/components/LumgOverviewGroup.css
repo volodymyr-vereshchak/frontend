@@ -1,0 +1,103 @@
+.lumg-group {
+  margin-bottom: 20px;
+  border: 1px solid #3E3E3E;
+  border-radius: 8px;
+  background: #222222;
+  overflow: hidden;
+}
+
+.lumg-group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px;
+  background: #2a2a2a;
+  border: none;
+  border-bottom: 1px solid #3E3E3E;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s;
+}
+
+.lumg-group-header:hover {
+  background: #303030;
+}
+
+.lumg-group--collapsed .lumg-group-header {
+  border-bottom: none;
+}
+
+.lumg-group-chevron {
+  font-size: 14px;
+  color: #B9E42B;
+  transition: transform 0.2s ease;
+  line-height: 1;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.lumg-group-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.lumg-group-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: #ffffff;
+  flex: 1;
+}
+
+.lumg-group-count {
+  font-size: 13px;
+  color: #aaaaaa;
+  background: #1a1a1a;
+  padding: 3px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.lumg-group-body {
+  padding: 18px;
+}
+
+.lumg-group-empty {
+  padding: 24px 18px;
+  color: #888888;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Toolbar with expand/collapse-all buttons */
+.lumg-groups-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.lumg-groups-toolbar button {
+  padding: 6px 14px;
+  background: #2a2a2a;
+  border: 1px solid #3E3E3E;
+  border-radius: 6px;
+  color: #cccccc;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lumg-groups-toolbar button:hover {
+  border-color: #B9E42B;
+  color: #ffffff;
+}
+
+@media (max-width: 480px) {
+  .lumg-group-body {
+    padding: 12px;
+  }
+
+  .lumg-group-name {
+    font-size: 15px;
+  }
+}

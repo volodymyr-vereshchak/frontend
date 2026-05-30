@@ -5,7 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { lineApi, archiveDataApi, paramArchiveApi, branchApi, lumgApi } from '../services/api';
 import { OverviewCalculator } from '../utils/overviewCalculator';
 import OverviewMetrics from './OverviewMetrics';
-import PressureGaugesGrid from './PressureGaugesGrid';
+import LumgOverviewGroup from './LumgOverviewGroup';
 
 /**
  * Overview Tab Component
@@ -26,6 +26,20 @@ const OverviewTab = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
+
+  // Collapsed LUMG groups, persisted per lumg id: { [lumgId]: true }
+  const [collapsedLumgs, setCollapsedLumgs] = useLocalStorage('hlv-overview-collapsed-lumgs', {});
+
+  const toggleLumg = (lumgId) => {
+    setCollapsedLumgs(prev => ({ ...prev, [lumgId]: !prev[lumgId] }));
+  };
+
+  const setAllCollapsed = (collapsed) => {
+    if (!data?.lumgGroups) return;
+    const next = {};
+    data.lumgGroups.forEach(g => { next[g.lumgId] = collapsed; });
+    setCollapsedLumgs(next);
+  };
 
   /**
    * Load branches and lumgs on mount, auto-select first
@@ -85,11 +99,17 @@ const OverviewTab = () => {
         throw new Error(t('noLumgsForBranch'));
       }
 
-      // Fetch lines for all LUMGs in parallel
+      // Fetch lines for all LUMGs in parallel, remembering which LUMG each line belongs to
+      const lineToLumg = {};
       const linesResponses = await Promise.all(
-        branchLumgIds.map(lumgId => lineApi.getLinesByLumg(lumgId))
+        branchLumgIds.map(async lumgId => {
+          const r = await lineApi.getLinesByLumg(lumgId);
+          const arr = Array.isArray(r) ? r : r?.data || [];
+          arr.forEach(line => { lineToLumg[line.id] = lumgId; });
+          return arr;
+        })
       );
-      let lines = linesResponses.flatMap(r => Array.isArray(r) ? r : r?.data || []);
+      let lines = linesResponses.flatMap(r => r);
 
       if (!Array.isArray(lines) || lines.length === 0) {
         throw new Error(t('noLinesData'));
@@ -161,6 +181,17 @@ const OverviewTab = () => {
         lineNames[line.id] = line.name || `${t('unknownLine')} ${line.id}`;
       });
 
+      // Group report lines by LUMG, preserving branch LUMG order; drop empty groups
+      const lumgNameById = {};
+      allLumgs.forEach(l => { lumgNameById[l.id] = l.name; });
+      const lumgGroups = branchLumgIds
+        .map(lumgId => ({
+          lumgId,
+          lumgName: lumgNameById[lumgId] || `ЛУМГ ${lumgId}`,
+          lineIds: lines.filter(l => lineToLumg[l.id] === lumgId).map(l => l.id),
+        }))
+        .filter(g => g.lineIds.length > 0);
+
       const currentTotal = OverviewCalculator.calculate24hTotal(last24hData, reportLineIds);
       const previousTotal = OverviewCalculator.calculate24hTotal(previous24hData, reportLineIds);
       const volumeComparison = OverviewCalculator.calculateComparison(currentTotal, previousTotal);
@@ -192,6 +223,7 @@ const OverviewTab = () => {
         pressures,
         lineNames,
         pressureTimestamps,
+        lumgGroups,
         activeLines,
         totalLines: reportLineIds.length,
         currentPeriod: { start: currentStart, end: currentEnd },
@@ -309,15 +341,26 @@ const OverviewTab = () => {
           />
 
           <section className="overview-section">
-            <h3 className="section-title">{t('linePressures')}</h3>
-            <PressureGaugesGrid
-              pressures={data.pressures}
-              lineNames={data.lineNames}
-              timestamps={data.pressureTimestamps}
-              referenceTime={data.currentPeriod?.end}
-              flowComparisons={data.flowComparisons}
-              volumeComparisons={data.volumeComparisons}
-            />
+            {data.lumgGroups && data.lumgGroups.length > 1 && (
+              <div className="lumg-groups-toolbar">
+                <button type="button" onClick={() => setAllCollapsed(false)}>
+                  {t('expandAll')}
+                </button>
+                <button type="button" onClick={() => setAllCollapsed(true)}>
+                  {t('collapseAll')}
+                </button>
+              </div>
+            )}
+
+            {(data.lumgGroups || []).map(group => (
+              <LumgOverviewGroup
+                key={group.lumgId}
+                group={group}
+                data={data}
+                collapsed={!!collapsedLumgs[group.lumgId]}
+                onToggle={() => toggleLumg(group.lumgId)}
+              />
+            ))}
           </section>
         </>
       )}
