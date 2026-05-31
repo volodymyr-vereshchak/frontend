@@ -728,6 +728,7 @@ export const userManagementApi = {
   create:        (data)          => apiClient.post('/auth/users', data),
   update:        (id, data)      => apiClient.patch(`/auth/users/${id}`, data),
   resetPassword: (id)            => apiClient.post(`/auth/users/${id}/reset-password`),
+  remove:        (id)            => apiClient.delete(`/auth/users/${id}`),
 };
 
 export default apiClient;

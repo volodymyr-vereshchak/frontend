@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 import './FlowRateCalc.css';
 
 // ─── Constants (exact values from CalcDSTU8586.dll / Ask2 XAML) ───────────────
@@ -72,17 +73,9 @@ const MATERIALS = [
   { label: '45Л',            a: 11.7e-6 },
 ];
 
-// cbComprFactor items from Ask2 XAML
-const KST_METHODS = ['Зробіть вибір ...', 'GERG-91 мод.', 'NX-19 мод.'];
-
-// cbPressureType items from Ask2 XAML
-const P_TYPES = ['абсолютний', 'надлишковий'];
-
-// cbTypeOtborDP items from Ask2 XAML (tooCorner=1, tooRad=2, tooFlange=3)
-const OTBOR = ['кутовий', 'трьохрадіусний', 'фланцевий'];
-
-// cbTypeTimeOrifice items from Ask2 XAML (ttwoRun=1, ttwoPeriod=2)
-const TIME_TYPES = ['експлуатації', 'міжконтрольний'];
+// Language-dependent dropdown labels are built inside the component via t().
+// The two method names (GERG-91 / NX-19) are kept untranslated (standard notation).
+const KST_METHOD_NAMES = ['', 'GERG-91 мод.', 'NX-19 мод.'];
 
 // ─── Physics ──────────────────────────────────────────────────────────────────
 
@@ -261,10 +254,20 @@ const INIT = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function FlowRateCalc() {
+  const { t } = useLanguage();
   const [mtype, setMtype] = useState('orifice');
   const [s, setS] = useState(INIT);
   const [errors, setErrors] = useState({});
   const [results, setResults] = useState(null);
+
+  // Localized dropdown labels (indices stay stable — only display text changes)
+  const KST_METHODS = useMemo(
+    () => [t('fcKstPlaceholder'), KST_METHOD_NAMES[1], KST_METHOD_NAMES[2]],
+    [t]
+  );
+  const P_TYPES = useMemo(() => [t('fcPAbs'), t('fcPGauge')], [t]);
+  const OTBOR = useMemo(() => [t('fcOtborCorner'), t('fcOtborRad'), t('fcOtborFlange')], [t]);
+  const TIME_TYPES = useMemo(() => [t('fcTimeOp'), t('fcTimeInterctrl')], [t]);
 
   const set = useCallback((f, v) => {
     setS(prev => ({ ...prev, [f]: v }));
@@ -276,20 +279,20 @@ export default function FlowRateCalc() {
     const errs = {};
     const pf = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
     const req = (f, v, lo, hi) => {
-      if (v === null) { errs[f] = 'Введіть значення'; return null; }
-      if (lo != null && v < lo) { errs[f] = `Мін: ${lo}`; return null; }
-      if (hi != null && v > hi) { errs[f] = `Макс: ${hi}`; return null; }
+      if (v === null) { errs[f] = t('fcEnterValue'); return null; }
+      if (lo != null && v < lo) { errs[f] = `${t('fcMin')}: ${lo}`; return null; }
+      if (hi != null && v > hi) { errs[f] = `${t('fcMax')}: ${hi}`; return null; }
       return v;
     };
 
     // Kst must be selected
-    if (s.kst === 0) { setErrors({ kst: 'Оберіть метод Кст' }); return; }
+    if (s.kst === 0) { setErrors({ kst: t('fcSelectKst') }); return; }
 
     const rho = req('rho', pf(s.rho), 0.66, 1.0);
     const co2 = pf(s.co2) ?? 0;
     const n2  = pf(s.n2)  ?? 0;
-    if (co2 < 0 || co2 > 16) errs.co2 = 'Діапазон: 0–16 %';
-    if (n2  < 0 || n2  > 16) errs.n2  = 'Діапазон: 0–16 %';
+    if (co2 < 0 || co2 > 16) errs.co2 = t('fcRangeCo2N2');
+    if (n2  < 0 || n2  > 16) errs.n2  = t('fcRangeCo2N2');
     const t   = req('t', pf(s.t), -23.15, 70);
     const pv  = req('p', pf(s.p), 0);
 
@@ -299,7 +302,7 @@ export default function FlowRateCalc() {
     const P1_Pa = s.pType === 0
       ? pPa
       : pPa + (pf(s.patm) ?? 101325) * P_UNITS[s.patmU].k;
-    if (P1_Pa <= 0) { setErrors({ p: 'P має бути > 0' }); return; }
+    if (P1_Pa <= 0) { setErrors({ p: t('fcPMustPositive') }); return; }
 
     const gamma = rho / RHO_AIR;
     const T_K   = t + 273.15;
@@ -324,7 +327,7 @@ export default function FlowRateCalc() {
       if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
       const dP_Pa = dpv * P_UNITS[s.dpU].k;
-      if (dP_Pa >= P1_Pa) { setErrors({ dp: 'ΔP має бути < P' }); return; }
+      if (dP_Pa >= P1_Pa) { setErrors({ dp: t('fcDpMustLessP') }); return; }
 
       const alphaD = MATERIALS[s.matPipe]?.a   ?? 11.9e-6;
       const alphad = MATERIALS[s.matOrifice]?.a ?? 16.7e-6;
@@ -332,7 +335,7 @@ export default function FlowRateCalc() {
       const dT = d20v * (1 + alphad * (t - 20));
       const beta = dT / DT;
       if (beta < 0.1 || beta > 0.75) {
-        setErrors({ d20: `β = ${beta.toFixed(4)} — має бути 0.10–0.75` });
+        setErrors({ d20: `β = ${beta.toFixed(4)} ${t('fcBetaRange')}` });
         return;
       }
 
@@ -347,7 +350,7 @@ export default function FlowRateCalc() {
 
     setResults({ Z, Kp, rho_w, rho, gamma, Tpc, Ppc, Pr, Tr, P_MPa, T_K, mu, kappa, oRes, Q_w, Q_std });
     setErrors({});
-  }, [s, mtype]);
+  }, [s, mtype, t]);
 
   const handleReset = useCallback(() => {
     setS(INIT); setErrors({}); setResults(null);
@@ -359,7 +362,7 @@ export default function FlowRateCalc() {
   return (
     <div className="flow-calc-page">
       <div className="flow-calc-header">
-        <h2>Розрахунок обсягу газу</h2>
+        <h2>{t('fcTitle')}</h2>
       </div>
 
       <div className="flow-calc-body">
@@ -369,55 +372,55 @@ export default function FlowRateCalc() {
 
           {/* Device type radio */}
           <div className="cf-device-row">
-            <span className="cf-device-label">Виберіть перетворювач витрати:</span>
+            <span className="cf-device-label">{t('fcSelectConverter')}</span>
             <label className="cf-radio">
               <input type="radio" name="mtype" checked={mtype === 'orifice'}
                 onChange={() => { setMtype('orifice'); setResults(null); }} />
-              звужуючий пристрій
+              {t('fcOrificeDevice')}
             </label>
             <label className="cf-radio">
               <input type="radio" name="mtype" checked={mtype === 'meter'}
                 onChange={() => { setMtype('meter'); setResults(null); }} />
-              лічильник
+              {t('fcMeter')}
             </label>
           </div>
 
           {/* General params */}
           <div className="flow-panel">
-            <div className="flow-panel-header">Загальні параметри</div>
+            <div className="flow-panel-header">{t('fcGeneralParams')}</div>
             <div className="flow-panel-body cf-general-grid">
               <div>
                 <SelectRow id="kst" label="К<sub>ст</sub>:" value={s.kst}
                   onChange={v => set('kst', v)} opts={KST_METHODS} placeholderIdx={0} />
                 {errors.kst && <div className="cf-error">{errors.kst}</div>}
-                <InputRow id="rho" label="Густина:" value={s.rho}
+                <InputRow id="rho" label={t('fcDensityLabel')} value={s.rho}
                   onChange={v => set('rho', v)} unit="кг/м³"
                   min={0.66} max={1.0} step="0.0001" error={errors.rho} />
-                <InputRow id="co2" label="Диоксид вуглецю:" value={s.co2}
+                <InputRow id="co2" label={t('fcCo2Label')} value={s.co2}
                   onChange={v => set('co2', v)} unit="мол.%"
                   min={0} max={16} step="0.01" placeholder="0" error={errors.co2} />
-                <InputRow id="n2" label="Азот:" value={s.n2}
+                <InputRow id="n2" label={t('fcN2Label')} value={s.n2}
                   onChange={v => set('n2', v)} unit="мол.%"
                   min={0} max={16} step="0.01" placeholder="0" />
               </div>
               <div>
-                <SelectRow id="pType" label="Тип тиску:" value={s.pType}
+                <SelectRow id="pType" label={t('fcPressureTypeLabel')} value={s.pType}
                   onChange={v => set('pType', v)} opts={P_TYPES} />
                 {showAtm ? (
-                  <InputUnitRow id="patm" label="Атм. тиск:" value={s.patm}
+                  <InputUnitRow id="patm" label={t('fcAtmPressureLabel')} value={s.patm}
                     onChange={v => set('patm', v)} uIdx={s.patmU} onUnit={v => set('patmU', v)}
                     units={P_UNITS} min={90000} max={120000} step="0.001" error={errors.patm} />
                 ) : (
                   <div className="cf-row cf-row-empty">
-                    <span className="cf-label">Атм. тиск:</span>
+                    <span className="cf-label" dangerouslySetInnerHTML={{ __html: t('fcAtmPressureLabel') }} />
                     <span className="cf-input-placeholder">—</span>
                     <span className="cf-unit" />
                   </div>
                 )}
-                <InputUnitRow id="p" label="Тиск:" value={s.p}
+                <InputUnitRow id="p" label={t('fcPressureLabel')} value={s.p}
                   onChange={v => set('p', v)} uIdx={s.pU} onUnit={v => set('pU', v)}
                   units={P_UNITS} min={0} max={99999999} step="0.001" error={errors.p} />
-                <InputRow id="t" label="Температура:" value={s.t}
+                <InputRow id="t" label={t('fcTemperatureLabel')} value={s.t}
                   onChange={v => set('t', v)} unit="°C"
                   min={-23.15} max={70} step="0.1" error={errors.t} />
               </div>
@@ -427,20 +430,20 @@ export default function FlowRateCalc() {
           {/* Orifice params */}
           {mtype === 'orifice' && (
             <div className="flow-panel">
-              <div className="flow-panel-header">Параметри для звужуючого пристрою</div>
+              <div className="flow-panel-header">{t('fcOrificeParams')}</div>
               <div className="flow-panel-body cf-orifice-grid">
                 <div>
-                  <SelectRow id="otbor" label="Тип відбору:" value={s.otbor}
+                  <SelectRow id="otbor" label={t('fcOtborLabel')} value={s.otbor}
                     onChange={v => set('otbor', v)} opts={OTBOR} />
-                  <InputUnitRow id="dp" label="Перепад тиску:" value={s.dp}
+                  <InputUnitRow id="dp" label={t('fcDpLabel')} value={s.dp}
                     onChange={v => set('dp', v)} uIdx={s.dpU} onUnit={v => set('dpU', v)}
                     units={P_UNITS} min={0} max={9999999} step="0.1" error={errors.dp} />
                   <InputRow id="D20" label="D₂₀, мм:" value={s.D20}
                     onChange={v => set('D20', v)} unit="мм"
                     min={50} max={1200} step="0.01" error={errors.D20} />
-                  <SelectRow id="matPipe" label="Матеріал ВТ:" value={s.matPipe}
+                  <SelectRow id="matPipe" label={t('fcMatPipeLabel')} value={s.matPipe}
                     onChange={v => set('matPipe', v)} opts={MATERIALS} />
-                  <InputRow id="rsh" label="Шорсткість, мм:" value={s.rsh}
+                  <InputRow id="rsh" label={t('fcRoughnessLabel')} value={s.rsh}
                     onChange={v => set('rsh', v)} unit="мм"
                     min={0} max={2.5} step="0.001" />
                 </div>
@@ -448,15 +451,15 @@ export default function FlowRateCalc() {
                   <InputRow id="d20" label="d₂₀, мм:" value={s.d20}
                     onChange={v => set('d20', v)} unit="мм"
                     min={12.5} max={960} step="0.01" error={errors.d20} />
-                  <SelectRow id="matOrifice" label="Матеріал ЗП:" value={s.matOrifice}
+                  <SelectRow id="matOrifice" label={t('fcMatOrificeLabel')} value={s.matOrifice}
                     onChange={v => set('matOrifice', v)} opts={MATERIALS} />
-                  <InputRow id="rEdge" label="Радіус канту, мм:" value={s.rEdge}
+                  <InputRow id="rEdge" label={t('fcEdgeRadiusLabel')} value={s.rEdge}
                     onChange={v => set('rEdge', v)} unit="мм"
                     min={0} max={1.0} step="0.01" placeholder="0" />
-                  <SelectRow id="timeType" label="Тип часу ЗП:" value={s.timeType}
+                  <SelectRow id="timeType" label={t('fcTimeTypeLabel')} value={s.timeType}
                     onChange={v => set('timeType', v)} opts={TIME_TYPES} />
-                  <InputRow id="timeOrifice" label="Час ЗП, рік:" value={s.timeOrifice}
-                    onChange={v => set('timeOrifice', v)} unit="рік"
+                  <InputRow id="timeOrifice" label={t('fcTimeOrificeLabel')} value={s.timeOrifice}
+                    onChange={v => set('timeOrifice', v)} unit={t('fcUnitYear')}
                     min={0} max={100} step="0.1" placeholder="0" />
                 </div>
               </div>
@@ -466,39 +469,39 @@ export default function FlowRateCalc() {
           {/* Meter params */}
           {mtype === 'meter' && (
             <div className="flow-panel">
-              <div className="flow-panel-header">Параметри для лічильника</div>
+              <div className="flow-panel-header">{t('fcMeterParams')}</div>
               <div className="flow-panel-body">
-                <InputRow id="qw" label="Об'єм в робочих умовах:" value={s.qw}
-                  onChange={v => set('qw', v)} unit="м³/год"
+                <InputRow id="qw" label={t('fcWorkVolumeLabel')} value={s.qw}
+                  onChange={v => set('qw', v)} unit={t('fcUnitM3h')}
                   min={0} max={9999999} step="0.001" error={errors.qw} />
               </div>
             </div>
           )}
 
           <div style={{ display: 'flex', gap: 10 }}>
-            <button className="fc-btn-calc" onClick={handleCalc}>Розрахунок</button>
-            <button className="fc-btn-reset" onClick={handleReset}>Скинути</button>
+            <button className="fc-btn-calc" onClick={handleCalc}>{t('fcCalculate')}</button>
+            <button className="fc-btn-reset" onClick={handleReset}>{t('fcReset')}</button>
           </div>
         </div>
 
         {/* ── RIGHT: Results ── */}
         <div className="flow-panel" style={{ alignSelf: 'start' }}>
-          <div className="flow-panel-header">Результати</div>
+          <div className="flow-panel-header">{t('fcResults')}</div>
           <div className="flow-panel-body">
             {!results ? (
               <div className="fc-placeholder">
                 <div className="fc-placeholder-icon">⚙</div>
-                <p>Введіть параметри та натисніть<br /><strong>Розрахунок</strong></p>
+                <p>{t('fcEnterParamsPrompt')}<br /><strong>{t('fcCalculate')}</strong></p>
               </div>
             ) : (
               <>
-                <div className="cf-res-group">Параметри газу</div>
-                <ResRow label="γ — відносна щільність" value={fmt(results.gamma, 4)} unit="—" />
-                <ResRow label="Z — коефіцієнт стисливості" value={fmt(results.Z, 5)} unit="—" />
-                <ResRow label="ρ<sub>р</sub> — щільність робоча" value={fmt(results.rho_w, 4)} unit="кг/м³" />
-                <ResRow label="μ — динамічна в'язкість" value={fmt(results.mu * 1e6, 3)} unit="мкПа·с" />
+                <div className="cf-res-group">{t('fcGasParams')}</div>
+                <ResRow label={t('fcGamma')} value={fmt(results.gamma, 4)} unit="—" />
+                <ResRow label={t('fcZ')} value={fmt(results.Z, 5)} unit="—" />
+                <ResRow label={t('fcRhoW')} value={fmt(results.rho_w, 4)} unit="кг/м³" />
+                <ResRow label={t('fcMu')} value={fmt(results.mu * 1e6, 3)} unit="мкПа·с" />
 
-                <div className="cf-res-group">Псевдокритичні параметри</div>
+                <div className="cf-res-group">{t('fcPseudocritical')}</div>
                 <ResRow label="T<sub>пк</sub>" value={fmt(results.Tpc, 2)} unit="K" />
                 <ResRow label="P<sub>пк</sub>" value={fmt(results.Ppc, 4)} unit="МПа" />
                 <ResRow label="P<sub>пр</sub>" value={fmt(results.Pr, 4)} unit="—" />
@@ -506,32 +509,30 @@ export default function FlowRateCalc() {
 
                 {results.oRes && (
                   <>
-                    <div className="cf-res-group">Звужуючий пристрій</div>
+                    <div className="cf-res-group">{t('fcOrificeGroup')}</div>
                     <ResRow label="D<sub>T</sub>" value={fmt(results.oRes.DT_mm, 3)} unit="мм" />
                     <ResRow label="d<sub>T</sub>" value={fmt(results.oRes.dT_mm, 3)} unit="мм" />
                     <ResRow label="β = d/D" value={fmt(results.oRes.beta, 4)} unit="—" />
-                    <ResRow label="C — коефіцієнт витрати" value={fmt(results.oRes.C, 5)} unit="—" />
-                    <ResRow label="ε — коефіцієнт розширення" value={fmt(results.oRes.eps, 5)} unit="—" />
+                    <ResRow label={t('fcC')} value={fmt(results.oRes.C, 5)} unit="—" />
+                    <ResRow label={t('fcEps')} value={fmt(results.oRes.eps, 5)} unit="—" />
                     <ResRow label="Re<sub>D</sub>" value={results.oRes.Re_D.toFixed(0)} unit="—" />
                   </>
                 )}
 
-                <div className="cf-res-group">Приведення об'єму</div>
-                <ResRow label="K<sub>p</sub> — коефіцієнт приведення" value={fmt(results.Kp, 5)} unit="—" />
+                <div className="cf-res-group">{t('fcVolumeReduction')}</div>
+                <ResRow label={t('fcKp')} value={fmt(results.Kp, 5)} unit="—" />
                 {results.Q_w > 0 && (
-                  <ResRow label="Q<sub>р</sub> — витрата (роб. умови)"
-                    value={fmt(results.Q_w, 4)} unit="м³/год" />
+                  <ResRow label={t('fcQw')}
+                    value={fmt(results.Q_w, 4)} unit={t('fcUnitM3h')} />
                 )}
                 {results.Q_std !== null && (
                   <div className="cf-res-row cf-res-highlight">
                     <span className="cf-res-label" dangerouslySetInnerHTML={{ __html:
-                      mtype === 'orifice'
-                        ? 'Q<sub>ст</sub> — витрата (ст. умови)'
-                        : 'V<sub>ст</sub> — об\'єм (ст. умови)'
+                      mtype === 'orifice' ? t('fcQstOrifice') : t('fcVstMeter')
                     }} />
                     <span className="cf-res-value">{fmt(results.Q_std, 4)}</span>
                     <span className="cf-res-unit">
-                      {mtype === 'orifice' ? 'м³/год в с.у.' : 'м³ в с.у.'}
+                      {mtype === 'orifice' ? t('fcUnitM3hStd') : t('fcUnitM3Std')}
                     </span>
                   </div>
                 )}

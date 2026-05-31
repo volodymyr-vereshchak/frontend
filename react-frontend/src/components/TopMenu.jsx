@@ -275,10 +275,10 @@ const handleGRSTrendsClick = () => {
               <button
                 className="dropdown-item"
                 onClick={handleFlowCalcClick}
-                title="Розрахунок витрати"
+                title={t('fcMenuTitle')}
               >
                 <span className="dropdown-item-icon">⚙</span>
-                <span className="dropdown-item-text">Розрахунок витрати</span>
+                <span className="dropdown-item-text">{t('fcMenuTitle')}</span>
               </button>
             </div>
           )}

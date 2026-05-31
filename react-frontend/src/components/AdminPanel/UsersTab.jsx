@@ -55,10 +55,14 @@ export default function UsersTab() {
   };
 
   const handleToggleActive = async (user) => {
-    const result = await userManagementApi.update(user.id, { active: !user.active });
-    if (result) {
-      await load();
-      showStatus(true, user.active ? 'Деактивовано' : 'Активовано');
+    try {
+      const result = await userManagementApi.update(user.id, { active: !user.active });
+      if (result) {
+        await load();
+        showStatus(true, user.active ? 'Деактивовано' : 'Активовано');
+      }
+    } catch (err) {
+      showStatus(false, err.message || 'Помилка зміни статусу');
     }
   };
 
@@ -70,6 +74,22 @@ export default function UsersTab() {
       }
     } catch (err) {
       showStatus(false, 'Помилка скидання паролю');
+    }
+  };
+
+  const handleDelete = async (user) => {
+    const ok = window.confirm(
+      `Видалити користувача "${user.username}"?\n\nЦю дію не можна скасувати. ` +
+      `Якщо потрібно лише тимчасово заблокувати доступ — скористайтесь «Деактив.».`
+    );
+    if (!ok) return;
+    try {
+      await userManagementApi.remove(user.id);
+      if (shownPassword?.userId === user.id) setShownPassword(null);
+      await load();
+      showStatus(true, 'Користувача видалено');
+    } catch (err) {
+      showStatus(false, err.message || 'Помилка видалення');
     }
   };
 
@@ -100,17 +120,21 @@ export default function UsersTab() {
 
   const handleSaveUser = async (u) => {
     const ed = editingUser[u.id];
-    const result = await userManagementApi.update(u.id, {
-      display_name: ed.display_name || null,
-      role: ed.role,
-      branch_ids: ed.role === 'admin' ? [] : ed.branch_ids,
-    });
-    if (result) {
-      await load();
-      cancelEditUser(u.id);
-      showStatus(true, 'Збережено');
-    } else {
-      showStatus(false, 'Помилка збереження');
+    try {
+      const result = await userManagementApi.update(u.id, {
+        display_name: ed.display_name || null,
+        role: ed.role,
+        branch_ids: ed.role === 'admin' ? [] : ed.branch_ids,
+      });
+      if (result) {
+        await load();
+        cancelEditUser(u.id);
+        showStatus(true, 'Збережено');
+      } else {
+        showStatus(false, 'Помилка збереження');
+      }
+    } catch (err) {
+      showStatus(false, err.message || 'Помилка збереження');
     }
   };
 
@@ -323,6 +347,9 @@ export default function UsersTab() {
                   <button className="btn-edit" style={{ fontSize: 11 }} onClick={() => handleResetPassword(u)} title="Згенерувати новий пароль">Новий пароль</button>
                   <button className={u.active ? 'btn-danger' : 'btn-edit'} style={{ fontSize: 11 }} onClick={() => handleToggleActive(u)}>
                     {u.active ? 'Деактив.' : 'Активув.'}
+                  </button>
+                  <button className="btn-danger" style={{ fontSize: 11, marginLeft: 4 }} onClick={() => handleDelete(u)} title="Видалити користувача назавжди">
+                    Видалити
                   </button>
                 </td>
               </tr>
