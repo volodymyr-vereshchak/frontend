@@ -1,7 +1,12 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
+import { initClientLogging } from './utils/clientLogger.js'
 import './index.css'
+
+// Capture uncaught JS errors / promise rejections and ship them to the backend.
+initClientLogging()
 
 // Load non-secret runtime config (GET /config) into window.APP_CONFIG before
 // rendering, so global settings like the commercial-day contract hour are
@@ -30,7 +35,9 @@ async function loadRuntimeConfig() {
 loadRuntimeConfig().finally(() => {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </React.StrictMode>,
   )
 })
