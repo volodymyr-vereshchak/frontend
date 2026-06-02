@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { authApi } from '../services/api';
+import { authApi, setSessionHandlers } from '../services/api';
 
 const UserContext = createContext(null);
 
@@ -12,6 +12,14 @@ export function UserProvider({ children }) {
       .then(data => setUser(data))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
+  }, []);
+
+  // When a request gets 401 and transparent re-auth (/auth/me) also fails, the
+  // session is truly gone → drop to the login screen instead of leaving the app
+  // stuck on requests that all 401.
+  useEffect(() => {
+    setSessionHandlers({ onSessionLost: () => setUser(null) });
+    return () => setSessionHandlers({ onSessionLost: null });
   }, []);
 
   const login = async (username, password, rememberMe = false) => {

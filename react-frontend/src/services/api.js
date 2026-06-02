@@ -11,6 +11,45 @@ class APIError extends Error {
 
 const DEFAULT_API_URL = '/api';
 
+// ── Per-endpoint request timeouts ──────────────────────────────────────────
+// A stalled TCP connection (flaky network) and a slow backend look identical to
+// fetch() — both are just "no response yet". So we keep generous timeouts for
+// genuinely heavy work (DPD enterprise data, reports) and only fail fast on
+// trivial/hot metadata endpoints, where anything past a few seconds means a
+// dead connection, not real work — letting the idempotent retry reconnect.
+const TIMEOUT_HEAVY = 120000;   // external DPD API, report generation
+const TIMEOUT_LIGHT = 12000;    // instant, high-frequency metadata/config
+const TIMEOUT_DEFAULT = 30000;  // archive data queries (daily/hourly/counts/…)
+
+function timeoutForEndpoint(endpoint) {
+  if (/^\/(enterprise\/volumes|get_report)/.test(endpoint)) return TIMEOUT_HEAVY;
+  if (/^\/(auth|config|lines|virtual_lines)/.test(endpoint)) return TIMEOUT_LIGHT;
+  return TIMEOUT_DEFAULT;
+}
+
+// ── Session-expiry handling ────────────────────────────────────────────────
+// When any request comes back 401 the session has expired (JWT cookie gone).
+// We first try one transparent re-auth via /auth/me — under AUTO_LOGIN the
+// backend re-mints the cookie, so the original request can be replayed and the
+// user never notices. If re-auth fails the user is truly logged out and we
+// notify the app (UserContext) to drop to the login screen.
+let _onSessionLost = null;   // () => void, registered by UserContext
+let _reauthPromise = null;   // de-dupes concurrent re-auth attempts
+
+export function setSessionHandlers({ onSessionLost } = {}) {
+  _onSessionLost = onSessionLost || null;
+}
+
+async function _tryReauth(baseUrl) {
+  if (!_reauthPromise) {
+    _reauthPromise = fetch(`${baseUrl}/auth/me`, { credentials: 'include' })
+      .then(r => r.ok)
+      .catch(() => false)
+      .finally(() => { _reauthPromise = null; });
+  }
+  return _reauthPromise;
+}
+
 class ApiClient {
   constructor() {
     this.maxRetries = 3;
@@ -24,7 +63,9 @@ class ApiClient {
 
   async _makeRequest(endpoint, options = {}) {
     const url = `${this.baseUrl}${endpoint}`;
-    const { timeout = 30000, headers, ...rest } = options;
+    const { timeout: timeoutOpt, headers, _reauthTried = false, ...rest } = options;
+    // Endpoint-derived timeout unless the caller passed an explicit one.
+    const timeout = timeoutOpt ?? timeoutForEndpoint(endpoint);
     const method = (rest.method || 'GET').toUpperCase();
     // Only idempotent methods are safe to retry on network/5xx errors.
     // POST/PATCH are NOT retried — a network blip after the server already
@@ -53,6 +94,17 @@ class ApiClient {
         clearTimeout(timer);
 
         if (!response.ok) {
+          // Session expired → try one transparent re-auth, then replay the
+          // request once. /auth/* endpoints are excluded to avoid a loop.
+          if (response.status === 401 && !endpoint.startsWith('/auth/')) {
+            if (!_reauthTried && await _tryReauth(this.baseUrl)) {
+              clearTimeout(timer);
+              return await this._makeRequest(endpoint, { ...options, _reauthTried: true });
+            }
+            // Re-auth failed, or the replay was still unauthorized → logged out.
+            if (_onSessionLost) _onSessionLost();
+          }
+
           let detail = response.statusText;
           try {
             const body = await response.json();
