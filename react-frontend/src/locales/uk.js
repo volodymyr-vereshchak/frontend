@@ -44,6 +44,10 @@ export const uk = {
   noData: "Немає даних для відображення",
   loadingData: "Завантаження даних...",
 
+  // Pagination
+  perPage: "На сторінці",
+  page: "Стор.",
+
   // Export
   records: "Записів",
   export: "Експорт",

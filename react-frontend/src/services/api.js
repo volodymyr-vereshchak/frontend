@@ -284,6 +284,7 @@ export const archiveCountsApi = {
 
 // Edit Archive API methods (detailed intervention data)
 export const editArchiveApi = {
+  // Full list — used by exports and any caller that needs every row.
   async getEditData(lineIds, fromDate, toDate) {
     const params = {
       line_id: lineIds,
@@ -291,6 +292,45 @@ export const editArchiveApi = {
       to_date: toDate
     };
     return await apiClient.get('/edit/', params);
+  },
+  // Server-side paginated page — returns { total, items }.
+  async getEditDataPaged(lineIds, fromDate, toDate, { skip = 0, limit = 50, orderBy = 'period', orderDir = 'asc' } = {}) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate,
+      skip,
+      limit,
+      order_by: orderBy,
+      order_dir: orderDir,
+    };
+    return await apiClient.get('/edit/paged/', params);
+  }
+};
+
+// Sys (alarms) Archive API methods
+export const sysArchiveApi = {
+  // Full list — used by exports and any caller that needs every row.
+  async getSysData(lineIds, fromDate, toDate) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate
+    };
+    return await apiClient.get('/sys/', params);
+  },
+  // Server-side paginated page — returns { total, items }.
+  async getSysDataPaged(lineIds, fromDate, toDate, { skip = 0, limit = 50, orderBy = 'period', orderDir = 'asc' } = {}) {
+    const params = {
+      line_id: lineIds,
+      from_date: fromDate,
+      to_date: toDate,
+      skip,
+      limit,
+      order_by: orderBy,
+      order_dir: orderDir,
+    };
+    return await apiClient.get('/sys/paged/', params);
   }
 };
 

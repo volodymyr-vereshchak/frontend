@@ -44,6 +44,10 @@ export const ru = {
   noData: "Нет данных для отображения",
   loadingData: "Загрузка данных...",
 
+  // Pagination
+  perPage: "На странице",
+  page: "Стр.",
+
   // Export
   records: "Записей",
   export: "Экспорт",

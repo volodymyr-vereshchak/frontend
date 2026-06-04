@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './DataTable.css';
-import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper, enterpriseApi, enterpriseVirtualApi } from '../services/api';
+import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, sysArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper, enterpriseApi, enterpriseVirtualApi } from '../services/api';
 import { formatEditValue } from '../utils/valueConverter';
 
 const EDIT_CHANNEL_NAMES = ["P", "T", "dP", "dPL", "Густ"];
@@ -35,10 +35,18 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const [error, setError] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'period', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [pageInput, setPageInput] = useState('1');
+  const [totalRows, setTotalRows] = useState(0);
   const [exportWithEnterprise, setExportWithEnterprise] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const fetchCountRef = useRef(0);
+
+  // Alarm (sys) and change (edit) archives can hold tens of thousands of rows per
+  // day, so for physical lines they are fetched one page at a time from the
+  // server (/sys/paged/, /edit/paged/) with server-side sorting. Everything else
+  // (daily/hourly/param, and virtual lines) loads fully and sorts client-side.
+  const serverPaged = !isVirtualLine && (archiveType === 'sys' || archiveType === 'edit');
 
   // Format period value for Excel export
   const formatPeriodForExcel = (value) => {
@@ -189,11 +197,19 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
       // ── Standard export ────────────────────────────────────────────────────
 
+      // Server-paginated archives (sys / edit) only keep the current page in
+      // memory; pull the full dataset so the export is complete.
+      const exportData = serverPaged
+        ? ((archiveType === 'sys'
+            ? await sysArchiveApi.getSysData(selectedLines, dateRange.fromDate, dateRange.toDate)
+            : await editArchiveApi.getEditData(selectedLines, dateRange.fromDate, dateRange.toDate)) || [])
+        : rowData;
+
       // Prepare header row
       const headers = columns.map(col => col.label);
 
       // Prepare data rows
-      const dataRows = rowData.map(row => {
+      const dataRows = exportData.map(row => {
         return columns.map(col => {
           let value = row[col.key];
           if (col.key === 'period' && value) return formatPeriodForExcel(value);
@@ -251,7 +267,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       const columnWidths = columns.map((col, colIndex) => {
         const headerLength = col.label.length;
         const maxDataLength = Math.max(
-          ...rowData.map(row => {
+          ...exportData.map(row => {
             const value = row[col.key];
             if (value === null || value === undefined) return 0;
             // For numbers, consider decimal places
@@ -458,15 +474,24 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
       // ФИЗИЧЕСКИЕ ЛИНИИ - существующая логика
 
-      // Special handling for edit archive with value conversion
-      if (archiveType === 'edit') {
-        const data = await editArchiveApi.getEditData(selectedLines, dateRange.fromDate, dateRange.toDate);
+      // Server-paginated archives (alarms / changes): fetch only the current
+      // page with server-side sorting; never pull the whole archive into memory.
+      if (serverPaged) {
+        const opts = {
+          skip: (currentPage - 1) * itemsPerPage,
+          limit: itemsPerPage,
+          orderBy: sortConfig.key,
+          orderDir: sortConfig.direction,
+        };
+        const resp = archiveType === 'sys'
+          ? await sysArchiveApi.getSysDataPaged(selectedLines, dateRange.fromDate, dateRange.toDate, opts)
+          : await editArchiveApi.getEditDataPaged(selectedLines, dateRange.fromDate, dateRange.toDate, opts);
 
         if (fetchCountRef.current !== myFetchId) return;
-        setRowData(data || []);
-        if (onDataChange) {
-          onDataChange(data || []);
-        }
+        const items = resp?.items || [];
+        setRowData(items);
+        setTotalRows(resp?.total || 0);
+        if (onDataChange) onDataChange(items);
         return;
       }
 
@@ -613,29 +638,39 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     setError(null);
   }, [archiveType]);
 
+  // Reset to the first page and default sort whenever the query context changes
+  // (lines, dates, archive type). Returning the same state object when already at
+  // the default avoids an extra render/fetch cycle.
+  useEffect(() => {
+    setCurrentPage(p => (p === 1 ? p : 1));
+    setSortConfig(s => (s.key === 'period' && s.direction === 'asc' ? s : { key: 'period', direction: 'asc' }));
+  }, [JSON.stringify(selectedLines), JSON.stringify(dateRange), isDateFilterEnabled, archiveType, isVirtualLine]);
+
+  // Page and sort only drive a re-fetch for server-paginated archives; for
+  // everything else they are handled client-side, so they are excluded from the
+  // fetch key to avoid needless reloads.
+  const fetchKey = JSON.stringify(
+    serverPaged
+      ? [selectedLines, dateRange, isDateFilterEnabled, archiveType, isVirtualLine, currentPage, itemsPerPage, sortConfig]
+      : [selectedLines, dateRange, isDateFilterEnabled, archiveType, isVirtualLine]
+  );
+
   useEffect(() => {
     const abortController = new AbortController();
-
-    // No debounce for archive type changes - immediate loading
-    // Small debounce for date/line changes to prevent too many requests
-    const isArchiveChange = archiveType; // If archiveType changed, load immediately
-    const delay = 50; // Reduced delay for better responsiveness
-
     const timeoutId = setTimeout(() => {
       fetchData(abortController);
-    }, delay);
-
+    }, 50);
     return () => {
       clearTimeout(timeoutId);
       abortController.abort(); // Cancel pending requests
     };
-  }, [
-    JSON.stringify(selectedLines),
-    JSON.stringify(dateRange),
-    isDateFilterEnabled,
-    archiveType,
-    isVirtualLine
-  ]);
+  }, [fetchKey]);
+
+  // Keep the manual page-number input in sync when the page changes via the
+  // arrows, page-size change, or a context reset.
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -643,6 +678,9 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+    // Server-paginated archives re-sort the whole set on the backend, so jump
+    // back to the first page when the sort changes.
+    if (serverPaged) setCurrentPage(1);
   };
 
   const sortedData = React.useMemo(() => {
@@ -675,15 +713,34 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     return sortableData;
   }, [rowData, sortConfig]);
 
-  const paginatedData = React.useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return sortedData.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedData, currentPage, itemsPerPage]);
+  // Server-paginated archives arrive already sorted and sliced by the backend;
+  // render them as-is. Everything else is sorted client-side over the full set.
+  const displayData = serverPaged ? rowData : sortedData;
 
-  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+  // Only server-paginated archives expose page controls; others show everything.
+  const totalPages = serverPaged ? Math.max(1, Math.ceil(totalRows / itemsPerPage)) : 1;
 
   const getRecordCount = () => {
+    if (serverPaged) return totalRows;
     return rowData ? rowData.length : 0;
+  };
+
+  const goToPage = (n) => {
+    const clamped = Math.max(1, Math.min(totalPages, n));
+    setCurrentPage(clamped);
+    setPageInput(String(clamped));
+  };
+
+  // Commit the manually typed page number (Enter / blur), clamped to range.
+  const commitPageInput = () => {
+    const n = parseInt(pageInput, 10);
+    goToPage(isNaN(n) ? currentPage : n);
+  };
+
+  // Switch page size and restart from the first page.
+  const changePageSize = (size) => {
+    setItemsPerPage(size);
+    setCurrentPage(1);
   };
 
   const formatNumber = (value, key) => {
@@ -907,14 +964,14 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
                         {t('loadingData')}
                       </td>
                     </tr>
-                  ) : sortedData.length === 0 ? (
+                  ) : displayData.length === 0 ? (
                     <tr>
                       <td colSpan={columns.length} className="no-data-cell">
                         {t('noData')}
                       </td>
                     </tr>
                   ) : (
-                    sortedData.map((row, index) => (
+                    displayData.map((row, index) => (
                       <tr key={index}>
                         {columns.map((column) => (
                           <td
@@ -951,6 +1008,63 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
               </table>
             )}
           </div>
+
+          {/* Pagination controls — server-paginated archives (sys / edit) only */}
+          {serverPaged && !loading && totalRows > 0 && (
+            <div
+              className="table-pagination"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '10px 0', flexWrap: 'wrap' }}
+            >
+              {/* Page size selector */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ color: '#aaa', fontSize: '12px' }}>{t('perPage')}:</span>
+                {[10, 50, 100].map(size => (
+                  <button
+                    key={size}
+                    onClick={() => changePageSize(size)}
+                    style={{
+                      padding: '2px 9px', borderRadius: '4px', border: '1px solid #555', fontSize: '12px', cursor: 'pointer',
+                      background: itemsPerPage === size ? '#B9E42B' : '#333',
+                      color: itemsPerPage === size ? '#000' : '#fff',
+                      fontWeight: itemsPerPage === size ? 600 : 400,
+                    }}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+
+              {/* Page navigation with manual page input */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  style={{ padding: '2px 12px', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px', fontSize: '16px', lineHeight: '20px', cursor: currentPage <= 1 ? 'not-allowed' : 'pointer', opacity: currentPage <= 1 ? 0.4 : 1 }}
+                >
+                  ‹
+                </button>
+                <span style={{ color: '#aaa', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={pageInput}
+                    onChange={e => setPageInput(e.target.value.replace(/[^0-9]/g, ''))}
+                    onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                    onBlur={commitPageInput}
+                    style={{ width: '52px', textAlign: 'center', padding: '2px 4px', background: '#222', color: '#fff', border: '1px solid #555', borderRadius: '4px', fontSize: '13px' }}
+                  />
+                  / {totalPages}
+                </span>
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  style={{ padding: '2px 12px', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '4px', fontSize: '16px', lineHeight: '20px', cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer', opacity: currentPage >= totalPages ? 0.4 : 1 }}
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
