@@ -65,6 +65,8 @@ const PressureGaugesGrid = ({
             flowData={flowMap[lineId]}
             volumeData={volumeMap[lineId]}
             dpData={pressureData?.dpData}
+            pressureUnit={pressureData?.pressureUnit}
+            dpUnit={pressureData?.dpUnit}
           />
         );
       })}

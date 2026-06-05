@@ -1,6 +1,7 @@
 import React from 'react';
 import './PressureGauge.css';
 import { useLanguage } from '../contexts/LanguageContext';
+import { PRESSURE_UNIT_DEFAULT, DP_UNIT_DEFAULT } from '../constants/pressureUnits';
 
 const PressureGauge = ({
   lineId,
@@ -14,8 +15,12 @@ const PressureGauge = ({
   dpData,
   minPressure24h,
   maxPressure24h,
+  pressureUnit,
+  dpUnit,
 }) => {
   const { t } = useLanguage();
+  const pUnit = pressureUnit || PRESSURE_UNIT_DEFAULT;
+  const dUnit = dpUnit || DP_UNIT_DEFAULT;
 
   const isStale = referenceTime && timestamp &&
     Math.abs(new Date(timestamp).getTime() - new Date(referenceTime).getTime()) > 60 * 1000;
@@ -62,7 +67,7 @@ const PressureGauge = ({
       <div className="gauge-pressure-block">
         <div className="gauge-pressure-current">
           <span className="pressure-value">{fmt(pressure)}</span>
-          <span className="pressure-unit">{t('pressureUnit')}</span>
+          <span className="pressure-unit">{pUnit}</span>
         </div>
         <div className="gauge-pressure-minmax">
           <div className="minmax-item">
@@ -158,7 +163,7 @@ const PressureGauge = ({
               </div>
               <div className="data-row dp-value-row">
                 <span className="data-value">{dpData.currentDp.toFixed(2)}</span>
-                <span className="data-unit">{dpData.isMeter ? t('flowUnit') : t('dpUnit')}</span>
+                <span className="data-unit">{dpData.isMeter ? t('flowUnit') : dUnit}</span>
               </div>
             </div>
             <div className="dp-value-item">
@@ -168,7 +173,7 @@ const PressureGauge = ({
               </div>
               <div className="data-row dp-value-row">
                 <span className="data-value">{dpData.maxDp24h.toFixed(2)}</span>
-                <span className="data-unit">{dpData.isMeter ? t('flowUnit') : t('dpUnit')}</span>
+                <span className="data-unit">{dpData.isMeter ? t('flowUnit') : dUnit}</span>
               </div>
             </div>
           </div>

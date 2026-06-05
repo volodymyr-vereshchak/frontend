@@ -3,6 +3,8 @@
  * Utility functions for calculating GRS overview metrics
  */
 
+import { PRESSURE_UNIT_DEFAULT, DP_UNIT_DEFAULT } from '../constants/pressureUnits';
+
 export class OverviewCalculator {
   /**
    * Format date for API (YYYY-MM-DD HH:00:00)
@@ -212,7 +214,9 @@ export class OverviewCalculator {
         timestamp: lastRecord.periodDate,
         isHighPressure: isHighPressure,
         recordCount: lineRecords.length,
-        dpData: dpData
+        dpData: dpData,
+        pressureUnit: (line && line.pressure_unit) || PRESSURE_UNIT_DEFAULT,
+        dpUnit: (line && line.dp_unit) || DP_UNIT_DEFAULT,
       };
     }
 

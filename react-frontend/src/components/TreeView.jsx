@@ -181,6 +181,8 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
                   address: line.address,
                   line: line.line,
                   meter: line.meter,
+                  pressure_unit: line.pressure_unit,
+                  dp_unit: line.dp_unit,
                 })),
               };
             }).filter(g => g.children.length > 0);
@@ -308,7 +310,14 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
             if (vline) { lineMetadata = { is_virtual: true }; break outer; }
             for (const gvc of lumg.children || []) {
               const line = gvc.children?.find(c => c.id === selectedItem);
-              if (line) { lineMetadata = { is_virtual: false }; break outer; }
+              if (line) {
+                lineMetadata = {
+                  is_virtual: false,
+                  pressure_unit: line.pressure_unit,
+                  dp_unit: line.dp_unit,
+                };
+                break outer;
+              }
             }
           }
         }

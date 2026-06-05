@@ -143,6 +143,7 @@ function AppContent({ user }) {
   const [chartData, setChartData] = useState([]);
 const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
   const [selectedLineIsVirtual, setSelectedLineIsVirtual] = useState(false);
+  const [selectedLineUnits, setSelectedLineUnits] = useState(null);
 
   // Clean expired enterprise cache entries on app startup
   useEffect(() => { cleanExpired(); }, []);
@@ -191,8 +192,14 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
       const firstLineId = lineIds[0];
       const isVirtual = lineMetadata?.is_virtual || virtualLinesHelper.isVirtualLine(firstLineId);
       setSelectedLineIsVirtual(isVirtual);
+      setSelectedLineUnits(
+        lineMetadata && (lineMetadata.pressure_unit || lineMetadata.dp_unit)
+          ? { pressure_unit: lineMetadata.pressure_unit, dp_unit: lineMetadata.dp_unit }
+          : null
+      );
     } else {
       setSelectedLineIsVirtual(false);
+      setSelectedLineUnits(null);
     }
   }, []);
 
@@ -288,6 +295,7 @@ isVirtualLine={selectedLineIsVirtual}
                   isDateFilterEnabled={isDateFilterEnabled}
                   archiveType={archiveType}
                   isVirtualLine={selectedLineIsVirtual}
+                  lineUnits={selectedLineUnits}
                   onDataChange={handleDataChange}
                 />
               </div>

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { P_UNITS } from '../constants/pressureUnits';
 import './FlowRateCalc.css';
 
 // ─── Constants (exact values from CalcDSTU8586.dll / Ask2 XAML) ───────────────
@@ -9,18 +10,9 @@ const P0 = 0.101325;     // standard pressure, MPa
 const Z0 = 0.99988;      // Z at standard conditions
 const RHO_AIR = 1.2041;  // density of air at standard conditions, kg/m³
 
-// Units list: order matches Units.ListUnits from CalcDSTU8586.dll
-// index 0=Па, 1=кПа (default P/DP), 7=мм рт.ст. (default Patm in gauge mode)
-const P_UNITS = [
-  { label: 'Па',        k: 1        },
-  { label: 'кПа',       k: 1e3      },
-  { label: 'МПа',       k: 1e6      },
-  { label: 'бар',       k: 1e5      },
-  { label: 'кгс/см²',   k: 98066.5  },
-  { label: 'кгс/м²',    k: 9.80665  },
-  { label: 'PSI',       k: 6894.76  },
-  { label: 'мм рт.ст',  k: 133.322  },
-];
+// P_UNITS (pressure unit list) lives in ../constants/pressureUnits so the
+// per-line unit selectors share the exact same set. Order is significant —
+// see the note there. index 0=Па, 1=кПа (default P/DP), 7=мм рт.ст.
 
 // Material list: exact order from Material.ListMaterials (CalcDSTU8586.dll)
 // Both pipe and orifice use this same list.

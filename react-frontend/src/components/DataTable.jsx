@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './DataTable.css';
 import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, sysArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper, enterpriseApi, enterpriseVirtualApi } from '../services/api';
 import { formatEditValue } from '../utils/valueConverter';
+import { PRESSURE_UNIT_DEFAULT, DP_UNIT_DEFAULT } from '../constants/pressureUnits';
 
 const EDIT_CHANNEL_NAMES = ["P", "T", "dP", "dPL", "Густ"];
 
@@ -28,7 +29,7 @@ const ExcelIcon = ({ color = "#B9E42B" }) => (
   </svg>
 );
 
-const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType, onDataChange, isVirtualLine }) => {
+const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType, onDataChange, isVirtualLine, lineUnits }) => {
   const { t, getLocale } = useLanguage();
   const [rowData, setRowData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -344,6 +345,8 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   };
 
   const getColumns = () => {
+    const pressureUnit = lineUnits?.pressure_unit || PRESSURE_UNIT_DEFAULT;
+    const dpUnit = lineUnits?.dp_unit || DP_UNIT_DEFAULT;
     switch (archiveType) {
       case 'daily':
       case 'hourly':
@@ -359,8 +362,8 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         return [
           { key: 'period', label: t('period'), sortable: true },
           { key: 'volume', label: t('volume'), sortable: true, isSummable: true },
-          { key: 'w_volume_dp', label: t('workingVolumePressure'), sortable: true, isAveragable: true },
-          { key: 'pressure', label: t('pressure'), sortable: true, isAveragable: true },
+          { key: 'w_volume_dp', label: `${t('workingVolumePressure')}, ${dpUnit}`, sortable: true, isAveragable: true },
+          { key: 'pressure', label: `${t('pressure')}, ${pressureUnit}`, sortable: true, isAveragable: true },
           { key: 'temperature', label: t('temperature'), sortable: true, isAveragable: true },
           { key: 'density', label: t('density'), sortable: true, isAveragable: true },
           { key: 'edit_counts', label: t('editCounts'), sortable: true, isSummable: true, tooltip: t('changesCount') },

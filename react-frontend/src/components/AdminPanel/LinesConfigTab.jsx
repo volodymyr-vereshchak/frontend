@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { branchApi, lumgApi, lineApi, gasVolumeApi } from '../../services/api';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { UNIT_LABELS, PRESSURE_UNIT_DEFAULT, DP_UNIT_DEFAULT } from '../../constants/pressureUnits';
 
 const EMPTY_ADD = { name: '', line: '', meter: false, gas_volume_calc_id: '' };
 
@@ -73,6 +74,31 @@ export default function LinesConfigTab() {
     const result = await lineApi.update(line.id, { [field]: newValue });
     setSaving(prev => ({ ...prev, [`${line.id}_${field}`]: false }));
     if (result) setLines(prev => prev.map(l => l.id === line.id ? { ...l, [field]: newValue } : l));
+  };
+
+  // ── Unit selection (pressure / dp) ────────────────────────────────────────────
+
+  const handleUnitChange = async (line, field, value) => {
+    if (line[field] === value) return;
+    const prevValue = line[field];
+    setSaving(prev => ({ ...prev, [`${line.id}_${field}`]: true }));
+    setLines(prev => prev.map(l => l.id === line.id ? { ...l, [field]: value } : l));
+    const result = await lineApi.update(line.id, { [field]: value });
+    setSaving(prev => ({ ...prev, [`${line.id}_${field}`]: false }));
+    if (!result) {
+      setLines(prev => prev.map(l => l.id === line.id ? { ...l, [field]: prevValue } : l));
+    }
+  };
+
+  const UnitSelect = ({ line, field, fallback }) => {
+    const key = `${line.id}_${field}`;
+    return (
+      <select className="admin-select" value={line[field] || fallback} disabled={saving[key]}
+        onChange={e => handleUnitChange(line, field, e.target.value)}
+        style={{ minWidth: 0, width: 92, fontSize: 11, opacity: saving[key] ? 0.6 : 1 }}>
+        {UNIT_LABELS.map(u => <option key={u} value={u}>{u}</option>)}
+      </select>
+    );
   };
 
   // ── Edit name ───────────────────────────────────────────────────────────────
@@ -234,6 +260,8 @@ export default function LinesConfigTab() {
             <th>В звіт</th>
             <th>В тренди</th>
             <th>Вис. тиск</th>
+            <th>Тиск, од.</th>
+            <th>Перепад, од.</th>
             <th></th>
           </tr>
         </thead>
@@ -284,6 +312,8 @@ export default function LinesConfigTab() {
               <td><Toggle line={l} field="include_in_report" /></td>
               <td><Toggle line={l} field="include_in_trends" /></td>
               <td><Toggle line={l} field="is_high_pressure" /></td>
+              <td><UnitSelect line={l} field="pressure_unit" fallback={PRESSURE_UNIT_DEFAULT} /></td>
+              <td><UnitSelect line={l} field="dp_unit" fallback={DP_UNIT_DEFAULT} /></td>
               <td style={{ whiteSpace: 'nowrap' }}>
                 {editingId === l.id ? (
                   <>
