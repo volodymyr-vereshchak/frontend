@@ -193,8 +193,12 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
       const isVirtual = lineMetadata?.is_virtual || virtualLinesHelper.isVirtualLine(firstLineId);
       setSelectedLineIsVirtual(isVirtual);
       setSelectedLineUnits(
-        lineMetadata && (lineMetadata.pressure_unit || lineMetadata.dp_unit)
-          ? { pressure_unit: lineMetadata.pressure_unit, dp_unit: lineMetadata.dp_unit }
+        lineMetadata && !lineMetadata.is_virtual
+          ? {
+              meter: lineMetadata.meter,
+              pressure_unit: lineMetadata.pressure_unit,
+              dp_unit: lineMetadata.dp_unit,
+            }
           : null
       );
     } else {
@@ -308,6 +312,7 @@ isVirtualLine={selectedLineIsVirtual}
                 archiveType={archiveType}
                 selectedLines={selectedLines}
                 isVirtualLine={selectedLineIsVirtual}
+                lineUnits={selectedLineUnits}
               />
             )}
           </>

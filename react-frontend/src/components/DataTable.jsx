@@ -347,6 +347,10 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const getColumns = () => {
     const pressureUnit = lineUnits?.pressure_unit || PRESSURE_UNIT_DEFAULT;
     const dpUnit = lineUnits?.dp_unit || DP_UNIT_DEFAULT;
+    // Meter lines store working volume (m³) in w_volume_dp; others store dP.
+    const wVolumeDpLabel = lineUnits?.meter
+      ? `${t('workingVolume')}, ${t('volumeUnit')}`
+      : `${t('differentialPressure')}, ${dpUnit}`;
     switch (archiveType) {
       case 'daily':
       case 'hourly':
@@ -362,7 +366,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         return [
           { key: 'period', label: t('period'), sortable: true },
           { key: 'volume', label: t('volume'), sortable: true, isSummable: true },
-          { key: 'w_volume_dp', label: `${t('workingVolumePressure')}, ${dpUnit}`, sortable: true, isAveragable: true },
+          { key: 'w_volume_dp', label: wVolumeDpLabel, sortable: true, isAveragable: true },
           { key: 'pressure', label: `${t('pressure')}, ${pressureUnit}`, sortable: true, isAveragable: true },
           { key: 'temperature', label: t('temperature'), sortable: true, isAveragable: true },
           { key: 'density', label: t('density'), sortable: true, isAveragable: true },

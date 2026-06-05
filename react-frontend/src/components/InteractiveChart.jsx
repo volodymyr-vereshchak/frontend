@@ -13,6 +13,7 @@ import {
 import './InteractiveChart.css';
 import { useLanguage } from '../contexts/LanguageContext';
 import SimplifiedEnterpriseControl from './SimplifiedEnterpriseControl';
+import { DP_UNIT_DEFAULT } from '../constants/pressureUnits';
 
 function generateTrendColor(index, total) {
   const hue = Math.round((index * 360) / total);
@@ -36,7 +37,7 @@ function periodHasTime(value) {
   return /T\d{2}/.test(String(value ?? '').replace(' ', 'T'));
 }
 
-const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lineNames = {}, trendsEnterpriseChecked = false, onTrendsEnterpriseChange = null }) => {
+const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lineNames = {}, lineUnits = null, trendsEnterpriseChecked = false, onTrendsEnterpriseChange = null }) => {
   const { t, getLocale } = useLanguage();
   const [visibleLines, setVisibleLines] = useState({});
   const [yAxisDomain, setYAxisDomain] = useState(['dataMin', 'dataMax']);
@@ -294,6 +295,11 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
   }, []);
 
   const getChartColumns = () => {
+    // Meter lines store working volume (m³) in w_volume_dp; others store dP.
+    const dpUnit = lineUnits?.dp_unit || DP_UNIT_DEFAULT;
+    const wVolumeDpLabel = lineUnits?.meter
+      ? `${t('workingVolume')}, ${t('volumeUnit')}`
+      : `${t('differentialPressure')}, ${dpUnit}`;
     switch (archiveType) {
       case 'trends': {
         if (!data || data.length === 0) return [];
@@ -315,7 +321,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
         }
         return [
           { key: 'volume', label: t('volumeLabel'), color: '#8884d8', yAxisId: 'left' },
-          { key: 'w_volume_dp', label: t('workingVolumeDpLabel'), color: '#82ca9d', yAxisId: 'left' },
+          { key: 'w_volume_dp', label: wVolumeDpLabel, color: '#82ca9d', yAxisId: 'left' },
           { key: 'pressure', label: t('pressureLabel'), color: '#ffc658', yAxisId: 'right' },
           { key: 'temperature', label: t('temperatureLabel'), color: '#ff7300', yAxisId: 'right' },
         ];

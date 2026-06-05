@@ -313,6 +313,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
               if (line) {
                 lineMetadata = {
                   is_virtual: false,
+                  meter: line.meter,
                   pressure_unit: line.pressure_unit,
                   dp_unit: line.dp_unit,
                 };

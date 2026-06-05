@@ -23,6 +23,7 @@ export const uk = {
   volume: "Об'єм",
   value: "Значення",
   workingVolumePressure: "Роб. об'єм/перепад",
+  workingVolume: "Роб. об'єм",
   pressure: "Тиск",
   temperature: "Температура",
   density: "Щільність",

@@ -23,6 +23,7 @@ export const ru = {
   volume: "Объем",
   value: "Значение",
   workingVolumePressure: "Раб. объем/перепад",
+  workingVolume: "Раб. объем",
   pressure: "Давление",
   temperature: "Температура",
   density: "Плотность",
