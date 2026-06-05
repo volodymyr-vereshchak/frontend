@@ -156,6 +156,14 @@ export class OverviewCalculator {
       const lastRecord = lineRecords[0];
       const line = lines.find(l => l.id === lineId);
 
+      // Restrict to the last 24h relative to this line's most recent record.
+      // The caller passes a wider (~3-day) dataset so sparse lines still get
+      // records; current/max/min for pressure & dP must use a true 24h window.
+      const windowStart = lastRecord.periodDate.getTime() - 24 * 60 * 60 * 1000;
+      const records24h = lineRecords.filter(
+        record => record.periodDate.getTime() >= windowStart
+      );
+
       // Check if this is a high pressure line (from DB field, fallback to false)
       const isHighPressure = line ? (line.is_high_pressure || false) : false;
 
@@ -171,7 +179,7 @@ export class OverviewCalculator {
       pressure = Math.round(pressure * 1000) / 1000;
 
       // Calculate max dP over last 24h
-      const maxDp24h = lineRecords.reduce((max, record) => {
+      const maxDp24h = records24h.reduce((max, record) => {
         const dp = record.w_volume_dp || 0;
         return dp > max ? dp : max;
       }, 0);
@@ -186,8 +194,8 @@ export class OverviewCalculator {
         isMeter: line.meter === true
       } : null;
 
-      // Min/max pressure over all 24h records (with same formula applied)
-      const pressureValues = lineRecords.map(r => {
+      // Min/max pressure over last 24h records (with same formula applied)
+      const pressureValues = records24h.map(r => {
         let p = r.pressure || 0;
         if (!isHighPressure && line && !line.meter) {
           p = p - ((r.w_volume_dp || 0) / 10000);
