@@ -367,10 +367,17 @@ export default function FlowRateCalc() {
   }, []);
 
   const filteredCalcs = useMemo(() => {
-    if (!selBranch) return calcs;
-    const ids = lumgs.filter(l => l.branch_id == selBranch).map(l => l.id);
-    return calcs.filter(c => ids.includes(c.lumg_id));
-  }, [selBranch, calcs, lumgs]);
+    // Only calcs that have at least one line of the selected device type.
+    const calcIdsWithDevice = new Set(
+      lines.filter(l => !!l.meter === wantMeter).map(l => l.gas_volume_calc_id)
+    );
+    let cs = calcs.filter(c => calcIdsWithDevice.has(c.id));
+    if (selBranch) {
+      const ids = lumgs.filter(l => l.branch_id == selBranch).map(l => l.id);
+      cs = cs.filter(c => ids.includes(c.lumg_id));
+    }
+    return cs;
+  }, [selBranch, calcs, lumgs, lines, wantMeter]);
 
   const filteredLines = useMemo(() => {
     const byDevice = lines.filter(l => !!l.meter === wantMeter);
@@ -480,9 +487,9 @@ export default function FlowRateCalc() {
     if (v) pullFromLine(v); else setPullStatus(null);
   }, [pullFromLine]);
 
-  // Switching device type changes which lines are eligible — reset the picked line.
+  // Switching device type changes which calcs/lines are eligible — reset both.
   const handleMtype = useCallback((next) => {
-    setMtype(next); setResults(null); setSelLine(''); setPullStatus(null);
+    setMtype(next); setResults(null); setSelCalc(''); setSelLine(''); setPullStatus(null);
   }, []);
 
   const handleCalc = useCallback(() => {
