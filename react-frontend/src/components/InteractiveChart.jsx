@@ -165,6 +165,12 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
         return;
       }
 
+      // Recharts default (interval="preserveEnd") force-shows the last tick and
+      // drops its neighbour (the penultimate) to avoid overlap — so the second-to-
+      // last X label goes missing. When all labels comfortably fit, show every tick
+      // (interval 0) so the penultimate stays; only thin genuinely dense charts.
+      const xTickInterval = sortedChartData.length <= 60 ? 0 : 'preserveStartEnd';
+
       const chartJSX = (
         <ResponsiveContainer width="100%" height={800}>
           <LineChart data={sortedChartData} margin={{ top: 10, right: isDualAxis ? 5 : 5, left: 0, bottom: 20 }}>
@@ -176,6 +182,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
               angle={-45}
               textAnchor="end"
               height={80}
+              interval={xTickInterval}
             />
             <YAxis yAxisId="left" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
             {isDualAxis && (
