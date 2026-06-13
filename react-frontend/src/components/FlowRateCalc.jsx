@@ -515,7 +515,7 @@ export default function FlowRateCalc() {
     const n2  = pf(s.n2)  ?? 0;
     if (co2 < 0 || co2 > 16) errs.co2 = t('fcRangeCo2N2');
     if (n2  < 0 || n2  > 16) errs.n2  = t('fcRangeCo2N2');
-    const t   = req('t', pf(s.t), -23.15, 70);
+    const tC  = req('t', pf(s.t), -23.15, 70);
     const pv  = req('p', pf(s.p), 0);
 
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -527,7 +527,7 @@ export default function FlowRateCalc() {
     if (P1_Pa <= 0) { setErrors({ p: t('fcPMustPositive') }); return; }
 
     const gamma = rho / RHO_AIR;
-    const T_K   = t + 273.15;
+    const T_K   = tC + 273.15;
     const P_MPa = P1_Pa * 1e-6;
     const { Tpc, Ppc } = pseudocritical(gamma, co2, n2);
     const Pr = P_MPa / Ppc;
@@ -553,15 +553,15 @@ export default function FlowRateCalc() {
 
       const alphaD = MATERIALS[s.matPipe]?.a   ?? 11.9e-6;
       const alphad = MATERIALS[s.matOrifice]?.a ?? 16.7e-6;
-      const DT = D20v * (1 + alphaD * (t - 20));
-      const dT = d20v * (1 + alphad * (t - 20));
+      const DT = D20v * (1 + alphaD * (tC - 20));
+      const dT = d20v * (1 + alphad * (tC - 20));
       const beta = dT / DT;
       if (beta < 0.1 || beta > 0.75) {
         setErrors({ d20: `β = ${beta.toFixed(4)} ${t('fcBetaRange')}` });
         return;
       }
 
-      oRes = orificeFlow({ D_mm: D20v, d_mm: d20v, alphaD, alphad, T: t,
+      oRes = orificeFlow({ D_mm: D20v, d_mm: d20v, alphaD, alphad, T: tC,
         dP_Pa, P1_Pa, rho_w, mu, otborIdx: s.otbor, kappa });
       Q_w   = oRes.qm / rho_w * 3600;
       Q_std = oRes.qm / rho  * 3600;
@@ -751,6 +751,11 @@ export default function FlowRateCalc() {
             <button className="fc-btn-calc" onClick={handleCalc}>{t('fcCalculate')}</button>
             <button className="fc-btn-reset" onClick={handleReset}>{t('fcReset')}</button>
           </div>
+          {Object.keys(errors).length > 0 && (
+            <div className="cf-error" style={{ marginTop: 2 }}>
+              {errors.kst || t('fcFixErrors')}
+            </div>
+          )}
         </div>
 
         {/* ── RIGHT: Results ── */}
