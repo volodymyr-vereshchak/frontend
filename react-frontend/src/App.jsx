@@ -196,6 +196,7 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
         lineMetadata && !lineMetadata.is_virtual
           ? {
               meter: lineMetadata.meter,
+              is_high_pressure: lineMetadata.is_high_pressure,
               pressure_unit: lineMetadata.pressure_unit,
               dp_unit: lineMetadata.dp_unit,
             }

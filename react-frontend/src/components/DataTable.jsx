@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './DataTable.css';
 import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, sysArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper, enterpriseApi, enterpriseVirtualApi } from '../services/api';
 import { formatEditValue } from '../utils/valueConverter';
-import { PRESSURE_UNIT_DEFAULT, DP_UNIT_DEFAULT } from '../constants/pressureUnits';
+import { PRESSURE_UNIT_DEFAULT, DP_UNIT_DEFAULT, convertPressureValue } from '../constants/pressureUnits';
 
 const EDIT_CHANNEL_NAMES = ["P", "T", "dP", "dPL", "Густ"];
 
@@ -79,7 +79,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       // ── Enterprise export (daily/hourly only) ──────────────────────────────
       if (exportWithEnterprise && (archiveType === 'daily' || archiveType === 'hourly') && selectedLines && selectedLines.length > 0) {
         // Sort data chronologically
-        const sortedData = [...rowData].sort((a, b) => new Date(a.period) - new Date(b.period));
+        const sortedData = [...processedRowData].sort((a, b) => new Date(a.period) - new Date(b.period));
         const firstDate = String(sortedData[0].period).slice(0, 10);
         const toDate   = String(sortedData[sortedData.length - 1].period).slice(0, 10);
         const periodType = archiveType === 'hourly' ? 'hourly' : 'daily';
@@ -204,7 +204,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         ? ((archiveType === 'sys'
             ? await sysArchiveApi.getSysData(selectedLines, dateRange.fromDate, dateRange.toDate)
             : await editArchiveApi.getEditData(selectedLines, dateRange.fromDate, dateRange.toDate)) || [])
-        : rowData;
+        : processedRowData;
 
       // Prepare header row
       const headers = columns.map(col => col.label);
@@ -233,14 +233,14 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
             return t('total');
           } else if (col.isSummable) {
             // Calculate sum for volume, edit_counts, sys_counts
-            const sum = rowData.reduce((acc, row) => {
+            const sum = processedRowData.reduce((acc, row) => {
               const value = parseFloat(row[col.key]) || 0;
               return acc + value;
             }, 0);
             return sum;
           } else if (col.isAveragable) {
             // Calculate average for other numeric columns
-            const validValues = rowData
+            const validValues = processedRowData
               .map(row => parseFloat(row[col.key]))
               .filter(value => !isNaN(value));
 
@@ -344,9 +344,19 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     }
   };
 
+  const pressureUnit = lineUnits?.pressure_unit || PRESSURE_UNIT_DEFAULT;
+  const dpUnit = lineUnits?.dp_unit || DP_UNIT_DEFAULT;
+  // Output (downstream) pressure = pressure − dP, shown only for low-pressure
+  // non-meter lines (meter=false AND not high pressure) in daily/hourly archives.
+  // For meters or high-pressure lines we show the raw pressure with no extra column.
+  const showOutputPressure =
+    !isVirtualLine &&
+    !!lineUnits &&
+    !lineUnits.meter &&
+    !lineUnits.is_high_pressure &&
+    (archiveType === 'daily' || archiveType === 'hourly');
+
   const getColumns = () => {
-    const pressureUnit = lineUnits?.pressure_unit || PRESSURE_UNIT_DEFAULT;
-    const dpUnit = lineUnits?.dp_unit || DP_UNIT_DEFAULT;
     // Meter lines store working volume (m³) in w_volume_dp; others store dP.
     const wVolumeDpLabel = lineUnits?.meter
       ? `${t('workingVolume')}, ${t('volumeUnit')}`
@@ -368,6 +378,9 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
           { key: 'volume', label: t('volume'), sortable: true, isSummable: true },
           { key: 'w_volume_dp', label: wVolumeDpLabel, sortable: true, isAveragable: true },
           { key: 'pressure', label: `${t('pressure')}, ${pressureUnit}`, sortable: true, isAveragable: true },
+          ...(showOutputPressure
+            ? [{ key: 'output_pressure', label: `${t('outputPressure')}, ${pressureUnit}`, sortable: true, isAveragable: true }]
+            : []),
           { key: 'temperature', label: t('temperature'), sortable: true, isAveragable: true },
           { key: 'density', label: t('density'), sortable: true, isAveragable: true },
           { key: 'edit_counts', label: t('editCounts'), sortable: true, isSummable: true, tooltip: t('changesCount') },
@@ -690,8 +703,19 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     if (serverPaged) setCurrentPage(1);
   };
 
+  // Inject the computed output-pressure field (pressure − dP, dP converted into
+  // the pressure unit) so it flows through sorting, summary, render and export.
+  const processedRowData = React.useMemo(() => {
+    if (!showOutputPressure) return rowData;
+    return rowData.map(row => ({
+      ...row,
+      output_pressure:
+        (row.pressure || 0) - convertPressureValue(row.w_volume_dp || 0, dpUnit, pressureUnit),
+    }));
+  }, [rowData, showOutputPressure, dpUnit, pressureUnit]);
+
   const sortedData = React.useMemo(() => {
-    let sortableData = [...rowData];
+    let sortableData = [...processedRowData];
     if (sortConfig.key) {
       sortableData.sort((a, b) => {
         let aVal = a[sortConfig.key];
@@ -718,7 +742,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       });
     }
     return sortableData;
-  }, [rowData, sortConfig]);
+  }, [processedRowData, sortConfig]);
 
   // Server-paginated archives arrive already sorted and sliced by the backend;
   // render them as-is. Everything else is sorted client-side over the full set.

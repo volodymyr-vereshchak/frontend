@@ -25,6 +25,7 @@ export const uk = {
   workingVolumePressure: "Роб. об'єм/перепад",
   workingVolume: "Роб. об'єм",
   pressure: "Тиск",
+  outputPressure: "Тиск вих.",
   temperature: "Температура",
   density: "Щільність",
   editCounts: "З",

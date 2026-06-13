@@ -13,7 +13,7 @@ import {
 import './InteractiveChart.css';
 import { useLanguage } from '../contexts/LanguageContext';
 import SimplifiedEnterpriseControl from './SimplifiedEnterpriseControl';
-import { DP_UNIT_DEFAULT } from '../constants/pressureUnits';
+import { DP_UNIT_DEFAULT, PRESSURE_UNIT_DEFAULT, convertPressureValue } from '../constants/pressureUnits';
 
 function generateTrendColor(index, total) {
   const hue = Math.round((index * 360) / total);
@@ -49,6 +49,27 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
   const linesDropdownRef = useRef(null);
   const renderCancelRef = useRef(null);
   const renderTimeoutRef = useRef(null);
+
+  const pressureUnit = lineUnits?.pressure_unit || PRESSURE_UNIT_DEFAULT;
+  const dpUnit = lineUnits?.dp_unit || DP_UNIT_DEFAULT;
+  // Output (downstream) pressure series = pressure − dP, only for low-pressure
+  // non-meter lines (meter=false AND not high pressure) in daily/hourly archives.
+  const showOutputPressure =
+    !isVirtualLine &&
+    !!lineUnits &&
+    !lineUnits.meter &&
+    !lineUnits.is_high_pressure &&
+    (archiveType === 'daily' || archiveType === 'hourly');
+
+  // Inject the computed output_pressure field into the chart data so the series
+  // can pick it up via dataKey (dP converted into the pressure unit, then subtracted).
+  const chartData = useMemo(() => {
+    if (!showOutputPressure || !Array.isArray(data)) return data;
+    return data.map(d => ({
+      ...d,
+      output_pressure: (d.pressure || 0) - convertPressureValue(d.w_volume_dp || 0, dpUnit, pressureUnit),
+    }));
+  }, [data, showOutputPressure, dpUnit, pressureUnit]);
 
   // Async chart rendering with cancellation
   const renderChartAsync = useCallback(async (chartData, archiveType, visibleLines, enterpriseData) => {
@@ -258,18 +279,18 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
 
       setVisibleLines(initialVisible);
     }
-  }, [data, archiveType]);
+  }, [data, archiveType, showOutputPressure]);
 
   // Trigger async chart rendering when data or settings change
   useEffect(() => {
-    if (data && data.length > 0 && Object.keys(visibleLines).length > 0) {
+    if (chartData && chartData.length > 0 && Object.keys(visibleLines).length > 0) {
       console.log('Starting async chart rendering...');
-      renderChartAsync(data, archiveType, visibleLines, enterpriseOverlayData);
+      renderChartAsync(chartData, archiveType, visibleLines, enterpriseOverlayData);
     } else {
       setRenderedChart(null);
       setIsChartLoading(false);
     }
-  }, [data, archiveType, visibleLines, enterpriseOverlayData, renderChartAsync]);
+  }, [chartData, archiveType, visibleLines, enterpriseOverlayData, renderChartAsync]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -296,7 +317,6 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
 
   const getChartColumns = () => {
     // Meter lines store working volume (m³) in w_volume_dp; others store dP.
-    const dpUnit = lineUnits?.dp_unit || DP_UNIT_DEFAULT;
     const wVolumeDpLabel = lineUnits?.meter
       ? `${t('workingVolume')}, ${t('volumeUnit')}`
       : `${t('differentialPressure')}, ${dpUnit}`;
@@ -323,6 +343,9 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
           { key: 'volume', label: t('volumeLabel'), color: '#8884d8', yAxisId: 'left' },
           { key: 'w_volume_dp', label: wVolumeDpLabel, color: '#82ca9d', yAxisId: 'left' },
           { key: 'pressure', label: t('pressureLabel'), color: '#ffc658', yAxisId: 'right' },
+          ...(showOutputPressure
+            ? [{ key: 'output_pressure', label: `${t('outputPressure')}, ${pressureUnit}`, color: '#e91e63', yAxisId: 'right' }]
+            : []),
           { key: 'temperature', label: t('temperatureLabel'), color: '#ff7300', yAxisId: 'right' },
         ];
       case 'param':

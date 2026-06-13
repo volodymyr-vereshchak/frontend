@@ -181,6 +181,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
                   address: line.address,
                   line: line.line,
                   meter: line.meter,
+                  is_high_pressure: line.is_high_pressure,
                   pressure_unit: line.pressure_unit,
                   dp_unit: line.dp_unit,
                 })),
@@ -314,6 +315,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
                 lineMetadata = {
                   is_virtual: false,
                   meter: line.meter,
+                  is_high_pressure: line.is_high_pressure,
                   pressure_unit: line.pressure_unit,
                   dp_unit: line.dp_unit,
                 };
