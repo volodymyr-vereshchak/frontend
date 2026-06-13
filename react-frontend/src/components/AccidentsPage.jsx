@@ -5,6 +5,16 @@ import apiClient, { branchApi, lumgApi, gasVolumeApi, lineApi } from '../service
 import * as XLSX from 'xlsx';
 import { pairAccidents, groupAccidentsByType } from '../utils/accidentsCalculator';
 
+// Format a Date as a naive local YYYY-MM-DD. Using toISOString() here would shift
+// the date to UTC — for UTC+ timezones local midnight falls on the previous day,
+// so e.g. the 1st of the month would render as the last day of the previous month.
+function toLocalISODate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function formatDurationMs(ms) {
   if (ms <= 0) return '00:00:00';
   const h = Math.floor(ms / 3600000);
@@ -64,9 +74,9 @@ export default function AccidentsPage() {
 
   const today = new Date();
   const [fromDate, setFromDate] = useState(
-    new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10)
+    toLocalISODate(new Date(today.getFullYear(), today.getMonth(), 1))
   );
-  const [toDate, setToDate] = useState(today.toISOString().slice(0, 10));
+  const [toDate, setToDate] = useState(toLocalISODate(today));
 
   const [groupedAccidents, setGroupedAccidents] = useState([]);
   const [expandedRows,     setExpandedRows]     = useState(new Set());
