@@ -71,8 +71,12 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
     }));
   }, [data, showOutputPressure, dpUnit, pressureUnit]);
 
-  // Async chart rendering with cancellation
-  const renderChartAsync = useCallback(async (chartData, archiveType, visibleLines, enterpriseData) => {
+  // Async chart rendering with cancellation.
+  // `columns` and `isDualAxis` are computed fresh by the caller and passed in:
+  // this callback has empty deps (to avoid re-render loops on every `t`/props
+  // change), so it must NOT call getChartColumns() itself — that closure would be
+  // stale and would, e.g., drop the conditional output_pressure series.
+  const renderChartAsync = useCallback(async (chartData, archiveType, visibleLines, enterpriseData, columns, isDualAxis) => {
     if (renderCancelRef.current) {
       renderCancelRef.current.cancelled = true;
     }
@@ -141,7 +145,6 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
         });
       }
 
-      const columns = getChartColumns();
       const chunks = [];
 
       const CHUNK_SIZE = 1000;
@@ -161,8 +164,6 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
         console.log('Chart rendering cancelled before final render');
         return;
       }
-
-      const isDualAxis = (archiveType === 'daily' || archiveType === 'hourly') && !isVirtualLine;
 
       const chartJSX = (
         <ResponsiveContainer width="100%" height={800}>
@@ -285,7 +286,9 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
   useEffect(() => {
     if (chartData && chartData.length > 0 && Object.keys(visibleLines).length > 0) {
       console.log('Starting async chart rendering...');
-      renderChartAsync(chartData, archiveType, visibleLines, enterpriseOverlayData);
+      const cols = getChartColumns();
+      const isDualAxis = (archiveType === 'daily' || archiveType === 'hourly') && !isVirtualLine;
+      renderChartAsync(chartData, archiveType, visibleLines, enterpriseOverlayData, cols, isDualAxis);
     } else {
       setRenderedChart(null);
       setIsChartLoading(false);
@@ -342,7 +345,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
         return [
           { key: 'volume', label: t('volumeLabel'), color: '#8884d8', yAxisId: 'left' },
           { key: 'w_volume_dp', label: wVolumeDpLabel, color: '#82ca9d', yAxisId: 'left' },
-          { key: 'pressure', label: t('pressureLabel'), color: '#ffc658', yAxisId: 'right' },
+          { key: 'pressure', label: `${t('pressureLabel')}, ${pressureUnit}`, color: '#ffc658', yAxisId: 'right' },
           ...(showOutputPressure
             ? [{ key: 'output_pressure', label: `${t('outputPressure')}, ${pressureUnit}`, color: '#e91e63', yAxisId: 'right' }]
             : []),
