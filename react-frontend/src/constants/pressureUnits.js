@@ -19,3 +19,19 @@ export const UNIT_LABELS = P_UNITS.map(u => u.label);
 // Defaults match the previously hardcoded units (кг/см² / кг/м²).
 export const PRESSURE_UNIT_DEFAULT = 'кгс/см²';
 export const DP_UNIT_DEFAULT = 'кгс/м²';
+
+// Map label -> conversion factor k (Pa per unit) for quick lookup.
+const UNIT_K = Object.fromEntries(P_UNITS.map(u => [u.label, u.k]));
+
+/**
+ * Convert a numeric value between pressure units using their Pa factors.
+ * value_to = value_from * k_from / k_to.
+ * Falls back to no-op if either unit is unknown.
+ */
+export function convertPressureValue(value, fromUnit, toUnit) {
+  if (fromUnit === toUnit) return value;
+  const kFrom = UNIT_K[fromUnit];
+  const kTo = UNIT_K[toUnit];
+  if (!kFrom || !kTo) return value;
+  return (value * kFrom) / kTo;
+}

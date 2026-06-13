@@ -3,7 +3,7 @@
  * Utility functions for calculating GRS overview metrics
  */
 
-import { PRESSURE_UNIT_DEFAULT, DP_UNIT_DEFAULT } from '../constants/pressureUnits';
+import { PRESSURE_UNIT_DEFAULT, DP_UNIT_DEFAULT, convertPressureValue } from '../constants/pressureUnits';
 
 export class OverviewCalculator {
   /**
@@ -169,12 +169,19 @@ export class OverviewCalculator {
       // Check if this is a high pressure line (from DB field, fallback to false)
       const isHighPressure = line ? (line.is_high_pressure || false) : false;
 
-      // Calculate pressure with differential adjustment for low pressure non-meter lines
+      // Per-line units (label-only elsewhere, but here we need them to bring dP
+      // into the pressure unit before subtracting).
+      const pressureUnit = (line && line.pressure_unit) || PRESSURE_UNIT_DEFAULT;
+      const dpUnit = (line && line.dp_unit) || DP_UNIT_DEFAULT;
+
+      // Calculate pressure with differential adjustment for low pressure non-meter lines.
+      // dP must be converted from its own unit into the pressure unit, then subtracted.
+      // (For the кгс/см² / кгс/м² defaults this equals the old division by 10000.)
       let pressure = lastRecord.pressure || 0;
       const wVolumeDp = lastRecord.w_volume_dp || 0;
 
       if (!isHighPressure && line && !line.meter) {
-        pressure = pressure - (wVolumeDp / 10000);
+        pressure = pressure - convertPressureValue(wVolumeDp, dpUnit, pressureUnit);
       }
 
       // Round to 3 decimal places
@@ -200,7 +207,7 @@ export class OverviewCalculator {
       const pressureValues = records24h.map(r => {
         let p = r.pressure || 0;
         if (!isHighPressure && line && !line.meter) {
-          p = p - ((r.w_volume_dp || 0) / 10000);
+          p = p - convertPressureValue(r.w_volume_dp || 0, dpUnit, pressureUnit);
         }
         return Math.round(p * 1000) / 1000;
       });
@@ -215,8 +222,8 @@ export class OverviewCalculator {
         isHighPressure: isHighPressure,
         recordCount: lineRecords.length,
         dpData: dpData,
-        pressureUnit: (line && line.pressure_unit) || PRESSURE_UNIT_DEFAULT,
-        dpUnit: (line && line.dp_unit) || DP_UNIT_DEFAULT,
+        pressureUnit,
+        dpUnit,
       };
     }
 
