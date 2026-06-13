@@ -911,6 +911,9 @@ const EnterprisePollAnalysis = () => {
             <ResponsiveContainer width="100%" height={800}>
               <LineChart data={pollResults} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
+                {/* Recharts default (interval="preserveEnd") drops the tick next
+                    to the forced last one, hiding the penultimate X label. Show
+                    every tick when labels fit; thin only genuinely dense charts. */}
                 <XAxis
                   dataKey="period"
                   tickFormatter={formatPeriod}
@@ -918,6 +921,7 @@ const EnterprisePollAnalysis = () => {
                   angle={-45}
                   textAnchor="end"
                   height={80}
+                  interval={pollResults.length <= 60 ? 0 : 'preserveStartEnd'}
                 />
                 <YAxis yAxisId="left" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
                 <YAxis yAxisId="right" orientation="right" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
