@@ -18,7 +18,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { enterprisePollApi, enterpriseApi, lineApi, branchApi } from '../../services/api';
 import { useUser } from '../../contexts/UserContext';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { buildEvenXTicks } from '../../utils/chartTicks';
+import { TimeAxisTick, labelEveryFor } from '../../utils/timeAxisTick';
 
 // Register locales
 registerLocale('ru', ru);
@@ -912,18 +912,14 @@ const EnterprisePollAnalysis = () => {
             <ResponsiveContainer width="100%" height={800}>
               <LineChart data={pollResults} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                {/* Recharts default (interval="preserveEnd") drops the tick next
-                    to the forced last one, hiding the penultimate X label. Show
-                    every tick when few; for dense charts pass explicit even ticks. */}
+                {/* Render every tick (interval 0) and choose labels ourselves so
+                    Recharts never drops the penultimate X label. See timeAxisTick. */}
                 <XAxis
                   dataKey="period"
-                  tickFormatter={formatPeriod}
                   stroke="#9e9e9e"
-                  angle={-45}
-                  textAnchor="end"
                   height={80}
                   interval={0}
-                  ticks={buildEvenXTicks(pollResults.map(r => r.period))}
+                  tick={<TimeAxisTick total={pollResults.length} labelEvery={labelEveryFor(pollResults.length)} formatter={formatPeriod} />}
                 />
                 <YAxis yAxisId="left" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
                 <YAxis yAxisId="right" orientation="right" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />

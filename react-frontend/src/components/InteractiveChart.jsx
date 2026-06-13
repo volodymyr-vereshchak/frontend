@@ -14,7 +14,7 @@ import './InteractiveChart.css';
 import { useLanguage } from '../contexts/LanguageContext';
 import SimplifiedEnterpriseControl from './SimplifiedEnterpriseControl';
 import { DP_UNIT_DEFAULT, PRESSURE_UNIT_DEFAULT, convertPressureValue } from '../constants/pressureUnits';
-import { buildEvenXTicks } from '../utils/chartTicks';
+import { TimeAxisTick, labelEveryFor } from '../utils/timeAxisTick';
 
 function generateTrendColor(index, total) {
   const hue = Math.round((index * 360) / total);
@@ -166,10 +166,10 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
         return;
       }
 
-      // Avoid Recharts' default tick thinning dropping the penultimate X label:
-      // show every tick when few (interval 0), and for dense charts pass explicit
-      // evenly-spaced ticks (last point always included) instead of preserveEnd.
-      const xTicks = buildEvenXTicks(sortedChartData.map(d => d.period));
+      // Render a tick for every point (interval={0}) and pick which get a label
+      // ourselves (counting back from the end), so Recharts never drops the
+      // penultimate X label. See utils/timeAxisTick.
+      const xLabelEvery = labelEveryFor(sortedChartData.length);
 
       const chartJSX = (
         <ResponsiveContainer width="100%" height={800}>
@@ -177,13 +177,10 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
             <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
             <XAxis
               dataKey="period"
-              tickFormatter={formatXAxisLabel}
               stroke="#9e9e9e"
-              angle={-45}
-              textAnchor="end"
               height={80}
               interval={0}
-              ticks={xTicks}
+              tick={<TimeAxisTick total={sortedChartData.length} labelEvery={xLabelEvery} formatter={formatXAxisLabel} />}
             />
             <YAxis yAxisId="left" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
             {isDualAxis && (
