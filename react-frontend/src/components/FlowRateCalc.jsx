@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { P_UNITS } from '../constants/pressureUnits';
+import { P_UNITS, UNIT_LABELS } from '../constants/pressureUnits';
+import { lineApi, branchApi, lumgApi, gasVolumeApi, archiveDataApi, paramArchiveApi } from '../services/api';
 import './FlowRateCalc.css';
 
 // ─── Constants (exact values from CalcDSTU8586.dll / Ask2 XAML) ───────────────
@@ -226,6 +227,36 @@ function fmt(n, d = 4) {
   return n.toFixed(d);
 }
 
+// ─── Auto-fill helpers ──────────────────────────────────────────────────────
+
+// Match a thermal-expansion coefficient (param A0su/A0pipe — already ×1e6 in
+// ParamList) to the closest MATERIALS entry (whose `a` is in 1/°C). Returns the
+// material index, or null if nothing is reasonably close.
+function matchMaterialIndex(a0scaled) {
+  if (a0scaled == null || isNaN(a0scaled) || a0scaled <= 0) return null;
+  let best = null, bestDiff = Infinity;
+  MATERIALS.forEach((m, i) => {
+    const diff = Math.abs(m.a * 1e6 - a0scaled);
+    if (diff < bestDiff) { bestDiff = diff; best = i; }
+  });
+  // Material coeffs are ~10–17 (×1e-6/°C) and differ by >=0.1; reject if far off.
+  return bestDiff <= 0.6 ? best : null;
+}
+
+// Index of a unit label in the shared P_UNITS list; falls back when not found.
+function unitIndexByLabel(label, fallback) {
+  const i = UNIT_LABELS.indexOf(label);
+  return i >= 0 ? i : fallback;
+}
+
+// Naive DD.MM.YYYY HH:00 of an archive period (no UTC shift).
+function formatPeriodShort(period) {
+  const m = String(period).replace(' ', 'T').match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}))?/);
+  if (!m) return String(period);
+  const [, y, mo, d, h = '00'] = m;
+  return `${d}.${mo}.${y} ${h}:00`;
+}
+
 // ─── Initial state ────────────────────────────────────────────────────────────
 
 const INIT = {
@@ -252,6 +283,48 @@ export default function FlowRateCalc() {
   const [errors, setErrors] = useState({});
   const [results, setResults] = useState(null);
 
+  // ── Auto-fill-from-line state ──
+  const [branches, setBranches] = useState([]);
+  const [lumgs, setLumgs] = useState([]);
+  const [calcs, setCalcs] = useState([]);
+  const [lines, setLines] = useState([]);
+  const [selBranch, setSelBranch] = useState('');
+  const [selCalc, setSelCalc] = useState('');
+  const [selLine, setSelLine] = useState('');
+  const [pullStatus, setPullStatus] = useState(null); // { type:'ok'|'warn'|'loading', text, warns? }
+
+  // Orifice → restrictor lines (meter=false); meter → counter lines (meter=true).
+  const wantMeter = mtype === 'meter';
+
+  // Load reference data once for the cascade (branch → calc → line).
+  useEffect(() => {
+    Promise.all([
+      branchApi.getAll(),
+      lumgApi.getAll(),
+      gasVolumeApi.getGasVolumeCalcs(),
+      lineApi.getAll(),
+    ]).then(([br, lu, ca, li]) => {
+      setBranches(br || []); setLumgs(lu || []); setCalcs(ca || []); setLines(li || []);
+    }).catch(() => { /* non-fatal: manual entry still works */ });
+  }, []);
+
+  const filteredCalcs = useMemo(() => {
+    if (!selBranch) return calcs;
+    const ids = lumgs.filter(l => l.branch_id == selBranch).map(l => l.id);
+    return calcs.filter(c => ids.includes(c.lumg_id));
+  }, [selBranch, calcs, lumgs]);
+
+  const filteredLines = useMemo(() => {
+    const byDevice = lines.filter(l => !!l.meter === wantMeter);
+    if (selCalc) return byDevice.filter(l => l.gas_volume_calc_id == selCalc);
+    if (selBranch) {
+      const lumgIds = lumgs.filter(l => l.branch_id == selBranch).map(l => l.id);
+      const calcIds = calcs.filter(c => lumgIds.includes(c.lumg_id)).map(c => c.id);
+      return byDevice.filter(l => calcIds.includes(l.gas_volume_calc_id));
+    }
+    return byDevice;
+  }, [lines, wantMeter, selCalc, selBranch, lumgs, calcs]);
+
   // Localized dropdown labels (indices stay stable — only display text changes)
   const KST_METHODS = useMemo(
     () => [t('fcKstPlaceholder'), KST_METHOD_NAMES[1], KST_METHOD_NAMES[2]],
@@ -265,6 +338,93 @@ export default function FlowRateCalc() {
     setS(prev => ({ ...prev, [f]: v }));
     setErrors(prev => { const e = { ...prev }; delete e[f]; return e; });
     setResults(null);
+  }, []);
+
+  // Pull the latest params + last hourly record for a line into the form.
+  const pullFromLine = useCallback(async (lineId) => {
+    const line = lines.find(l => l.id === Number(lineId));
+    if (!line) return;
+    setPullStatus({ type: 'loading', text: t('fcLineFillLoading') });
+    try {
+      const [params, lastPeriod] = await Promise.all([
+        paramArchiveApi.getParamsForLines([line.id]),
+        archiveDataApi.getLastPeriod([line.id]),
+      ]);
+      const param = Array.isArray(params) && params.length ? params[0] : null;
+
+      // Last hourly record: fetch a window around the anchor period, take the newest.
+      let hourly = null;
+      const anchor = lastPeriod || new Date();
+      const start = new Date(anchor.getTime() - 2 * 864e5).toISOString().slice(0, 10);
+      const end   = new Date(anchor.getTime() + 2 * 864e5).toISOString().slice(0, 10);
+      const recs = await archiveDataApi.getHourlyData([line.id], start, end);
+      if (Array.isArray(recs) && recs.length) {
+        hourly = recs.reduce((a, b) => (new Date(a.period) > new Date(b.period) ? a : b));
+      }
+
+      setS(prev => {
+        const next = { ...prev };
+        if (param) {
+          if (param.density != null)  next.rho = String(param.density);
+          if (param.co2 != null)      next.co2 = String(param.co2);
+          if (param.n2 != null)       next.n2  = String(param.n2);
+          if (param.D20 != null)      next.D20 = String(param.D20);
+          if (param.d20 != null)      next.d20 = String(param.d20);
+          if (param.roughness != null) next.rsh = String(param.roughness);
+          if (param.radius != null)   next.rEdge = String(param.radius);
+          if (param.su_year != null)  next.timeOrifice = String(param.su_year);
+          const mO = matchMaterialIndex(param.A0su);
+          if (mO != null) next.matOrifice = mO;
+          const mP = matchMaterialIndex(param.A0pipe);
+          if (mP != null) next.matPipe = mP;
+        }
+        if (hourly) {
+          if (hourly.pressure != null) {
+            next.p = String(hourly.pressure);
+            next.pU = unitIndexByLabel(line.pressure_unit, prev.pU);
+            next.pType = 0; // archive pressure is absolute
+          }
+          if (hourly.temperature != null) next.t = String(hourly.temperature);
+          if (hourly.w_volume_dp != null) {
+            if (wantMeter) {
+              next.qw = String(hourly.w_volume_dp);
+            } else {
+              next.dp = String(hourly.w_volume_dp);
+              next.dpU = unitIndexByLabel(line.dp_unit, prev.dpU);
+            }
+          }
+        }
+        return next;
+      });
+      setErrors({});
+      setResults(null);
+
+      const warns = [];
+      if (!param)  warns.push(t('fcLineFillNoParams'));
+      if (!hourly) warns.push(t('fcLineFillNoHourly'));
+      if (!param && !hourly) {
+        setPullStatus({ type: 'warn', text: warns.join('. ') });
+      } else {
+        const when = hourly ? formatPeriodShort(hourly.period) : '';
+        const text = `${t('fcLineFillPulledFrom')} «${line.name || line.id}»` +
+          (when ? ` ${t('fcLineFillAt')} ${when}` : '');
+        setPullStatus({ type: warns.length ? 'warn' : 'ok', text, warns });
+      }
+    } catch (e) {
+      setPullStatus({ type: 'warn', text: t('fcLineFillNoHourly') });
+    }
+  }, [lines, wantMeter, t]);
+
+  const handleSelBranch = useCallback((v) => { setSelBranch(v); setSelCalc(''); setSelLine(''); setPullStatus(null); }, []);
+  const handleSelCalc   = useCallback((v) => { setSelCalc(v); setSelLine(''); setPullStatus(null); }, []);
+  const handleSelLine   = useCallback((v) => {
+    setSelLine(v);
+    if (v) pullFromLine(v); else setPullStatus(null);
+  }, [pullFromLine]);
+
+  // Switching device type changes which lines are eligible — reset the picked line.
+  const handleMtype = useCallback((next) => {
+    setMtype(next); setResults(null); setSelLine(''); setPullStatus(null);
   }, []);
 
   const handleCalc = useCallback(() => {
@@ -367,14 +527,61 @@ export default function FlowRateCalc() {
             <span className="cf-device-label">{t('fcSelectConverter')}</span>
             <label className="cf-radio">
               <input type="radio" name="mtype" checked={mtype === 'orifice'}
-                onChange={() => { setMtype('orifice'); setResults(null); }} />
+                onChange={() => handleMtype('orifice')} />
               {t('fcOrificeDevice')}
             </label>
             <label className="cf-radio">
               <input type="radio" name="mtype" checked={mtype === 'meter'}
-                onChange={() => { setMtype('meter'); setResults(null); }} />
+                onChange={() => handleMtype('meter')} />
               {t('fcMeter')}
             </label>
+          </div>
+
+          {/* Auto-fill from line */}
+          <div className="flow-panel">
+            <div className="flow-panel-header">{t('fcLineFillTitle')}</div>
+            <div className="flow-panel-body">
+              <div className="cf-row">
+                <label className="cf-label" htmlFor="fc-fill-branch">{t('fcLineFillBranch')}:</label>
+                <select id="fc-fill-branch" className="cf-select" value={selBranch}
+                  onChange={e => handleSelBranch(e.target.value)}>
+                  <option value="">{t('fcLineFillAllBranches')}</option>
+                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+                <span className="cf-unit" />
+              </div>
+              <div className="cf-row">
+                <label className="cf-label" htmlFor="fc-fill-calc">{t('fcLineFillCalc')}:</label>
+                <select id="fc-fill-calc" className="cf-select" value={selCalc}
+                  onChange={e => handleSelCalc(e.target.value)}>
+                  <option value="">{t('fcLineFillAllCalcs')}</option>
+                  {filteredCalcs.map(c => <option key={c.id} value={c.id}>{c.name || `#${c.id}`}</option>)}
+                </select>
+                <span className="cf-unit" />
+              </div>
+              <div className="cf-row">
+                <label className="cf-label" htmlFor="fc-fill-line">{t('fcLineFillLine')}:</label>
+                <select id="fc-fill-line" className="cf-select" value={selLine}
+                  onChange={e => handleSelLine(e.target.value)}>
+                  <option value="">{t('fcLineFillSelectLine')}</option>
+                  {filteredLines.map(l => <option key={l.id} value={l.id}>{l.name || `#${l.id}`}</option>)}
+                </select>
+                <span className="cf-unit" />
+              </div>
+              {pullStatus && (
+                <div style={{ padding: '4px 2px 0', fontSize: 13,
+                  color: pullStatus.type === 'ok' ? '#7bbf2b'
+                       : pullStatus.type === 'warn' ? '#e0a020' : '#aaa' }}>
+                  <div>{pullStatus.text}</div>
+                  {pullStatus.warns && pullStatus.warns.length > 0 && (
+                    <div style={{ color: '#e0a020' }}>{pullStatus.warns.join('; ')}</div>
+                  )}
+                  {pullStatus.type === 'ok' && (
+                    <div style={{ color: '#888', marginTop: 2 }}>{t('fcLineFillHint')}</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* General params */}
