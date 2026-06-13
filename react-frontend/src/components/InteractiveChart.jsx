@@ -77,7 +77,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
   // this callback has empty deps (to avoid re-render loops on every `t`/props
   // change), so it must NOT call getChartColumns() itself — that closure would be
   // stale and would, e.g., drop the conditional output_pressure series.
-  const renderChartAsync = useCallback(async (chartData, archiveType, visibleLines, enterpriseData, columns, isDualAxis) => {
+  const renderChartAsync = useCallback(async (chartData, archiveType, visibleLines, enterpriseData, columns, isDualAxis, formatXLabel) => {
     if (renderCancelRef.current) {
       renderCancelRef.current.cancelled = true;
     }
@@ -180,7 +180,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
               stroke="#9e9e9e"
               height={80}
               interval={0}
-              tick={<TimeAxisTick total={sortedChartData.length} labelEvery={xLabelEvery} formatter={formatXAxisLabel} />}
+              tick={<TimeAxisTick total={sortedChartData.length} labelEvery={xLabelEvery} formatter={formatXLabel} />}
             />
             <YAxis yAxisId="left" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
             {isDualAxis && (
@@ -293,7 +293,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
       console.log('Starting async chart rendering...');
       const cols = getChartColumns();
       const isDualAxis = (archiveType === 'daily' || archiveType === 'hourly') && !isVirtualLine;
-      renderChartAsync(chartData, archiveType, visibleLines, enterpriseOverlayData, cols, isDualAxis);
+      renderChartAsync(chartData, archiveType, visibleLines, enterpriseOverlayData, cols, isDualAxis, formatXAxisLabel);
     } else {
       setRenderedChart(null);
       setIsChartLoading(false);
@@ -384,9 +384,10 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
     const date = parsePeriod(value);
     const locale = getLocale();
     if (!date) return String(value);
-    // Date-only for daily / daily-trend; date+time when the period carries an hour
-    // (hourly trend or hourly archive).
-    const dateOnly = (archiveType === 'daily' || archiveType === 'trends') && !periodHasTime(value);
+    // Daily archive: always date-only (its periods may carry a 00:00:00 time).
+    // Trends: date-only for daily trend, date+time for hourly trend (period has an hour).
+    // Hourly archive: date+time.
+    const dateOnly = archiveType === 'daily' || (archiveType === 'trends' && !periodHasTime(value));
     if (dateOnly) {
       return date.toLocaleDateString(locale);
     }
