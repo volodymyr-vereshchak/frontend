@@ -777,8 +777,9 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const formatNumber = (value, key) => {
     if (typeof value !== 'number' || isNaN(value)) return value;
 
-    // Default formatting with 2 decimal places and spaces between thousands
-    const formatted = value.toFixed(2);
+    // Density needs 4 decimals; everything else 2. Spaces between thousands.
+    const decimals = key === 'density' ? 4 : 2;
+    const formatted = value.toFixed(decimals);
     const [integerPart, decimalPart] = formatted.split('.');
     return integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '.' + decimalPart;
   };
