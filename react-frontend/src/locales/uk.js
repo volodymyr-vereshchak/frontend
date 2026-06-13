@@ -301,6 +301,10 @@ grsTrends: "Тренди ГРС",
   fcResults: "Результати",
   fcCalculate: "Розрахунок",
   fcReset: "Скинути",
+  // What's new dialog
+  whatsNewTitle: "Що нового",
+  whatsNewNewer: "Новіше",
+  whatsNewOlder: "Старіше",
   // Auto-fill from line
   fcLineFillTitle: "Заповнити з лінії",
   fcLineFillBranch: "Філія",

@@ -4,6 +4,13 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { languages } from '../locales';
 import UserBadge from './UserBadge/UserBadge';
 import { useUser } from '../contexts/UserContext';
+import WhatsNewModal from './WhatsNewModal';
+import { CHANGELOG } from '../constants/changelog';
+
+// Identity of the newest changelog state — changes whenever an entry is added or
+// the top date changes; used to drive the "new updates" badge via localStorage.
+const CHANGELOG_KEY = `${CHANGELOG.length}:${CHANGELOG[0]?.date || ''}`;
+const CHANGELOG_SEEN_STORAGE = 'hlv-changelog-seen';
 
 // Archive Icons from Python project
 const CalendarIcon = ({ color = "#B9E42B" }) => (
@@ -93,8 +100,23 @@ const TopMenu = ({ onArchiveTypeChange, archiveType, isVirtualLine, activeArchiv
      archiveType === 'admin' ? 'admin' : 'overview') : 'overview');
   const [isReportsDropdownOpen, setIsReportsDropdownOpen] = useState(false);
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
+  const [hasNewUpdates, setHasNewUpdates] = useState(false);
   const dropdownRef = useRef(null);
   const languageDropdownRef = useRef(null);
+
+  // Show the badge when the newest changelog state differs from what was last seen.
+  useEffect(() => {
+    try {
+      setHasNewUpdates(localStorage.getItem(CHANGELOG_SEEN_STORAGE) !== CHANGELOG_KEY);
+    } catch { setHasNewUpdates(true); }
+  }, []);
+
+  const openWhatsNew = () => {
+    setIsWhatsNewOpen(true);
+    setHasNewUpdates(false);
+    try { localStorage.setItem(CHANGELOG_SEEN_STORAGE, CHANGELOG_KEY); } catch {}
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -288,6 +310,24 @@ const handleGRSTrendsClick = () => {
       <div className="right-section">
         <UserBadge />
 
+        {/* What's new */}
+        <div className="whatsnew-wrapper" style={{ position: 'relative' }}>
+          <button
+            className="language-button"
+            onClick={openWhatsNew}
+            title={t('whatsNewTitle')}
+          >
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#B9E42B', lineHeight: 1 }}>?</span>
+          </button>
+          {hasNewUpdates && (
+            <span style={{
+              position: 'absolute', top: 3, right: 3, width: 9, height: 9,
+              borderRadius: '50%', background: '#ff4d4d', border: '1.5px solid #2b2b2b',
+              pointerEvents: 'none',
+            }} />
+          )}
+        </div>
+
         {/* Language Switcher */}
         <div className="language-switcher" ref={languageDropdownRef}>
           <button
@@ -317,6 +357,8 @@ const handleGRSTrendsClick = () => {
 
         <h1 className="app-title">{t('appTitle')}</h1>
       </div>
+
+      {isWhatsNewOpen && <WhatsNewModal onClose={() => setIsWhatsNewOpen(false)} />}
     </div>
   );
 };
