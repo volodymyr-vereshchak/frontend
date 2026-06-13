@@ -777,11 +777,13 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const formatNumber = (value, key) => {
     if (typeof value !== 'number' || isNaN(value)) return value;
 
-    // Density needs 4 decimals; everything else 2. Spaces between thousands.
-    const decimals = key === 'density' ? 4 : 2;
+    // Density 4 decimals; alarm/change counts are integers; everything else 2.
+    const decimals = key === 'density' ? 4
+      : (key === 'edit_counts' || key === 'sys_counts') ? 0 : 2;
     const formatted = value.toFixed(decimals);
     const [integerPart, decimalPart] = formatted.split('.');
-    return integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '.' + decimalPart;
+    const intWithSep = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return decimalPart != null ? `${intWithSep}.${decimalPart}` : intWithSep;
   };
 
   const formatValue = (value, key, row = {}) => {
