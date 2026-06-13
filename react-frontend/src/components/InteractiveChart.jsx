@@ -14,6 +14,7 @@ import './InteractiveChart.css';
 import { useLanguage } from '../contexts/LanguageContext';
 import SimplifiedEnterpriseControl from './SimplifiedEnterpriseControl';
 import { DP_UNIT_DEFAULT, PRESSURE_UNIT_DEFAULT, convertPressureValue } from '../constants/pressureUnits';
+import { buildEvenXTicks } from '../utils/chartTicks';
 
 function generateTrendColor(index, total) {
   const hue = Math.round((index * 360) / total);
@@ -165,11 +166,10 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
         return;
       }
 
-      // Recharts default (interval="preserveEnd") force-shows the last tick and
-      // drops its neighbour (the penultimate) to avoid overlap — so the second-to-
-      // last X label goes missing. When all labels comfortably fit, show every tick
-      // (interval 0) so the penultimate stays; only thin genuinely dense charts.
-      const xTickInterval = sortedChartData.length <= 60 ? 0 : 'preserveStartEnd';
+      // Avoid Recharts' default tick thinning dropping the penultimate X label:
+      // show every tick when few (interval 0), and for dense charts pass explicit
+      // evenly-spaced ticks (last point always included) instead of preserveEnd.
+      const xTicks = buildEvenXTicks(sortedChartData.map(d => d.period));
 
       const chartJSX = (
         <ResponsiveContainer width="100%" height={800}>
@@ -182,7 +182,8 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
               angle={-45}
               textAnchor="end"
               height={80}
-              interval={xTickInterval}
+              interval={0}
+              ticks={xTicks}
             />
             <YAxis yAxisId="left" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
             {isDualAxis && (

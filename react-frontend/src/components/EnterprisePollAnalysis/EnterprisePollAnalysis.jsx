@@ -18,6 +18,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { enterprisePollApi, enterpriseApi, lineApi, branchApi } from '../../services/api';
 import { useUser } from '../../contexts/UserContext';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { buildEvenXTicks } from '../../utils/chartTicks';
 
 // Register locales
 registerLocale('ru', ru);
@@ -913,7 +914,7 @@ const EnterprisePollAnalysis = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
                 {/* Recharts default (interval="preserveEnd") drops the tick next
                     to the forced last one, hiding the penultimate X label. Show
-                    every tick when labels fit; thin only genuinely dense charts. */}
+                    every tick when few; for dense charts pass explicit even ticks. */}
                 <XAxis
                   dataKey="period"
                   tickFormatter={formatPeriod}
@@ -921,7 +922,8 @@ const EnterprisePollAnalysis = () => {
                   angle={-45}
                   textAnchor="end"
                   height={80}
-                  interval={pollResults.length <= 60 ? 0 : 'preserveStartEnd'}
+                  interval={0}
+                  ticks={buildEvenXTicks(pollResults.map(r => r.period))}
                 />
                 <YAxis yAxisId="left" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
                 <YAxis yAxisId="right" orientation="right" stroke="#9e9e9e" domain={['auto', 'auto']} allowDataOverflow={false} />
