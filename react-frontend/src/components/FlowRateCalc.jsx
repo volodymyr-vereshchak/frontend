@@ -307,6 +307,11 @@ function unitIndexByLabel(label, fallback) {
   return i >= 0 ? i : fallback;
 }
 
+// Round pulled values for the form: 2 decimals for most fields, 4 for density
+// (which needs the extra precision). Strips float noise from the archive.
+const round2 = (v) => (v == null || isNaN(v)) ? v : Math.round(v * 100) / 100;
+const round4 = (v) => (v == null || isNaN(v)) ? v : Math.round(v * 1e4) / 1e4;
+
 // Naive DD.MM.YYYY HH:00 of an archive period (no UTC shift).
 function formatPeriodShort(period) {
   const m = String(period).replace(' ', 'T').match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}))?/);
@@ -430,14 +435,14 @@ export default function FlowRateCalc() {
       setS(prev => {
         const next = { ...prev };
         if (param) {
-          if (param.density != null)  next.rho = String(param.density);
-          if (param.co2 != null)      next.co2 = String(param.co2);
-          if (param.n2 != null)       next.n2  = String(param.n2);
-          if (param.D20 != null)      next.D20 = String(param.D20);
-          if (param.d20 != null)      next.d20 = String(param.d20);
-          if (param.roughness != null) next.rsh = String(param.roughness);
-          if (param.radius != null)   next.rEdge = String(param.radius);
-          if (param.su_year != null)  next.timeOrifice = String(param.su_year);
+          if (param.density != null)  next.rho = String(round4(param.density));
+          if (param.co2 != null)      next.co2 = String(round2(param.co2));
+          if (param.n2 != null)       next.n2  = String(round2(param.n2));
+          if (param.D20 != null)      next.D20 = String(round2(param.D20));
+          if (param.d20 != null)      next.d20 = String(round2(param.d20));
+          if (param.roughness != null) next.rsh = String(round2(param.roughness));
+          if (param.radius != null)   next.rEdge = String(round2(param.radius));
+          if (param.su_year != null)  next.timeOrifice = String(round2(param.su_year));
           const mO = matchMaterialIndex(param.A0su, param.A1su, param.A2su);
           if (mO != null) next.matOrifice = mO;
           const mP = matchMaterialIndex(param.A0pipe, param.A1pipe, param.A2pipe);
@@ -445,16 +450,16 @@ export default function FlowRateCalc() {
         }
         if (hourly) {
           if (hourly.pressure != null) {
-            next.p = String(hourly.pressure);
+            next.p = String(round2(hourly.pressure));
             next.pU = unitIndexByLabel(line.pressure_unit, prev.pU);
             next.pType = 0; // archive pressure is absolute
           }
-          if (hourly.temperature != null) next.t = String(hourly.temperature);
+          if (hourly.temperature != null) next.t = String(round2(hourly.temperature));
           if (hourly.w_volume_dp != null) {
             if (wantMeter) {
-              next.qw = String(hourly.w_volume_dp);
+              next.qw = String(round2(hourly.w_volume_dp));
             } else {
-              next.dp = String(hourly.w_volume_dp);
+              next.dp = String(round2(hourly.w_volume_dp));
               next.dpU = unitIndexByLabel(line.dp_unit, prev.dpU);
             }
           }
