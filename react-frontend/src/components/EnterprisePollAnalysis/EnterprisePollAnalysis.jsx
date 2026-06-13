@@ -82,6 +82,11 @@ const EnterprisePollAnalysis = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [periodType, setPeriodType] = useState('daily');
+  // Period type the current pollResults were actually fetched with. The live
+  // `periodType` only drives the NEXT poll; the table/chart must keep formatting
+  // by the type they were loaded with, so toggling the switch doesn't reformat
+  // already-loaded rows (which caused daily dates to gain a UTC-shifted 03:00).
+  const [resultsPeriodType, setResultsPeriodType] = useState('daily');
   const [showUnpolledModal, setShowUnpolledModal] = useState(false);
 
   // Chart visibility toggles
@@ -279,6 +284,8 @@ const EnterprisePollAnalysis = () => {
         }).sort((a, b) => new Date(a.period) - new Date(b.period));
 
         setPollResults(results);
+        // Freeze the type the table/chart format by until the next poll.
+        setResultsPeriodType(periodType);
       }
     } catch (err) {
       console.error('Error polling enterprise:', err);
@@ -355,13 +362,18 @@ const EnterprisePollAnalysis = () => {
    */
   const formatPeriod = (period) => {
     if (!period) return '';
-    const date = new Date(period);
+    // Parse as a naive LOCAL date. new Date('YYYY-MM-DD') would parse as UTC and,
+    // in UTC+ timezones, shift the displayed time (e.g. a daily date showing 03:00).
+    const m = String(period).replace(' ', 'T')
+      .match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2})(?::(\d{2}))?)?/);
+    const date = m
+      ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4] || 0), Number(m[5] || 0))
+      : new Date(period);
     const locale = currentLocale === 'uk' ? 'uk-UA' : 'ru-RU';
 
-    if (periodType === 'daily') {
-      // Только дата, без времени
-      return date.toLocaleDateString(locale);
-    } else if (periodType === 'hourly') {
+    // Format by the type the data was polled with (resultsPeriodType), not the live
+    // toggle — so flipping the switch doesn't reformat already-loaded rows.
+    if (resultsPeriodType === 'hourly') {
       // Дата + время (часы:минуты, без секунд)
       return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, {
         hour: '2-digit',
@@ -369,6 +381,7 @@ const EnterprisePollAnalysis = () => {
         hour12: false
       });
     }
+    // daily — только дата, без времени
     return date.toLocaleDateString(locale);
   };
 
