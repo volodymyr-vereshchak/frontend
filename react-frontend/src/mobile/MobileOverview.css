@@ -1,0 +1,129 @@
+.m-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 10px 8px;
+}
+
+/* Branch + LUMG selectors in one row */
+.m-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.m-select {
+  flex: 1;
+  min-width: 0;
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 14px;
+}
+
+.m-line-select {
+  flex: none;
+  width: 100%;
+}
+
+/* Compact volume summary: label line, numbers on the line below (table-like). */
+.m-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  border-radius: 8px;
+}
+
+.m-summary-label {
+  font-size: 12px;
+  color: #9a9a9a;
+}
+
+.m-summary-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.m-summary-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #B9E42B;
+}
+
+.m-summary-change {
+  font-size: 12px;
+}
+.m-summary-change.up { color: #90EE90; }
+.m-summary-change.down { color: #ff6b6b; }
+.m-summary-change.flat { color: #9a9a9a; }
+
+.m-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 16px;
+  color: #9a9a9a;
+  text-align: center;
+}
+
+.m-error { color: #e05252; }
+
+.m-retry {
+  background: #B9E42B;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 600;
+}
+
+/* Swipeable carousel: one full-width card per slide, native touch scroll snap. */
+.m-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.m-carousel::-webkit-scrollbar { display: none; }
+
+.m-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  scroll-snap-align: center;
+  box-sizing: border-box;
+  padding: 0 2px;
+}
+
+.m-slide .pressure-gauge {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.m-dots {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.m-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+}
+
+.m-dot.active {
+  background: #B9E42B;
+  width: 9px;
+  height: 9px;
+}

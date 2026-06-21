@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Maskable: background fills the whole canvas; key content stays within the safe center. -->
+  <rect width="512" height="512" fill="#1e1e1e"/>
+  <!-- Gauge arc -->
+  <path d="M136 320 A136 136 0 1 1 376 320"
+        fill="none" stroke="#3a3a3a" stroke-width="26" stroke-linecap="round"/>
+  <path d="M136 320 A136 136 0 0 1 196 214"
+        fill="none" stroke="#B9E42B" stroke-width="26" stroke-linecap="round"/>
+  <!-- Needle -->
+  <line x1="256" y1="300" x2="316" y2="208" stroke="#B9E42B" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="256" cy="300" r="20" fill="#B9E42B"/>
+  <!-- Label -->
+  <text x="256" y="406" text-anchor="middle" font-family="Arial, sans-serif"
+        font-size="84" font-weight="700" fill="#ffffff">HL</text>
+</svg>

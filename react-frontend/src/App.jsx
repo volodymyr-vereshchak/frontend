@@ -13,6 +13,8 @@ import GRSTrendsPage from './components/GRSTrendsPage'
 import NightConsumptionPage from './components/NightConsumptionPage'
 import FlowRateCalcPage from './components/FlowRateCalcPage'
 import LoginPage from './components/LoginPage/LoginPage'
+import MobileApp from './mobile/MobileApp'
+import { useIsMobile } from './hooks/useIsMobile'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { UserProvider } from './contexts/UserContext'
 import { useUser } from './contexts/UserContext'
@@ -229,6 +231,12 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
   const handleDataChange = useCallback((data) => {
     setChartData(data || []);
   }, []);
+
+  // On phones, render the dedicated mobile shell (override with ?desktop=1).
+  const isMobile = useIsMobile();
+  if (isMobile) {
+    return <MobileApp />;
+  }
 
   return (
       <div className="App">

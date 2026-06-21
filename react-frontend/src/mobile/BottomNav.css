@@ -1,0 +1,35 @@
+.m-bottomnav {
+  display: flex;
+  align-items: stretch;
+  background: #232323;
+  border-top: 1px solid #3a3a3a;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.m-bottomnav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: none;
+  border: none;
+  color: #9a9a9a;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.m-bottomnav-item.active {
+  color: #B9E42B;
+}
+
+.m-bottomnav-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.m-bottomnav-label {
+  font-size: 11px;
+}
