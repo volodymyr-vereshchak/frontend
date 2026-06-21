@@ -27,16 +27,16 @@ const NightConsumption = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [tableData, setTableData] = useState([]);
-  const [isExporting, setIsExporting] = useState(false);
+  // Per-line hourly export tabs (ALL lines), built once on "Load" so the Excel
+  // export is instant and never re-queries the API. Keyed by lineId.
+  const [hourlySheets, setHourlySheets] = useState({});
   const [lineNames, setLineNames] = useState({});
   const [linesLoading, setLinesLoading] = useState(false);
 
-  // Trend lines (include_in_trends) — shown in the on-screen table.
-  const [physicalLines, setPhysicalLines] = useState([]);
-  const [virtualLines, setVirtualLines] = useState([]);
-  // ALL branch lines — used only for the Excel export (one sheet per line).
-  const [allPhysicalLines, setAllPhysicalLines] = useState([]);
-  const [allVirtualLines, setAllVirtualLines] = useState([]);
+  // Full branch line lists (objects keep include_in_trends / include_in_report
+  // flags). Subsets are derived: table = trend lines, export = report lines.
+  const [physicalLinesAll, setPhysicalLinesAll] = useState([]);
+  const [virtualLinesAll, setVirtualLinesAll] = useState([]);
 
   // Branch + lumg data
   const [branches, setBranches] = useState([]);
@@ -85,7 +85,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
       try {
         const branchLumgIds = lumgs.filter(l => l.branch_id === selectedBranchId).map(l => l.id);
 
-        // ALL physical lines of the branch; trend subset (include_in_trends) drives the table.
+        // ALL physical lines of the branch (keep flags; subsets derived via memos).
         let allPhys = [];
         if (branchLumgIds.length > 0) {
           const arrays = await Promise.all(
@@ -93,24 +93,20 @@ const NightConsumption = ({ isOpen, onClose }) => {
           );
           allPhys = arrays.flat().filter(Boolean);
         }
-        const phys = allPhys.filter(l => l.include_in_trends);
 
-        // ALL virtual lines of the branch; trend subset drives the table.
-        const allVirt = await fetch(
+        // ALL virtual lines of the branch.
+        const allVirtRaw = await fetch(
           `${(window.APP_CONFIG?.API_URL || '/api')}/virtual_lines/?branch_id=${selectedBranchId}`,
           { credentials: 'include' }
         ).then(r => r.ok ? r.json() : []).catch(() => []);
-        const virt = (Array.isArray(allVirt) ? allVirt : []).filter(l => l.include_in_trends);
+        const allVirt = Array.isArray(allVirtRaw) ? allVirtRaw : [];
 
-        setPhysicalLines(phys);
-        setVirtualLines(virt);
-        setAllPhysicalLines(allPhys);
-        setAllVirtualLines(Array.isArray(allVirt) ? allVirt : []);
+        setPhysicalLinesAll(allPhys);
+        setVirtualLinesAll(allVirt);
 
-        // Names for ALL lines (export needs every line's name).
+        // Names for every line (table + export use different subsets).
         const namesMap = {};
-        [...allPhys, ...(Array.isArray(allVirt) ? allVirt : [])]
-          .forEach(l => { namesMap[l.id] = l.name || `Лінія ${l.id}`; });
+        [...allPhys, ...allVirt].forEach(l => { namesMap[l.id] = l.name || `Лінія ${l.id}`; });
         setLineNames(namesMap);
       } catch (err) {
         console.error('Error loading lines for branch:', err);
@@ -122,14 +118,28 @@ const NightConsumption = ({ isOpen, onClose }) => {
     loadLinesByBranch();
   }, [isOpen, selectedBranchId, lumgs]);
 
-  const physicalLineIds = useMemo(() => physicalLines.map(l => l.id), [physicalLines]);
-  const virtualLineIds  = useMemo(() => virtualLines.map(l => l.id),  [virtualLines]);
-  const grsLines        = useMemo(() => [...physicalLineIds, ...virtualLineIds], [physicalLineIds, virtualLineIds]);
+  // Report lines = physical with include_in_report + ALL virtual lines. Both the
+  // on-screen table and the Excel export (one sheet per line) use this same set.
+  const reportPhysicalLineIds = useMemo(() => physicalLinesAll.filter(l => l.include_in_report).map(l => l.id), [physicalLinesAll]);
+  const reportVirtualLineIds  = useMemo(() => virtualLinesAll.map(l => l.id), [virtualLinesAll]);
+  const grsLines              = useMemo(() => [...reportPhysicalLineIds, ...reportVirtualLineIds], [reportPhysicalLineIds, reportVirtualLineIds]);
 
-  // ALL branch lines (export only) split by physical/virtual for the two endpoints.
-  const allPhysicalLineIds = useMemo(() => allPhysicalLines.map(l => l.id), [allPhysicalLines]);
-  const allVirtualLineIds  = useMemo(() => allVirtualLines.map(l => l.id),  [allVirtualLines]);
-  const allLines           = useMemo(() => [...allPhysicalLineIds, ...allVirtualLineIds], [allPhysicalLineIds, allVirtualLineIds]);
+  // Column widths sized to the DATA (not the header). Data is monospace, so char
+  // count maps to a predictable px width; with table-layout:fixed the long line-name
+  // headers then wrap to this width instead of stretching the column.
+  const formatCell = (v) => (v !== null && v !== undefined ? Number(v).toFixed(2) : '-');
+  const colWidths = useMemo(() => {
+    if (!tableData.length) return null;
+    const CHAR_PX = 8.5;   // ~width of one monospace char at 14px
+    const PADDING = 26;    // cell padding + borders
+    const MIN = 52;
+    const px = (chars) => Math.max(MIN, Math.round(chars * CHAR_PX + PADDING));
+    const dateChars = Math.max(1, ...tableData.map(r => String(r.date).length));
+    const lineCols = grsLines.map(lineId =>
+      px(Math.max(1, ...tableData.map(r => formatCell(r[`line_${lineId}`]).length)))
+    );
+    return [px(dateChars), ...lineCols];
+  }, [tableData, grsLines]);
 
   const calculateNightConsumption = async () => {
     if (grsLines.length === 0) {
@@ -147,13 +157,15 @@ const NightConsumption = ({ isOpen, onClose }) => {
       const { from: commercialFrom, to: commercialTo } =
         commercialHourlyRange(dateRange.fromDate, dateRange.toDate);
 
-      // Fetch physical and virtual hourly data from separate endpoints (like old HTML page)
+      // Fetch hourly + enterprise for the report lines (one load), so the summary
+      // table AND the per-line Excel tabs are both served from memory — the export
+      // never re-queries the API.
       const [physHourly, virtHourly, enterpriseData] = await Promise.all([
-        physicalLineIds.length > 0
-          ? archiveDataApi.getHourlyData(physicalLineIds, commercialFrom, commercialTo)
+        reportPhysicalLineIds.length > 0
+          ? archiveDataApi.getHourlyData(reportPhysicalLineIds, commercialFrom, commercialTo)
           : Promise.resolve([]),
-        virtualLineIds.length > 0
-          ? archiveDataVirtualApi.getHourlyDataVirtual(virtualLineIds, commercialFrom, commercialTo)
+        reportVirtualLineIds.length > 0
+          ? archiveDataVirtualApi.getHourlyDataVirtual(reportVirtualLineIds, commercialFrom, commercialTo)
           : Promise.resolve([]),
         getEnterpriseWithCache(
           grsLines, commercialFrom, commercialTo, 'hourly',
@@ -165,6 +177,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
       if (!hourlyData || hourlyData.length === 0) {
         setError(t('noDataAvailable'));
         setTableData([]);
+        setHourlySheets({});
         return;
       }
 
@@ -173,10 +186,12 @@ const NightConsumption = ({ isOpen, onClose }) => {
         console.warn('No enterprise data available, using GS volumes only');
       }
 
-      // Per-hour NET map (single source) -> summary MIN table (trend lines only).
+      // Per-hour NET map (single source) -> summary MIN table + per-line export tabs,
+      // both over the same report lines.
       const netMap = buildNetByDayLineHour(hourlyData, enterpriseData || []);
       const nightData = minNightRowsFromMap(netMap, grsLines);
       setTableData(nightData);
+      setHourlySheets(buildHourlySheets(netMap, nightData.map(r => r.date), grsLines));
 
     } catch (err) {
       setError(t('errorLoadingData'));
@@ -295,42 +310,17 @@ const NightConsumption = ({ isOpen, onClose }) => {
     calculateNightConsumption();
   };
 
-  const exportToExcel = async () => {
+  const exportToExcel = () => {
     if (!tableData || tableData.length === 0) {
       alert(t('noDataExport'));
       return;
     }
 
-    setIsExporting(true);
     try {
-      // The on-screen summary table uses trend lines only; the export needs the
-      // per-line hourly tabs for ALL branch lines, so fetch their data here.
-      const dates = tableData.map(r => r.date);
-      let hourlySheets = {};
-      const exportLineIds = allLines.length > 0 ? allLines : grsLines;
+      // Everything is already in memory (built on "Load"): no API calls here.
+      const exportLineIds = grsLines;
 
-      if (exportLineIds.length > 0) {
-        const { from: commercialFrom, to: commercialTo } =
-          commercialHourlyRange(dateRange.fromDate, dateRange.toDate);
-
-        const [physHourly, virtHourly, enterpriseData] = await Promise.all([
-          allPhysicalLineIds.length > 0
-            ? archiveDataApi.getHourlyData(allPhysicalLineIds, commercialFrom, commercialTo)
-            : Promise.resolve([]),
-          allVirtualLineIds.length > 0
-            ? archiveDataVirtualApi.getHourlyDataVirtual(allVirtualLineIds, commercialFrom, commercialTo)
-            : Promise.resolve([]),
-          getEnterpriseWithCache(
-            exportLineIds, commercialFrom, commercialTo, 'hourly',
-            (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
-          )
-        ]);
-        const allHourly = [...(physHourly || []), ...(virtHourly || [])];
-        const netMap = buildNetByDayLineHour(allHourly, enterpriseData || []);
-        hourlySheets = buildHourlySheets(netMap, dates, exportLineIds);
-      }
-
-      // Summary sheet (trend lines) — unchanged.
+      // Summary sheet — same report lines as the table.
       const excelData = tableData.map(row => {
         const excelRow = { [t('date')]: row.date };
         grsLines.forEach(lineId => {
@@ -384,8 +374,6 @@ const NightConsumption = ({ isOpen, onClose }) => {
     } catch (err) {
       console.error('Error exporting to Excel:', err);
       alert(t('errorExportingData'));
-    } finally {
-      setIsExporting(false);
     }
   };
 
@@ -472,15 +460,24 @@ const NightConsumption = ({ isOpen, onClose }) => {
                   className="export-button"
                   onClick={exportToExcel}
                   title={t('exportToExcel')}
-                  disabled={isExporting}
                 >
                   <ExcelIcon />
-                  <span>{isExporting ? t('loading') : t('exportToExcel')}</span>
+                  <span>{t('exportToExcel')}</span>
                 </button>
               </div>
 
               <div className="night-table-wrapper">
-                <table className="night-consumption-table">
+                <table
+                  className="night-consumption-table"
+                  style={colWidths ? { tableLayout: 'fixed', width: 'auto' } : undefined}
+                >
+                  {colWidths && (
+                    <colgroup>
+                      {colWidths.map((w, i) => (
+                        <col key={i} style={{ width: `${w}px` }} />
+                      ))}
+                    </colgroup>
+                  )}
                   <thead>
                     <tr>
                       <th>{t('date')}</th>
@@ -496,11 +493,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
                       <tr key={index}>
                         <td>{row.date}</td>
                         {grsLines.map(lineId => (
-                          <td key={lineId}>
-                            {row[`line_${lineId}`] !== null
-                              ? row[`line_${lineId}`].toFixed(2)
-                              : '-'}
-                          </td>
+                          <td key={lineId}>{formatCell(row[`line_${lineId}`])}</td>
                         ))}
                       </tr>
                     ))}

@@ -100,10 +100,14 @@
 }
 
 .night-consumption-table thead th {
-  padding: 12px 15px;
+  padding: 12px 10px;
   text-align: left;
   font-weight: 600;
-  white-space: nowrap;
+  /* Header wraps to the data-driven column width instead of widening the column. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  vertical-align: bottom;
   border-right: 1px solid #495057;
 }
 
@@ -136,7 +140,8 @@
 }
 
 .night-consumption-table tbody td {
-  padding: 10px 15px;
+  padding: 10px;
+  white-space: nowrap;
   border-bottom: 1px solid #e9ecef;
   border-right: 1px solid #e9ecef;
 }
