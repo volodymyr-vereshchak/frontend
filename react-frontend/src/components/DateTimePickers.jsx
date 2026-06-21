@@ -9,7 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 registerLocale('ru', ru);
 registerLocale('uk', uk);
 
-const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, initialDateRange, initialEnabled }) => {
+const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, initialDateRange, initialEnabled, hideEnableCheckbox = false }) => {
   const { language, t } = useLanguage();
 
   // Set default start datetime to beginning of month at 07:00
@@ -306,12 +306,14 @@ const DateTimePickers = ({ onDateRangeChange, onDateFilterToggle, archiveType, i
           todayButton={t('today')}
         />
 
-        <input
-          type="checkbox"
-          checked={isEnabled}
-          onChange={(e) => handleEnabledChange(e.target.checked)}
-          className="enable-checkbox"
-        />
+        {!hideEnableCheckbox && (
+          <input
+            type="checkbox"
+            checked={isEnabled}
+            onChange={(e) => handleEnabledChange(e.target.checked)}
+            className="enable-checkbox"
+          />
+        )}
       </div>
     </div>
   );

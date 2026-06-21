@@ -27,12 +27,16 @@ const NightConsumption = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [tableData, setTableData] = useState([]);
+  const [isExporting, setIsExporting] = useState(false);
   const [lineNames, setLineNames] = useState({});
   const [linesLoading, setLinesLoading] = useState(false);
 
-  // Physical and virtual lines loaded per branch
+  // Trend lines (include_in_trends) — shown in the on-screen table.
   const [physicalLines, setPhysicalLines] = useState([]);
   const [virtualLines, setVirtualLines] = useState([]);
+  // ALL branch lines — used only for the Excel export (one sheet per line).
+  const [allPhysicalLines, setAllPhysicalLines] = useState([]);
+  const [allVirtualLines, setAllVirtualLines] = useState([]);
 
   // Branch + lumg data
   const [branches, setBranches] = useState([]);
@@ -81,28 +85,32 @@ const NightConsumption = ({ isOpen, onClose }) => {
       try {
         const branchLumgIds = lumgs.filter(l => l.branch_id === selectedBranchId).map(l => l.id);
 
-        // Physical lines with include_in_trends=true
-        let phys = [];
+        // ALL physical lines of the branch; trend subset (include_in_trends) drives the table.
+        let allPhys = [];
         if (branchLumgIds.length > 0) {
           const arrays = await Promise.all(
             branchLumgIds.map(lid => lineApi.getLinesByLumg(lid))
           );
-          phys = arrays.flat().filter(l => l && l.include_in_trends);
+          allPhys = arrays.flat().filter(Boolean);
         }
+        const phys = allPhys.filter(l => l.include_in_trends);
 
-        // Virtual lines with include_in_trends=true for this branch
-        const virt = await lumgApi.getAll()
-          .then(() => fetch(
-            `${(window.APP_CONFIG?.API_URL || '/api')}/virtual_lines/?include_in_trends=true&branch_id=${selectedBranchId}`,
-            { credentials: 'include' }
-          ).then(r => r.ok ? r.json() : []))
-          .catch(() => []);
+        // ALL virtual lines of the branch; trend subset drives the table.
+        const allVirt = await fetch(
+          `${(window.APP_CONFIG?.API_URL || '/api')}/virtual_lines/?branch_id=${selectedBranchId}`,
+          { credentials: 'include' }
+        ).then(r => r.ok ? r.json() : []).catch(() => []);
+        const virt = (Array.isArray(allVirt) ? allVirt : []).filter(l => l.include_in_trends);
 
         setPhysicalLines(phys);
         setVirtualLines(virt);
+        setAllPhysicalLines(allPhys);
+        setAllVirtualLines(Array.isArray(allVirt) ? allVirt : []);
 
+        // Names for ALL lines (export needs every line's name).
         const namesMap = {};
-        [...phys, ...virt].forEach(l => { namesMap[l.id] = l.name || `Лінія ${l.id}`; });
+        [...allPhys, ...(Array.isArray(allVirt) ? allVirt : [])]
+          .forEach(l => { namesMap[l.id] = l.name || `Лінія ${l.id}`; });
         setLineNames(namesMap);
       } catch (err) {
         console.error('Error loading lines for branch:', err);
@@ -117,6 +125,11 @@ const NightConsumption = ({ isOpen, onClose }) => {
   const physicalLineIds = useMemo(() => physicalLines.map(l => l.id), [physicalLines]);
   const virtualLineIds  = useMemo(() => virtualLines.map(l => l.id),  [virtualLines]);
   const grsLines        = useMemo(() => [...physicalLineIds, ...virtualLineIds], [physicalLineIds, virtualLineIds]);
+
+  // ALL branch lines (export only) split by physical/virtual for the two endpoints.
+  const allPhysicalLineIds = useMemo(() => allPhysicalLines.map(l => l.id), [allPhysicalLines]);
+  const allVirtualLineIds  = useMemo(() => allVirtualLines.map(l => l.id),  [allVirtualLines]);
+  const allLines           = useMemo(() => [...allPhysicalLineIds, ...allVirtualLineIds], [allPhysicalLineIds, allVirtualLineIds]);
 
   const calculateNightConsumption = async () => {
     if (grsLines.length === 0) {
@@ -160,12 +173,9 @@ const NightConsumption = ({ isOpen, onClose }) => {
         console.warn('No enterprise data available, using GS volumes only');
       }
 
-      // Calculate night consumption with enterprise subtraction
-      const nightData = calculateMinNightFlow(
-        hourlyData,
-        grsLines,
-        enterpriseData || []
-      );
+      // Per-hour NET map (single source) -> summary MIN table (trend lines only).
+      const netMap = buildNetByDayLineHour(hourlyData, enterpriseData || []);
+      const nightData = minNightRowsFromMap(netMap, grsLines);
       setTableData(nightData);
 
     } catch (err) {
@@ -176,114 +186,105 @@ const NightConsumption = ({ isOpen, onClose }) => {
     }
   };
 
-  const calculateMinNightFlow = (hourlyData, lineIds, enterpriseData = []) => {
-    // STEP 1: Create enterprise lookup map normalized to YYYY-MM-DDTHH (13 chars)
-    // API returns "2025-12-01T03:00:00", cache returns "2025-12-01T03" — normalize both
-    const enterpriseMap = {};
+  // Per-line hourly columns for the Excel export (one sheet per line). The summary
+  // table keeps the MIN over hours 0-5; these tabs show the per-hour NET flow.
+  const NIGHT_HOURS = [21, 22, 23, 0, 1, 2, 3, 4]; // sheet column order
+  // Hours we must retain NET for: {0..5} feeds the summary MIN, {21,22,23} the tabs.
+  const MIN_HOURS = [0, 1, 2, 3, 4, 5];
 
+  // Single source of truth for both the summary table and the per-line tabs:
+  // { commDate: { lineId: { hour: netVolume } } } where NET = max(0, GS - enterprise).
+  const buildNetByDayLineHour = (hourlyData, enterpriseData = []) => {
+    // Enterprise lookup normalized to YYYY-MM-DDTHH (13 chars). API returns
+    // "2025-12-01T03:00:00", cache returns "2025-12-01T03" — normalize both.
+    const enterpriseMap = {};
     enterpriseData.forEach(entry => {
       const lineId = entry.line_id;
       const normalizedPeriod = String(entry.period || '').replace(' ', 'T').slice(0, 13);
-
-      if (!enterpriseMap[lineId]) {
-        enterpriseMap[lineId] = {};
-      }
+      if (!enterpriseMap[lineId]) enterpriseMap[lineId] = {};
 
       let totalVolume = 0;
       if (entry.devices && Array.isArray(entry.devices)) {
-        entry.devices.forEach(device => {
-          totalVolume += device.volume || 0;
-        });
+        entry.devices.forEach(device => { totalVolume += device.volume || 0; });
       } else if (entry.total_volume !== undefined) {
         totalVolume = entry.total_volume;
       }
-
       enterpriseMap[lineId][normalizedPeriod] = totalVolume;
     });
 
-    // STEP 2: Group hourly data by date and line for night period (0-5 hours)
-    const dataByDateAndLine = {};
+    const wantHours = new Set([...MIN_HOURS, ...NIGHT_HOURS]);
+    const map = {}; // commDate -> lineId -> hour -> net
 
     hourlyData.forEach((record) => {
-      // CRITICAL: Parse datetime WITHOUT timezone conversion
-      // Server sends "2025-10-01T00:00:00" which means LOCAL time 2025-10-01 00:00
-      // We must NOT let browser convert it to its timezone
-
+      // CRITICAL: parse datetime WITHOUT timezone conversion. Server sends
+      // "2025-10-01T00:00:00" meaning LOCAL time — must NOT let the browser shift it.
       let date, hour;
       const periodStr = String(record.period);
-
-      // Extract date and hour using REGEX to avoid ANY Date object creation
-      // This prevents timezone issues completely
       const isoMatch = periodStr.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
-
       if (isoMatch) {
-        // Format: "2025-10-01T00:00:00" or "2025-10-01 00:00:00"
         const [, year, month, day, hours] = isoMatch;
         date = `${year}-${month}-${day}`;
         hour = parseInt(hours, 10);
+      } else if (periodStr.includes('T')) {
+        const [datePart, timePart] = periodStr.split('T');
+        date = datePart;
+        hour = parseInt(timePart.substring(0, 2), 10);
+      } else if (periodStr.includes(' ')) {
+        const [datePart, timePart] = periodStr.split(' ');
+        date = datePart;
+        hour = parseInt(timePart.substring(0, 2), 10);
       } else {
-        // Fallback: try simple split (shouldn't happen with correct API)
-        if (periodStr.includes('T')) {
-          const [datePart, timePart] = periodStr.split('T');
-          date = datePart;
-          hour = parseInt(timePart.substring(0, 2), 10);
-        } else if (periodStr.includes(' ')) {
-          const [datePart, timePart] = periodStr.split(' ');
-          date = datePart;
-          hour = parseInt(timePart.substring(0, 2), 10);
-        } else {
-          return; // Skip invalid format
-        }
+        return; // Skip invalid format
       }
 
-      // Only consider hours 00:00 to 05:00 (inclusive)
-      if (hour >= 0 && hour <= 5) {
-        const lineId = record.line_id;
-        const fullDatetime = periodStr; // Keep full datetime for enterprise lookup
+      if (!wantHours.has(hour)) return;
 
-        // Attribute these early-morning hours to the COMMERCIAL day they belong to:
-        // 00:00–06:00 of calendar date C is part of commercial day C−1.
-        const commDate = commercialDayOf(date, hour);
+      const lineId = record.line_id;
+      // Attribute the hour to the COMMERCIAL day it belongs to (00:00–06:00 of
+      // calendar date C is part of commercial day C−1; 21:00–23:00 stay on C).
+      const commDate = commercialDayOf(date, hour);
 
-        // STEP 3: Calculate NET = MAX(0, GS Volume - Enterprise Volume)
-        // Normalize to 13 chars to match enterprise map key (YYYY-MM-DDTHH)
-        const normalizedPeriod = fullDatetime.replace(' ', 'T').slice(0, 13);
-        const gsVolume = record.volume !== undefined ? record.volume : (record.flow || 0);
-        const enterpriseVolume = (enterpriseMap[lineId]?.[normalizedPeriod]) || 0;
-        const netVolume = Math.max(0, gsVolume - enterpriseVolume);
+      const normalizedPeriod = periodStr.replace(' ', 'T').slice(0, 13);
+      const gsVolume = record.volume !== undefined ? record.volume : (record.flow || 0);
+      const enterpriseVolume = (enterpriseMap[lineId]?.[normalizedPeriod]) || 0;
+      const netVolume = Math.max(0, gsVolume - enterpriseVolume);
 
-        if (!dataByDateAndLine[commDate]) {
-          dataByDateAndLine[commDate] = {};
-        }
-
-        if (!dataByDateAndLine[commDate][lineId]) {
-          dataByDateAndLine[commDate][lineId] = [];
-        }
-
-        // Store NET volume instead of raw GS volume
-        dataByDateAndLine[commDate][lineId].push(netVolume);
-      }
+      if (!map[commDate]) map[commDate] = {};
+      if (!map[commDate][lineId]) map[commDate][lineId] = {};
+      map[commDate][lineId][hour] = netVolume;
     });
 
-    // STEP 4: Find MIN(NET volumes) for each date and line
-    const result = [];
+    return map;
+  };
 
-    Object.keys(dataByDateAndLine).sort().forEach(date => {
+  // Summary table rows: MIN(NET over hours 0-5) per commercial day per line.
+  const minNightRowsFromMap = (map, lineIds) => {
+    return Object.keys(map).sort().map(date => {
       const row = { date };
-
       lineIds.forEach(lineId => {
-        const netVolumes = dataByDateAndLine[date][lineId];
-        if (netVolumes && netVolumes.length > 0) {
-          row[`line_${lineId}`] = Math.min(...netVolumes);
-        } else {
-          row[`line_${lineId}`] = null;
-        }
+        const byHour = map[date][lineId];
+        const vals = byHour ? MIN_HOURS.map(h => byHour[h]).filter(v => v !== undefined) : [];
+        row[`line_${lineId}`] = vals.length > 0 ? Math.min(...vals) : null;
       });
-
-      result.push(row);
+      return row;
     });
+  };
 
-    return result;
+  // Per-line export tabs: { lineId: [ { date, 21, 22, ... }, ... ] } over the same
+  // commercial days as the summary table (every selected line gets a sheet).
+  const buildHourlySheets = (map, dates, lineIds) => {
+    const sheets = {};
+    lineIds.forEach(lineId => {
+      sheets[lineId] = dates.map(date => {
+        const byHour = map[date]?.[lineId] || {};
+        const row = { date };
+        NIGHT_HOURS.forEach(h => {
+          row[h] = byHour[h] !== undefined ? byHour[h] : null;
+        });
+        return row;
+      });
+    });
+    return sheets;
   };
 
   const handleDateRangeChange = (newDateRange) => {
@@ -294,49 +295,97 @@ const NightConsumption = ({ isOpen, onClose }) => {
     calculateNightConsumption();
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (!tableData || tableData.length === 0) {
       alert(t('noDataExport'));
       return;
     }
 
+    setIsExporting(true);
     try {
-      // Prepare data for Excel
+      // The on-screen summary table uses trend lines only; the export needs the
+      // per-line hourly tabs for ALL branch lines, so fetch their data here.
+      const dates = tableData.map(r => r.date);
+      let hourlySheets = {};
+      const exportLineIds = allLines.length > 0 ? allLines : grsLines;
+
+      if (exportLineIds.length > 0) {
+        const { from: commercialFrom, to: commercialTo } =
+          commercialHourlyRange(dateRange.fromDate, dateRange.toDate);
+
+        const [physHourly, virtHourly, enterpriseData] = await Promise.all([
+          allPhysicalLineIds.length > 0
+            ? archiveDataApi.getHourlyData(allPhysicalLineIds, commercialFrom, commercialTo)
+            : Promise.resolve([]),
+          allVirtualLineIds.length > 0
+            ? archiveDataVirtualApi.getHourlyDataVirtual(allVirtualLineIds, commercialFrom, commercialTo)
+            : Promise.resolve([]),
+          getEnterpriseWithCache(
+            exportLineIds, commercialFrom, commercialTo, 'hourly',
+            (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
+          )
+        ]);
+        const allHourly = [...(physHourly || []), ...(virtHourly || [])];
+        const netMap = buildNetByDayLineHour(allHourly, enterpriseData || []);
+        hourlySheets = buildHourlySheets(netMap, dates, exportLineIds);
+      }
+
+      // Summary sheet (trend lines) — unchanged.
       const excelData = tableData.map(row => {
         const excelRow = { [t('date')]: row.date };
-
         grsLines.forEach(lineId => {
           const columnName = lineNames[lineId] || `Line ${lineId}`;
           const value = row[`line_${lineId}`];
           excelRow[columnName] = value !== null ? value : '';
         });
-
         return excelRow;
       });
 
-      // Create workbook
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-      // Auto-size columns
-      const columnWidths = [
-        { wch: 15 }, // Date column
-        ...grsLines.map(() => ({ wch: 15 })) // Line columns
-      ];
-      worksheet['!cols'] = columnWidths;
-
-      // Add worksheet to workbook
+      worksheet['!cols'] = [{ wch: 15 }, ...grsLines.map(() => ({ wch: 15 }))];
       XLSX.utils.book_append_sheet(workbook, worksheet, t('nightConsumption'));
 
-      // Generate filename
+      // Per-line tabs for ALL lines: hourly NET flows (21:00-04:00) per commercial
+      // day. Excel sheet names must be unique, <=31 chars and free of : \ / ? * [ ].
+      const usedSheetNames = new Set([t('nightConsumption').toLowerCase()]);
+      const sanitizeSheetName = (raw) => {
+        let base = String(raw || 'Line').replace(/[:\\/?*[\]]/g, ' ').trim().slice(0, 31) || 'Line';
+        let name = base;
+        let i = 2;
+        while (usedSheetNames.has(name.toLowerCase())) {
+          const suffix = `~${i++}`;
+          name = base.slice(0, 31 - suffix.length) + suffix;
+        }
+        usedSheetNames.add(name.toLowerCase());
+        return name;
+      };
+
+      const hourHeaders = NIGHT_HOURS.map(h => `${String(h).padStart(2, '0')}:00`);
+      exportLineIds.forEach(lineId => {
+        const rows = (hourlySheets[lineId] || []).map(row => {
+          const out = { [t('date')]: row.date };
+          NIGHT_HOURS.forEach((h, idx) => {
+            out[hourHeaders[idx]] = row[h] !== null && row[h] !== undefined ? row[h] : '';
+          });
+          return out;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(rows, {
+          header: [t('date'), ...hourHeaders],
+        });
+        ws['!cols'] = [{ wch: 12 }, ...hourHeaders.map(() => ({ wch: 12 }))];
+        XLSX.utils.book_append_sheet(workbook, ws, sanitizeSheetName(lineNames[lineId] || `Line ${lineId}`));
+      });
+
       const branchName = branches.find(b => b.id === selectedBranchId)?.name || '';
       const filename = `${t('nightConsumption')}${branchName ? '_' + branchName : ''}_${dateRange.fromDate}_${dateRange.toDate}.xlsx`;
-
-      // Save file
       XLSX.writeFile(workbook, filename);
     } catch (err) {
       console.error('Error exporting to Excel:', err);
       alert(t('errorExportingData'));
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -385,6 +434,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
                 onDateFilterToggle={() => {}}
                 archiveType="daily"
                 initialDateRange={dateRange}
+                hideEnableCheckbox
               />
             </div>
 
@@ -422,9 +472,10 @@ const NightConsumption = ({ isOpen, onClose }) => {
                   className="export-button"
                   onClick={exportToExcel}
                   title={t('exportToExcel')}
+                  disabled={isExporting}
                 >
                   <ExcelIcon />
-                  <span>{t('exportToExcel')}</span>
+                  <span>{isExporting ? t('loading') : t('exportToExcel')}</span>
                 </button>
               </div>
 
