@@ -43,7 +43,21 @@ export function convertIntArrayToFloatArray(intArray) {
 }
 
 // edit_type_ids that store time-of-day as seconds since midnight
-const TIME_EDIT_TYPE_IDS = new Set([28, 29, 30, 31, 128]);
+const TIME_EDIT_TYPE_IDS = new Set([30, 31, 128]);
+
+// edit_type_ids that store a DST switch rule, NOT a time-of-day. The device
+// packs them as big-endian bytes [tag, hour, ruleConst, month]:
+//   28 "Коли на літній час"  → 01 03 C9 03  → березень, 03:00
+//   29 "Коли на зимовий час" → 01 04 C9 0A  → жовтень,  04:00
+// The constant 0xC9 byte encodes the "last Sunday" rule (identical for both
+// transitions), so there is no literal day/minute — only month + switch hour.
+const DST_RULE_EDIT_TYPE_IDS = new Set([28, 29]);
+
+// Ukrainian month names in genitive case (for "остання неділя <місяця>").
+const UA_MONTHS_GENITIVE = [
+  '', 'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+  'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня',
+];
 
 /**
  * Format a raw int from the edit archive into a human-readable string.
@@ -61,6 +75,23 @@ const TIME_EDIT_TYPE_IDS = new Set([28, 29, 30, 31, 128]);
  */
 export function formatEditValue(rawInt, editTypeId = null) {
   if (rawInt === null || rawInt === undefined) return '—';
+
+  // DST switch rule (e.g. "Коли на літній/зимовий час"): decode the packed
+  // big-endian bytes [tag, hour, ruleConst, month] into a readable rule.
+  // Handled before the small-int / float paths because the raw value is a
+  // packed dword, not a number.
+  if (DST_RULE_EDIT_TYPE_IDS.has(editTypeId)) {
+    const buf = new ArrayBuffer(4);
+    const dv = new DataView(buf);
+    dv.setInt32(0, rawInt, false); // big-endian
+    const hour = dv.getUint8(1);
+    const month = dv.getUint8(3);
+    const monthName = UA_MONTHS_GENITIVE[month];
+    if (monthName && hour <= 23) {
+      return `остання неділя ${monthName}, ${String(hour).padStart(2, '0')}:00`;
+    }
+    return String(rawInt); // unexpected packing → show raw
+  }
 
   if (rawInt >= -32767 && rawInt <= 32767) return String(rawInt);
 
