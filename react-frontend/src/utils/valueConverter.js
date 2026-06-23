@@ -59,6 +59,19 @@ const UA_MONTHS_GENITIVE = [
   'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня',
 ];
 
+// edit_type_ids whose value is a small integer packed in a dword (high word is
+// a 0x0102 type/len tag), so the real value is the low 16 bits. The old
+// formatter mis-read these as floats and showed garbage like "2.39e-38".
+//   32  Оперативний інтервал, хв.  → 01 02 00 1E → 30
+//   131 Контрактна година         → 01 02 00 07 → 7
+//   194 Порядок байтів (функц.6)   → 01 02 00 01 → 1
+//   199 Адреса Обчислювача         → 01 02 00 57 → 87
+const INT16_EDIT_TYPE_IDS = new Set([32, 131, 194, 199]);
+
+// edit_type_ids whose 4 bytes are ASCII text (e.g. a pipeline-name fragment).
+//   0  Найменування трубопроводу  → 20 20 20 20 → "    " (порожня назва)
+const TEXT_EDIT_TYPE_IDS = new Set([0]);
+
 /**
  * Format a raw int from the edit archive into a human-readable string.
  *
@@ -91,6 +104,26 @@ export function formatEditValue(rawInt, editTypeId = null) {
       return `остання неділя ${monthName}, ${String(hour).padStart(2, '0')}:00`;
     }
     return String(rawInt); // unexpected packing → show raw
+  }
+
+  // Small integer wrapped in a packed dword: the value is the low 16 bits.
+  if (INT16_EDIT_TYPE_IDS.has(editTypeId)) {
+    return String(rawInt & 0xFFFF);
+  }
+
+  // 4-byte ASCII text: decode printable bytes, trim trailing spaces/nulls.
+  if (TEXT_EDIT_TYPE_IDS.has(editTypeId)) {
+    const buf = new ArrayBuffer(4);
+    const dv = new DataView(buf);
+    dv.setInt32(0, rawInt, false); // big-endian
+    let s = '';
+    for (let i = 0; i < 4; i++) {
+      const c = dv.getUint8(i);
+      if (c === 0) continue;
+      s += (c >= 32 && c < 127) ? String.fromCharCode(c) : '.';
+    }
+    s = s.replace(/\s+$/, '');
+    return s.length ? s : '—';
   }
 
   if (rawInt >= -32767 && rawInt <= 32767) return String(rawInt);
