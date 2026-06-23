@@ -218,7 +218,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
             return resolveEditName(value, row.old_value, row.new_value) || '';
           }
           if (archiveType === 'edit' && (col.key === 'old_value' || col.key === 'new_value')) {
-            return formatEditValue(value, row.edit_type_id ?? null);
+            return formatEditValue(value, row.edit_type_id ?? null, row.gas_volume_calc_type_id ?? null);
           }
           if (typeof value === 'number') return value;
           return value || '';
@@ -793,7 +793,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     }
     // Edit archive: smart-format raw int values (handles enums, small coefficients, time, floats)
     if (archiveType === 'edit' && (key === 'old_value' || key === 'new_value')) {
-      return formatEditValue(value, row?.edit_type_id ?? null);
+      return formatEditValue(value, row?.edit_type_id ?? null, row?.gas_volume_calc_type_id ?? null);
     }
 
     if (key === 'period') {

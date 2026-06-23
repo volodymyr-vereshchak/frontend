@@ -42,8 +42,17 @@ export function convertIntArrayToFloatArray(intArray) {
   return intArray.map(convertIntToHexToFloat);
 }
 
-// edit_type_ids that store time-of-day as seconds since midnight
-const TIME_EDIT_TYPE_IDS = new Set([30, 31, 128]);
+// Computer (vychislitel) types whose edit-value byte layout we have actually
+// verified. The decoders below (DST / INT16 / TEXT / HEX) are firmware-specific,
+// so they are applied ONLY for these types; every other type keeps the generic
+// numeric/float handling. Verified so far:
+//   33 — "Флоутек-ТМ ГОСТ586" (Тернівка)
+const VERIFIED_CALC_TYPE_IDS = new Set([33]);
+
+// edit_type_ids that store time-of-day as seconds since midnight. 28/29 stay
+// here as the generic fallback for unverified types; for verified types they
+// are decoded as a DST rule instead (see DST_RULE_EDIT_TYPE_IDS).
+const TIME_EDIT_TYPE_IDS = new Set([28, 29, 30, 31, 128]);
 
 // edit_type_ids that store a DST switch rule, NOT a time-of-day. The device
 // packs them as big-endian bytes [tag, hour, ruleConst, month]:
@@ -72,6 +81,11 @@ const INT16_EDIT_TYPE_IDS = new Set([32, 131, 194, 199]);
 //   0  Найменування трубопроводу  → 20 20 20 20 → "    " (порожня назва)
 const TEXT_EDIT_TYPE_IDS = new Set([0]);
 
+// edit_type_ids that carry a packed event code (not a number/text/float), e.g.
+//   15 "Змінені параметри доступу / Додано користувача" → 00 11 0D 02
+// The field layout is unknown, so show the raw dword as hex for inspection.
+const HEX_EDIT_TYPE_IDS = new Set([15]);
+
 /**
  * Format a raw int from the edit archive into a human-readable string.
  *
@@ -84,16 +98,23 @@ const TEXT_EDIT_TYPE_IDS = new Set([0]);
  *
  * @param {number} rawInt      - Original integer value from DB
  * @param {number} editTypeId  - edit_type_id from the record (used for time detection)
+ * @param {number} calcTypeId  - gas_volume_calc_type_id (computer type); gates
+ *                               the firmware-specific decoders below
  * @returns {string}
  */
-export function formatEditValue(rawInt, editTypeId = null) {
+export function formatEditValue(rawInt, editTypeId = null, calcTypeId = null) {
   if (rawInt === null || rawInt === undefined) return '—';
+
+  // The decoders below (DST / HEX / INT16 / TEXT) are firmware-specific: their
+  // byte layout has only been verified for VERIFIED_CALC_TYPE_IDS. For any
+  // other computer type we skip them and use the generic numeric/float paths.
+  const isVerified = VERIFIED_CALC_TYPE_IDS.has(calcTypeId);
 
   // DST switch rule (e.g. "Коли на літній/зимовий час"): decode the packed
   // big-endian bytes [tag, hour, ruleConst, month] into a readable rule.
   // Handled before the small-int / float paths because the raw value is a
   // packed dword, not a number.
-  if (DST_RULE_EDIT_TYPE_IDS.has(editTypeId)) {
+  if (isVerified && DST_RULE_EDIT_TYPE_IDS.has(editTypeId)) {
     const buf = new ArrayBuffer(4);
     const dv = new DataView(buf);
     dv.setInt32(0, rawInt, false); // big-endian
@@ -106,13 +127,18 @@ export function formatEditValue(rawInt, editTypeId = null) {
     return String(rawInt); // unexpected packing → show raw
   }
 
+  // Packed event code with unknown layout: show the raw dword as hex.
+  if (isVerified && HEX_EDIT_TYPE_IDS.has(editTypeId)) {
+    return '0x' + (rawInt >>> 0).toString(16).toUpperCase().padStart(8, '0');
+  }
+
   // Small integer wrapped in a packed dword: the value is the low 16 bits.
-  if (INT16_EDIT_TYPE_IDS.has(editTypeId)) {
+  if (isVerified && INT16_EDIT_TYPE_IDS.has(editTypeId)) {
     return String(rawInt & 0xFFFF);
   }
 
   // 4-byte ASCII text: decode printable bytes, trim trailing spaces/nulls.
-  if (TEXT_EDIT_TYPE_IDS.has(editTypeId)) {
+  if (isVerified && TEXT_EDIT_TYPE_IDS.has(editTypeId)) {
     const buf = new ArrayBuffer(4);
     const dv = new DataView(buf);
     dv.setInt32(0, rawInt, false); // big-endian
