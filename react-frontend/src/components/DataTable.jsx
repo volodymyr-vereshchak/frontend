@@ -200,11 +200,25 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
       // Server-paginated archives (sys / edit) only keep the current page in
       // memory; pull the full dataset so the export is complete.
-      const exportData = serverPaged
+      const rawExportData = serverPaged
         ? ((archiveType === 'sys'
             ? await sysArchiveApi.getSysData(selectedLines, dateRange.fromDate, dateRange.toDate)
             : await editArchiveApi.getEditData(selectedLines, dateRange.fromDate, dateRange.toDate)) || [])
         : processedRowData;
+
+      // The API does not guarantee chronological row order (re-polled/backfilled
+      // periods can arrive out of sequence), and the on-screen table sorts a
+      // separate copy. Sort the export itself by period so every archive's
+      // spreadsheet is strictly chronological. Rows without a period keep a
+      // stable relative order at the end.
+      const exportData = rawExportData.slice().sort((a, b) => {
+        const ta = a.period ? new Date(a.period).getTime() : NaN;
+        const tb = b.period ? new Date(b.period).getTime() : NaN;
+        if (isNaN(ta) && isNaN(tb)) return 0;
+        if (isNaN(ta)) return 1;
+        if (isNaN(tb)) return -1;
+        return ta - tb;
+      });
 
       // Prepare header row
       const headers = columns.map(col => col.label);
