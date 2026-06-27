@@ -307,7 +307,8 @@ const EnterprisePollAnalysis = () => {
             period: record.period,
             volume: device?.volume ?? null,
             temperature: device?.temperature ?? null,
-            pressure: device?.pressure ?? null
+            pressure: device?.pressure ?? null,
+            pressureUnit: device?.pressure_unit ?? null
           };
         }).sort((a, b) => new Date(a.period) - new Date(b.period));
 
@@ -468,6 +469,13 @@ const EnterprisePollAnalysis = () => {
       temperature: avgTemperature,
       pressure: avgPressure
     };
+  }, [pollResults]);
+
+  // Pressure unit comes from the DPD API (pressUnit) and is the same for all
+  // rows; take the first non-empty one for the column header.
+  const pressureUnit = useMemo(() => {
+    const found = pollResults.find(r => r.pressureUnit);
+    return found ? found.pressureUnit : '';
   }, [pollResults]);
 
 
@@ -885,9 +893,9 @@ const EnterprisePollAnalysis = () => {
                         <thead>
                           <tr>
                             <th>{t('period')}</th>
-                            <th>{t('volume')}</th>
-                            <th>{t('temperature')}</th>
-                            <th>{t('pressure')}</th>
+                            <th>{t('volume')}, м³</th>
+                            <th>{t('temperature')}, °C</th>
+                            <th>{t('pressure')}{pressureUnit ? `, ${pressureUnit}` : ''}</th>
                           </tr>
                         </thead>
                         <tbody>

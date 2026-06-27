@@ -407,7 +407,7 @@
 .poll-results-table th {
   background-color: #333;
   padding: 10px 12px;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   position: sticky;
   top: 0;
@@ -416,6 +416,7 @@
 
 .poll-results-table td {
   padding: 8px 12px;
+  text-align: center;
   border-bottom: 1px solid #3a3a3a;
 }
 
