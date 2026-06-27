@@ -64,6 +64,14 @@ const NightConsumption = ({ isOpen, onClose }) => {
 
   const [dateRange, setDateRange] = useState(getInitialDateRange);
 
+  // Night-report variant:
+  //   'min'   — minimum NET over hours 00:00–05:00 (default)
+  //   'avg23' — average NET of hours 02:00 and 03:00 ((net[2]+net[3])/2)
+  const [reportType, setReportType] = useState('min');
+  // Per-day/line/hour NET map from the last load; kept so switching report type
+  // recomputes the table from memory without re-querying the API.
+  const [netMap, setNetMap] = useState({});
+
   // Load branches + lumgs on open
   useEffect(() => {
     if (!isOpen) return;
@@ -179,6 +187,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
         setError(t('noDataAvailable'));
         setTableData([]);
         setHourlySheets({});
+        setNetMap({});
         return;
       }
 
@@ -189,10 +198,11 @@ const NightConsumption = ({ isOpen, onClose }) => {
 
       // Per-hour NET map (single source) -> summary MIN table + per-line export tabs,
       // both over the same report lines.
-      const netMap = buildNetByDayLineHour(hourlyData, enterpriseData || []);
-      const nightData = minNightRowsFromMap(netMap, grsLines);
-      setTableData(nightData);
-      setHourlySheets(buildHourlySheets(netMap, nightData.map(r => r.date), grsLines));
+      const netMapResult = buildNetByDayLineHour(hourlyData, enterpriseData || []);
+      const dates = Object.keys(netMapResult).sort();
+      setNetMap(netMapResult);
+      setTableData(nightRowsFromMap(netMapResult, grsLines, reportType));
+      setHourlySheets(buildHourlySheets(netMapResult, dates, grsLines));
 
     } catch (err) {
       setError(t('errorLoadingData'));
@@ -207,6 +217,8 @@ const NightConsumption = ({ isOpen, onClose }) => {
   const NIGHT_HOURS = [21, 22, 23, 0, 1, 2, 3, 4]; // sheet column order
   // Hours we must retain NET for: {0..5} feeds the summary MIN, {21,22,23} the tabs.
   const MIN_HOURS = [0, 1, 2, 3, 4, 5];
+  // Hours averaged for the 'avg23' report variant.
+  const AVG_HOURS = [2, 3];
 
   // Single source of truth for both the summary table and the per-line tabs:
   // { commDate: { lineId: { hour: netVolume } } } where NET = max(0, GS - enterprise).
@@ -273,14 +285,23 @@ const NightConsumption = ({ isOpen, onClose }) => {
     return map;
   };
 
-  // Summary table rows: MIN(NET over hours 0-5) per commercial day per line.
-  const minNightRowsFromMap = (map, lineIds) => {
+  // Summary table rows per commercial day per line, depending on the variant:
+  //   'min'   — MIN(NET) over hours 00:00–05:00
+  //   'avg23' — AVG(NET) of hours 02:00 and 03:00
+  const nightRowsFromMap = (map, lineIds, type = 'min') => {
+    const hours = type === 'avg23' ? AVG_HOURS : MIN_HOURS;
     return Object.keys(map).sort().map(date => {
       const row = { date };
       lineIds.forEach(lineId => {
         const byHour = map[date][lineId];
-        const vals = byHour ? MIN_HOURS.map(h => byHour[h]).filter(v => v !== undefined) : [];
-        row[`line_${lineId}`] = vals.length > 0 ? Math.min(...vals) : null;
+        const vals = byHour ? hours.map(h => byHour[h]).filter(v => v !== undefined) : [];
+        if (vals.length === 0) {
+          row[`line_${lineId}`] = null;
+        } else if (type === 'avg23') {
+          row[`line_${lineId}`] = vals.reduce((a, b) => a + b, 0) / vals.length;
+        } else {
+          row[`line_${lineId}`] = Math.min(...vals);
+        }
       });
       return row;
     });
@@ -384,6 +405,15 @@ const NightConsumption = ({ isOpen, onClose }) => {
     }
   };
 
+  // Switching the report variant recomputes the summary table from the cached
+  // NET map — no API re-query. Per-line export tabs are variant-independent, so
+  // they stay as built on the last load.
+  useEffect(() => {
+    if (Object.keys(netMap).length === 0) return;
+    setTableData(nightRowsFromMap(netMap, grsLines, reportType));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportType]);
+
   // Re-calculate when enterprise cache is cleared (Ctrl+Shift+E)
   useEffect(() => {
     const handler = () => { if (isOpen) calculateNightConsumption(); };
@@ -415,6 +445,22 @@ const NightConsumption = ({ isOpen, onClose }) => {
               >
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
+            </div>
+
+            {/* Report variant: minimum (00–05) vs average (02–03) */}
+            <div className="nc-report-toggle">
+              <button
+                className={`nc-toggle-btn ${reportType === 'min' ? 'active' : ''}`}
+                onClick={() => setReportType('min')}
+              >
+                {t('nightReportMin')}
+              </button>
+              <button
+                className={`nc-toggle-btn ${reportType === 'avg23' ? 'active' : ''}`}
+                onClick={() => setReportType('avg23')}
+              >
+                {t('nightReportAvg')}
+              </button>
             </div>
 
             <div className="date-picker-section" style={{ marginBottom: 0, flex: 1 }}>
@@ -456,7 +502,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
           {!isLoading && !error && tableData.length > 0 && (
             <div className="table-section">
               <div className="night-table-header">
-                <h4>{t('nightConsumptionNetDescription')}</h4>
+                <h4>{reportType === 'avg23' ? t('nightConsumptionAvgDescription') : t('nightConsumptionNetDescription')}</h4>
                 <button
                   className="export-button"
                   onClick={exportToExcel}
