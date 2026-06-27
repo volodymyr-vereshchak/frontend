@@ -49,6 +49,10 @@ const getDeviceTypeName = (mfDev, typeDev) => {
   return DEVICE_TYPE_NAMES[`${mfDev}_${typeDev}`] || `${mfDev}-${typeDev}`;
 };
 
+// Prefer the corrector model name resolved server-side from the catalog; fall
+// back to the hardcoded mfDev_typeDev map for rows that aren't linked yet.
+const getEntModelName = (ent) => ent.modelName || getDeviceTypeName(ent.mfDev, ent.typeDev);
+
 // Normalize DB (snake_case) fields to camelCase used throughout this component
 const normalizeEnt = (e) => ({
   ...e,
@@ -56,6 +60,7 @@ const normalizeEnt = (e) => ({
   mfDev:   e.mf_dev   ?? e.mfDev,
   typeDev: e.type_dev ?? e.typeDev,
   chNum:   e.ch_num   ?? e.chNum,
+  modelName: e.model_name ?? e.modelName ?? null,
 });
 
 /**
@@ -526,7 +531,7 @@ const EnterprisePollAnalysis = () => {
     const data = unpolledEnterprises.map(e => ([
       getBranchNameById(e.branch_id),
       e.enterprise_name,
-      getDeviceTypeName(e.mfDev, e.typeDev),
+      getEntModelName(e),
       e.serNum,
       e.chNum,
       getLineName(e.line_id != null ? e.line_id : '__no_line__'),
@@ -1074,7 +1079,7 @@ const EnterprisePollAnalysis = () => {
                       >
                         <td>{getBranchNameById(enterprise.branch_id)}</td>
                         <td>{enterprise.enterprise_name}</td>
-                        <td>{getDeviceTypeName(enterprise.mfDev, enterprise.typeDev)}</td>
+                        <td>{getEntModelName(enterprise)}</td>
                         <td>{enterprise.serNum}</td>
                         <td>{enterprise.chNum}</td>
                         <td>{getLineName(enterprise.line_id != null ? enterprise.line_id : '__no_line__')}</td>

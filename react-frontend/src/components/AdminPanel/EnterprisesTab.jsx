@@ -1,23 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { enterpriseApi, lineApi, lumgApi, branchApi, gasVolumeApi } from '../../services/api';
+import { enterpriseApi, lineApi, lumgApi, branchApi, gasVolumeApi, deviceCatalogApi } from '../../services/api';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MF_DEV_OPTIONS = [
-  { value: 1, label: 'РадмирТех' },
-  { value: 3, label: 'ГРЕМПІС' },
-  { value: 4, label: 'Тандем' },
-  { value: 5, label: 'Укргазтех' },
-];
-const MF_DEV_LABEL = Object.fromEntries(MF_DEV_OPTIONS.map(o => [o.value, o.label]));
+// Legacy manufacturer-code → name, kept only as a display fallback for rows that
+// aren't linked to a corrector type yet.
+const MF_DEV_LABEL = { 1: 'РадмирТех', 3: 'ГРЕМПІС', 4: 'Тандем', 5: 'Укргазтех' };
 
 const EMPTY_FORM = {
   enterprise_name: '',
   branch_id: '',
   line_id: '',
   ser_num: '',
-  mf_dev: '',
-  type_dev: '',
+  corector_type_id: '',
   ch_num: '',
   active: true,
   enabled: true,
@@ -55,11 +50,13 @@ function LineSelect({ value, onChange, lines }) {
   );
 }
 
-function MfSelect({ value, onChange }) {
+// Single selector for the corrector type (manufacturer + model). Stores
+// corector_type_id; mf_dev/type_dev are derived server-side from the catalog.
+function CorectorTypeSelect({ value, onChange, options }) {
   return (
-    <select className="admin-select" value={value} onChange={e => onChange(e.target.value)}>
-      <option value="">—</option>
-      {MF_DEV_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    <select className="admin-select" value={value} onChange={e => onChange(e.target.value)} style={{ minWidth: 170 }}>
+      <option value="">— тип коректора —</option>
+      {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
     </select>
   );
 }
@@ -72,6 +69,8 @@ export default function EnterprisesTab() {
   const [calcs, setCalcs]             = useState([]);
   const [lumgs, setLumgs]             = useState([]);
   const [branches, setBranches]       = useState([]);
+  const [manufacturers, setManufacturers] = useState([]);
+  const [corectorTypes, setCorectorTypes] = useState([]);
   const [loading, setLoading]         = useState(false);
 
   // Filters
@@ -105,6 +104,12 @@ export default function EnterprisesTab() {
   const calcById   = Object.fromEntries(calcs.map(c => [c.id, c]));
   const lumgById   = Object.fromEntries(lumgs.map(l => [l.id, l]));
   const branchById = Object.fromEntries(branches.map(b => [b.id, b]));
+  const mfrShortById = Object.fromEntries(manufacturers.map(m => [m.id, m.short_name]));
+  const ctById     = Object.fromEntries(corectorTypes.map(c => [c.id, c]));
+  // Corrector-type dropdown options: "Виробник / Модель", sorted.
+  const corectorOptions = corectorTypes
+    .map(ct => ({ id: ct.id, label: `${mfrShortById[ct.manufacturer_id] || '?'} / ${ct.model_name}` }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   // Effective branch for an enterprise:
   // 1. enterprise.branch_id (direct)
@@ -135,12 +140,16 @@ export default function EnterprisesTab() {
       gasVolumeApi.getGasVolumeCalcs().catch(() => []),
       lumgApi.getAll().catch(() => []),
       branchApi.getAll().catch(() => []),
-    ]).then(([ent, lns, cls, lmgs, brs]) => {
+      deviceCatalogApi.getManufacturers().catch(() => []),
+      deviceCatalogApi.getCorectorTypes().catch(() => []),
+    ]).then(([ent, lns, cls, lmgs, brs, mfrs, cts]) => {
       setEnterprises(Array.isArray(ent)  ? ent  : []);
       setLines(      Array.isArray(lns)  ? lns  : []);
       setCalcs(      Array.isArray(cls)  ? cls  : []);
       setLumgs(      Array.isArray(lmgs) ? lmgs : []);
       setBranches(   Array.isArray(brs)  ? brs  : []);
+      setManufacturers(Array.isArray(mfrs) ? mfrs : []);
+      setCorectorTypes(Array.isArray(cts)  ? cts  : []);
     }).finally(() => setLoading(false));
   };
 
@@ -188,8 +197,7 @@ export default function EnterprisesTab() {
       branch_id: e.branch_id ?? '',
       line_id:   e.line_id  ?? '',
       ser_num:   e.ser_num,
-      mf_dev:    e.mf_dev,
-      type_dev:  e.type_dev,
+      corector_type_id: e.corector_type_id ?? '',
       ch_num:    e.ch_num,
       active:    e.active,
       enabled:   e.enabled,
@@ -206,8 +214,7 @@ export default function EnterprisesTab() {
       branch_id: editForm.branch_id === '' ? null : Number(editForm.branch_id),
       line_id:   editForm.line_id   === '' ? null : Number(editForm.line_id),
       ser_num:   Number(editForm.ser_num),
-      mf_dev:    Number(editForm.mf_dev),
-      type_dev:  Number(editForm.type_dev),
+      corector_type_id: editForm.corector_type_id === '' ? null : Number(editForm.corector_type_id),
       ch_num:    Number(editForm.ch_num),
     };
     const result = await enterpriseApi.update(editingId, payload);
@@ -227,8 +234,7 @@ export default function EnterprisesTab() {
       branch_id: addForm.branch_id === '' ? null : Number(addForm.branch_id),
       line_id:   addForm.line_id   === '' ? null : Number(addForm.line_id),
       ser_num:   Number(addForm.ser_num),
-      mf_dev:    Number(addForm.mf_dev),
-      type_dev:  Number(addForm.type_dev),
+      corector_type_id: addForm.corector_type_id === '' ? null : Number(addForm.corector_type_id),
       ch_num:    Number(addForm.ch_num),
       active:    addForm.active,
       enabled:   addForm.enabled,
@@ -443,15 +449,9 @@ export default function EnterprisesTab() {
                 onChange={e => setAddForm(f => ({ ...f, ser_num: e.target.value }))} />
             </div>
             <div className="admin-form-group">
-              <label>Виробник</label>
-              <MfSelect value={addForm.mf_dev}
-                onChange={v => setAddForm(f => ({ ...f, mf_dev: v }))} />
-            </div>
-            <div className="admin-form-group">
-              <label>TypeDev</label>
-              <input className="admin-input" type="number" style={{ width: 70 }}
-                value={addForm.type_dev}
-                onChange={e => setAddForm(f => ({ ...f, type_dev: e.target.value }))} />
+              <label>Тип коректора</label>
+              <CorectorTypeSelect value={addForm.corector_type_id} options={corectorOptions}
+                onChange={v => setAddForm(f => ({ ...f, corector_type_id: v }))} />
             </div>
             <div className="admin-form-group">
               <label>Канал</label>
@@ -520,8 +520,8 @@ export default function EnterprisesTab() {
               <col style={{ width: '14%' }} /> {/* Відділення */}
               <col style={{ width: '14%' }} /> {/* Лінія */}
               <col style={{ width: 72 }} />    {/* SerNum */}
-              <col style={{ width: '11%' }} /> {/* Виробник */}
-              <col style={{ width: 62 }} />    {/* TypeDev */}
+              <col style={{ width: '15%' }} /> {/* Виробник */}
+              <col style={{ width: '12%' }} /> {/* Коректор */}
               <col style={{ width: 52 }} />    {/* Канал */}
               <col style={{ width: 50 }} />    {/* Актив */}
               <col style={{ width: 55 }} />    {/* Увімкн */}
@@ -535,7 +535,7 @@ export default function EnterprisesTab() {
                 <th>Лінія</th>
                 <th>SerNum</th>
                 <th>Виробник</th>
-                <th>TypeDev</th>
+                <th>Коректор</th>
                 <th>Канал</th>
                 <th>Актив</th>
                 <th>Увімкн</th>
@@ -591,19 +591,20 @@ export default function EnterprisesTab() {
                     </td>
 
                     <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        title={MF_DEV_LABEL[ent.mf_dev] || String(ent.mf_dev)}>
+                        title={ent.manufacturer_short_name || MF_DEV_LABEL[ent.mf_dev] || String(ent.mf_dev ?? '')}>
                       {isEditing
-                        ? <MfSelect value={editForm.mf_dev}
-                            onChange={v => setEditForm(f => ({ ...f, mf_dev: v }))} />
-                        : MF_DEV_LABEL[ent.mf_dev] || ent.mf_dev}
+                        ? <CorectorTypeSelect value={editForm.corector_type_id} options={corectorOptions}
+                            onChange={v => setEditForm(f => ({ ...f, corector_type_id: v }))} />
+                        : (ent.manufacturer_short_name || MF_DEV_LABEL[ent.mf_dev] || ent.mf_dev || '—')}
                     </td>
 
-                    <td>
+                    <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        title={ent.model_name || String(ent.type_dev ?? '')}>
                       {isEditing
-                        ? <input className="admin-input" type="number" style={{ width: 70 }}
-                            value={editForm.type_dev}
-                            onChange={e => setEditForm(f => ({ ...f, type_dev: e.target.value }))} />
-                        : ent.type_dev}
+                        ? <span style={{ color: '#888', fontSize: 12 }}>
+                            {editForm.corector_type_id ? (ctById[editForm.corector_type_id]?.model_name || '') : '—'}
+                          </span>
+                        : (ent.model_name || ent.type_dev || '—')}
                     </td>
 
                     <td>
