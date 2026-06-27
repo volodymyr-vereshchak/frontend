@@ -436,31 +436,34 @@ const NightConsumption = ({ isOpen, onClose }) => {
         <div className="night-consumption-modal-body">
           {/* Controls row: branch + dates + load button */}
           <div className="nc-controls-row">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>{t('branch')}:</label>
-              <select
-                style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
-                value={selectedBranchId || ''}
-                onChange={e => { setSelectedBranchId(Number(e.target.value)); setTableData([]); }}
-              >
-                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </div>
+            {/* Branch + report-variant toggle stacked vertically */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>{t('branch')}:</label>
+                <select
+                  style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
+                  value={selectedBranchId || ''}
+                  onChange={e => { setSelectedBranchId(Number(e.target.value)); setTableData([]); }}
+                >
+                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
 
-            {/* Report variant: minimum (00–05) vs average (02–03) */}
-            <div className="nc-report-toggle">
-              <button
-                className={`nc-toggle-btn ${reportType === 'min' ? 'active' : ''}`}
-                onClick={() => setReportType('min')}
-              >
-                {t('nightReportMin')}
-              </button>
-              <button
-                className={`nc-toggle-btn ${reportType === 'avg23' ? 'active' : ''}`}
-                onClick={() => setReportType('avg23')}
-              >
-                {t('nightReportAvg')}
-              </button>
+              {/* Report variant: minimum (00–05) vs average (02–03) */}
+              <div className="nc-report-toggle">
+                <button
+                  className={`nc-toggle-btn ${reportType === 'min' ? 'active' : ''}`}
+                  onClick={() => setReportType('min')}
+                >
+                  {t('nightReportMin')}
+                </button>
+                <button
+                  className={`nc-toggle-btn ${reportType === 'avg23' ? 'active' : ''}`}
+                  onClick={() => setReportType('avg23')}
+                >
+                  {t('nightReportAvg')}
+                </button>
+              </div>
             </div>
 
             <div className="date-picker-section" style={{ marginBottom: 0, flex: 1 }}>
