@@ -1,0 +1,49 @@
+/* Per-line night-consumption charts, shown under the summary table.
+   Styled to match the GRS-trends chart (dark theme). */
+.nc-charts-section {
+  margin-top: 24px;
+}
+
+.nc-charts-heading {
+  color: #B9E42B;
+  font-size: 15px;
+  margin: 0 0 14px 0;
+}
+
+/* One card per line; two columns on wide screens, one on narrow. */
+.nc-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.nc-chart-card {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px 12px 4px 12px;
+}
+
+.nc-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 8px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nc-chart-empty {
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .nc-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}

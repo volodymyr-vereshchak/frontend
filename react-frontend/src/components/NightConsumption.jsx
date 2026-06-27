@@ -11,6 +11,7 @@ import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { commercialHourlyRange, commercialDayOf } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
+import NightConsumptionCharts from './NightConsumptionCharts';
 import * as XLSX from 'xlsx';
 import './NightConsumption.css';
 
@@ -500,6 +501,13 @@ const NightConsumption = ({ isOpen, onClose }) => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Per-line charts (trends style) under the summary table */}
+              <NightConsumptionCharts
+                tableData={tableData}
+                lineIds={grsLines}
+                lineNames={lineNames}
+              />
             </div>
           )}
 
