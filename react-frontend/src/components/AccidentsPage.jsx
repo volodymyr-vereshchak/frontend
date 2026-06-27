@@ -146,13 +146,39 @@ export default function AccidentsPage() {
         if (!lineIds.length) lineIds = lines.map(l => l.id);
       }
 
-      const sysData = await apiClient.get('/sys/', {
+      // Accidents are bound to the commercial (contract) day, which runs
+      // 07:00 → 07:00. The selected calendar range [fromDate .. toDate] maps to
+      // the half-open interval:
+      //   start >= fromDate 07:00   …   end < (toDate + 1 day) 07:00
+      // e.g. 01.05–03.05 ⇒ from 01.05 07:00 (incl.) до 04.05 07:00 (не включая).
+      // Accidents are instantaneous events, so the boundary is exactly 07:00,
+      // not the last hourly bucket — 06:00 has no meaning here.
+      // Build these as LOCAL naive datetimes (ISO string WITHOUT a trailing Z):
+      // a bare "YYYY-MM-DD" is parsed as UTC midnight and, in UTC+ zones, shifts
+      // the hour (that is the old bug where the range end showed 03:00).
+      const nextDay = new Date(`${toDate}T00:00:00`);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const toNext = toLocalISODate(nextDay);
+
+      const contractFrom = `${fromDate}T07:00:00`; // start of first contract day (>=)
+      const contractEnd  = `${toNext}T07:00:00`;   // end of last contract day (< 07:00)
+
+      const rawSys = await apiClient.get('/sys/', {
         line_id:   lineIds,
-        from_date: fromDate,
-        to_date:   toDate,
+        from_date: contractFrom,
+        to_date:   contractEnd,
       });
 
-      const paired  = pairAccidents(sysData || [], { fromDate, toDate });
+      // The backend filters period <= to_date (inclusive), but the contract day
+      // ends at 07:00 EXCLUSIVE (an event at exactly 07:00 belongs to the next
+      // day). Drop the boundary instant so the upper bound is strictly < 07:00.
+      const endMs = new Date(contractEnd).getTime();
+      const sysData = (rawSys || []).filter(r => new Date(r.period).getTime() < endMs);
+
+      // Pass the contract boundaries so substituted start/end times (accidents
+      // missing their start or end record) snap to 07:00 of the contract period
+      // instead of the UTC-shifted calendar midnight.
+      const paired  = pairAccidents(sysData, { fromDate: contractFrom, toDate: contractEnd });
       const grouped = groupAccidentsByType(paired);
 
       setGroupedAccidents(grouped);
