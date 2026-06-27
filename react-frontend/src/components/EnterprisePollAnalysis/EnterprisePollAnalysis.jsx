@@ -127,6 +127,25 @@ const EnterprisePollAnalysis = () => {
     return `${year}-${month}-${day}`;
   };
 
+  // Add `days` calendar days to a date (returns a new Date).
+  const addDays = (date, days) => {
+    const d = new Date(date);
+    d.setDate(d.getDate() + days);
+    return d;
+  };
+
+  // Parse an API period ('YYYY-MM-DD[THH:MM[:SS]]' / '... HH:MM:SS') as a LOCAL
+  // Date — no timezone shift. Used to filter hourly results to the picked window.
+  const parsePeriodLocal = (period) => {
+    const m = String(period ?? '').replace(' ', 'T')
+      .match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2})(?::(\d{2}))?(?::(\d{2}))?)?/);
+    if (!m) return null;
+    return new Date(
+      Number(m[1]), Number(m[2]) - 1, Number(m[3]),
+      Number(m[4] || 0), Number(m[5] || 0), Number(m[6] || 0)
+    );
+  };
+
   /**
    * Load all enterprises and line names
    */
@@ -259,21 +278,30 @@ const EnterprisePollAnalysis = () => {
     setPollResults([]);
 
     try {
+      const isHourly = periodType === 'hourly';
+      // Hourly must bind strictly to the date AND time picked in the date
+      // pickers. The DPD API only accepts date granularity and returns
+      // commercial-day-aligned hours (07:00→07:00), so we request a 1-day-
+      // widened calendar range (to cover any alignment, incl. pre-07:00 hours)
+      // and then filter the result to the exact [start, end] window below.
+      const apiFrom = isHourly ? formatDateForAPI(addDays(startDateTime, -1)) : formatDateForAPI(startDateTime);
+      const apiTo   = isHourly ? formatDateForAPI(addDays(endDateTime, 1))   : formatDateForAPI(endDateTime);
+
       const data = await enterprisePollApi.pollEnterpriseDevice(
         selectedEnterprise.line_id,
         selectedEnterprise.serNum,
         selectedEnterprise.mfDev,
         selectedEnterprise.typeDev,
         selectedEnterprise.chNum,
-        formatDateForAPI(startDateTime),
-        formatDateForAPI(endDateTime),
+        apiFrom,
+        apiTo,
         periodType
       );
 
       if (data && Array.isArray(data)) {
         // Backend returns device data in devices array
         // Volume is in device.volume, not record.total_volume
-        const results = data.map(record => {
+        let results = data.map(record => {
           const device = record.devices?.[0];
           return {
             period: record.period,
@@ -282,6 +310,17 @@ const EnterprisePollAnalysis = () => {
             pressure: device?.pressure ?? null
           };
         }).sort((a, b) => new Date(a.period) - new Date(b.period));
+
+        // Strict binding to the picked window for hourly (inclusive of both
+        // ends). Daily stays date-based and is not time-filtered.
+        if (isHourly) {
+          const fromMs = startDateTime.getTime();
+          const toMs   = endDateTime.getTime();
+          results = results.filter(r => {
+            const d = parsePeriodLocal(r.period);
+            return d ? (d.getTime() >= fromMs && d.getTime() <= toMs) : true;
+          });
+        }
 
         setPollResults(results);
         // Freeze the type the table/chart format by until the next poll.
