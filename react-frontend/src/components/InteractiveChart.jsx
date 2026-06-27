@@ -38,8 +38,14 @@ function periodHasTime(value) {
   return /T\d{2}/.test(String(value ?? '').replace(' ', 'T'));
 }
 
-const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lineNames = {}, lineUnits = null, trendsEnterpriseChecked = false, onTrendsEnterpriseChange = null }) => {
+const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lineNames = {}, lineUnits = null, trendsEnterpriseChecked = false, onTrendsEnterpriseChange = null, visibilityStorageKey = null }) => {
   const { t, getLocale } = useLanguage();
+
+  // Where the per-line visibility (which lines are toggled on) is persisted.
+  // Defaults to a per-archiveType key, but callers can pass an explicit key so
+  // two charts that both use the "trends" mode (e.g. GRS-trends and the night
+  // consumption chart) keep independent visibility memory.
+  const visibilityKey = visibilityStorageKey || `hlviewer-chart-visible-${archiveType}`;
   const [visibleLines, setVisibleLines] = useState({});
   const [yAxisDomain, setYAxisDomain] = useState(['dataMin', 'dataMax']);
   const [isChartLoading, setIsChartLoading] = useState(false);
@@ -266,7 +272,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
   useEffect(() => {
     if (data && data.length > 0) {
       const columns = getChartColumns();
-      const storageKey = `hlviewer-chart-visible-${archiveType}`;
+      const storageKey = visibilityKey;
       const savedPreferences = localStorage.getItem(storageKey);
       const initialVisible = {};
 
@@ -285,7 +291,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
 
       setVisibleLines(initialVisible);
     }
-  }, [data, archiveType, showOutputPressure]);
+  }, [data, archiveType, showOutputPressure, visibilityKey]);
 
   // Trigger async chart rendering when data or settings change
   useEffect(() => {
@@ -433,8 +439,7 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
         ...prev,
         [lineKey]: !prev[lineKey]
       };
-      const storageKey = `hlviewer-chart-visible-${archiveType}`;
-      localStorage.setItem(storageKey, JSON.stringify(newVisibleLines));
+      localStorage.setItem(visibilityKey, JSON.stringify(newVisibleLines));
       return newVisibleLines;
     });
   };

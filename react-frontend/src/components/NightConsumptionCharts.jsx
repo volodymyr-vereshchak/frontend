@@ -30,6 +30,7 @@ const NightConsumptionCharts = ({ tableData, lineIds, lineNames = {} }) => {
         archiveType="trends"
         selectedLines={lineIds}
         lineNames={lineNames}
+        visibilityStorageKey="hlviewer-chart-visible-night"
       />
     </div>
   );
