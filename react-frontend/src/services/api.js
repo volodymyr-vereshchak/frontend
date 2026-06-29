@@ -463,6 +463,7 @@ export const deviceCatalogApi = {
   deleteCorectorType:    (id)         => apiClient.delete(`/device-catalog/corector-types/${id}`),
   // Preload
   preload:               (force = false) => apiClient.post(`/device-catalog/preload?force=${force}`),
+  exportPreload:         ()           => apiClient.post('/device-catalog/export-preload'),
 };
 
 // Admin: Calc types API

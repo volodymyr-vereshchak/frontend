@@ -215,6 +215,8 @@ export default function DeviceMappingsTab() {
   const [manufacturers, setManufacturers] = useState([]);
   const [preloadStatus, setPreloadStatus] = useState(null);
   const [preloadForce, setPreloadForce] = useState(false);
+  const [exportStatus, setExportStatus] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const loadManufacturers = async () => {
     const data = await deviceCatalogApi.getManufacturers();
@@ -234,6 +236,19 @@ export default function DeviceMappingsTab() {
     }
   };
 
+  const handleExport = async () => {
+    setExportStatus(null);
+    setIsExporting(true);
+    try {
+      const res = await deviceCatalogApi.exportPreload();
+      setExportStatus({ ok: true, msg: `JSON збережено: виробників ${res.exported.manufacturers}, моделей ${res.exported.corector_types}` });
+    } catch (err) {
+      setExportStatus({ ok: false, msg: err.message || 'Помилка' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div>
       {/* Preload button */}
@@ -245,6 +260,20 @@ export default function DeviceMappingsTab() {
         </label>
         <button className="btn-secondary" onClick={handlePreload}>Передзавантажити</button>
         {preloadStatus && <span className={`admin-status ${preloadStatus.ok ? 'ok' : 'error'}`}>{preloadStatus.msg}</span>}
+      </div>
+
+      {/* Export to preload JSON */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, padding: '10px 14px', background: '#1e1e1e', border: '1px solid #2a2a2a', borderRadius: 6 }}>
+        <span style={{ color: '#888', fontSize: 13 }}>Зберегти поточний стан каталогу у preload JSON-файл:</span>
+        <button
+          className="btn-secondary"
+          onClick={handleExport}
+          disabled={isExporting}
+          title="Зберегти поточний стан БД у preload JSON-файл (device_catalog.json)"
+        >
+          {isExporting ? '⏳ Зберігання…' : '💾 Зберегти в JSON'}
+        </button>
+        {exportStatus && <span className={`admin-status ${exportStatus.ok ? 'ok' : 'error'}`}>{exportStatus.msg}</span>}
       </div>
 
       <ManufacturersSection manufacturers={manufacturers} onManufacturersChanged={loadManufacturers} />
