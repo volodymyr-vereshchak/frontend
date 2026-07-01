@@ -2,12 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   archiveDataApi,
   archiveDataVirtualApi,
-  enterpriseVirtualApi,
   branchApi,
   lumgApi,
   lineApi,
 } from '../services/api';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
+import { enterprisePeriodKey, buildEnterpriseByLinePeriod, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { commercialHourlyRange } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
@@ -159,7 +159,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
       if (showEnterprise) {
         entData = await getEnterpriseWithCache(
           grsLines, range.from, range.to, periodType,
-          (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
+          getEnterpriseFetchFn(true)
         ) || [];
       }
 
@@ -188,7 +188,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
           : { from: loadedDateRange.fromDate, to: loadedDateRange.toDate };
         entData = await getEnterpriseWithCache(
           loadedLines.all, range.from, range.to, loadedPeriodType,
-          (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
+          getEnterpriseFetchFn(true)
         ) || [];
       }
       recalculate(rawData, loadedPeriodType, loadedLines.all, entData);
@@ -200,8 +200,6 @@ const GRSTrends = ({ isOpen, onClose }) => {
   };
 
   const calculateGRSTrendsPercentages = (data, lineIds, enterpriseData = [], pType = periodType) => {
-    const keyLen = pType === 'hourly' ? 13 : 10;
-
     const lineDataMap = {};
     data.forEach(record => {
       const lid = record.line_id;
@@ -209,24 +207,13 @@ const GRSTrends = ({ isOpen, onClose }) => {
       lineDataMap[lid].push(record);
     });
 
-    const enterpriseMap = {};
-    enterpriseData.forEach(entry => {
-      const lid = entry.line_id;
-      const key = String(entry.period || '').replace(' ', 'T').slice(0, keyLen);
-      if (!enterpriseMap[lid]) enterpriseMap[lid] = {};
-      // API returns total_volume; cache returns devices array — handle both
-      const vol = entry.total_volume !== undefined
-        ? entry.total_volume
-        : Array.isArray(entry.devices)
-          ? entry.devices.reduce((s, d) => s + (d.volume || 0), 0)
-          : 0;
-      enterpriseMap[lid][key] = vol;
-    });
+    // Enterprise totals keyed by line then period (shared with archives/night).
+    const enterpriseMap = buildEnterpriseByLinePeriod(enterpriseData, pType);
 
     const lineTotals = {};
     Object.keys(lineDataMap).forEach(lid => {
       lineTotals[lid] = lineDataMap[lid].reduce((sum, rec) => {
-        const key = String(rec.period || '').replace(' ', 'T').slice(0, keyLen);
+        const key = enterprisePeriodKey(rec.period, pType);
         const gs  = rec.volume || 0;
         const ent = (enterpriseMap[lid] && enterpriseMap[lid][key]) || 0;
         return sum + Math.max(0, gs - ent);
@@ -238,7 +225,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
       const total = lineTotals[lid];
       if (total <= 0) return;
       lineDataMap[lid].forEach(rec => {
-        const key = String(rec.period || '').replace(' ', 'T').slice(0, keyLen);
+        const key = enterprisePeriodKey(rec.period, pType);
         const gs  = rec.volume || 0;
         const ent = (enterpriseMap[lid] && enterpriseMap[lid][key]) || 0;
         const net = Math.max(0, gs - ent);

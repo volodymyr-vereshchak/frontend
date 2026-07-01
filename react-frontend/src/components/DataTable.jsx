@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './DataTable.css';
-import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, sysArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper, enterpriseApi, enterpriseVirtualApi } from '../services/api';
+import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, sysArchiveApi, commercialDayUtils, archiveDataVirtualApi, virtualLinesHelper } from '../services/api';
+import { enterprisePeriodKey, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { formatEditValue } from '../utils/valueConverter';
 import { PRESSURE_UNIT_DEFAULT, DP_UNIT_DEFAULT, convertPressureValue } from '../constants/pressureUnits';
 
@@ -90,9 +91,8 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
 
         // Excel needs full per-enterprise breakdown — always fetch fresh from API
         // (cache stores only total volumes, which is enough for the chart overlay).
-        const rawEnterprise = await (isVirtualLine
-          ? enterpriseVirtualApi.getEnterpriseVolumesVirtual(selectedLines, fromDate, toDate, periodType)
-          : enterpriseApi.getEnterpriseVolumes(selectedLines, fromDate, toDate, periodType)
+        const rawEnterprise = await getEnterpriseFetchFn(isVirtualLine)(
+          selectedLines, fromDate, toDate, periodType
         ) || [];
 
         // Build per-period, per-enterprise breakdown
@@ -100,8 +100,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         const entNames = new Set();
 
         rawEnterprise.forEach(record => {
-          const raw = String(record.period || '').replace(' ', 'T');
-          const pk  = archiveType === 'hourly' ? raw.slice(0, 13) : raw.slice(0, 10);
+          const pk = enterprisePeriodKey(record.period, periodType);
           if (!entByPeriod[pk]) entByPeriod[pk] = {};
           (record.devices || []).forEach(device => {
             const name = device.enterprise_name || 'Unknown';
@@ -134,8 +133,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
             return value || '';
           });
 
-          const raw = String(row.period || '').replace(' ', 'T');
-          const pk  = archiveType === 'hourly' ? raw.slice(0, 13) : raw.slice(0, 10);
+          const pk = enterprisePeriodKey(row.period, periodType);
           const entData = entByPeriod[pk] || {};
 
           const entCells = sortedEntNames.map(name => entData[name] != null ? entData[name] : '');
@@ -154,8 +152,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
         });
         const summaryEnt = sortedEntNames.map(name =>
           sortedData.reduce((s, row) => {
-            const raw = String(row.period || '').replace(' ', 'T');
-            const pk  = archiveType === 'hourly' ? raw.slice(0, 13) : raw.slice(0, 10);
+            const pk = enterprisePeriodKey(row.period, periodType);
             return s + ((entByPeriod[pk] || {})[name] || 0);
           }, 0)
         );

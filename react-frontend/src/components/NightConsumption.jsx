@@ -2,12 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   archiveDataApi,
   archiveDataVirtualApi,
-  enterpriseVirtualApi,
   branchApi,
   lumgApi,
   lineApi,
 } from '../services/api';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
+import { enterprisePeriodKey, buildEnterpriseByLinePeriod, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { commercialHourlyRange, commercialDayOf } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
@@ -178,7 +178,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
           : Promise.resolve([]),
         getEnterpriseWithCache(
           grsLines, commercialFrom, commercialTo, 'hourly',
-          (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
+          getEnterpriseFetchFn(true)
         )
       ]);
       const hourlyData = [...(physHourly || []), ...(virtHourly || [])];
@@ -223,22 +223,10 @@ const NightConsumption = ({ isOpen, onClose }) => {
   // Single source of truth for both the summary table and the per-line tabs:
   // { commDate: { lineId: { hour: netVolume } } } where NET = max(0, GS - enterprise).
   const buildNetByDayLineHour = (hourlyData, enterpriseData = []) => {
-    // Enterprise lookup normalized to YYYY-MM-DDTHH (13 chars). API returns
-    // "2025-12-01T03:00:00", cache returns "2025-12-01T03" — normalize both.
-    const enterpriseMap = {};
-    enterpriseData.forEach(entry => {
-      const lineId = entry.line_id;
-      const normalizedPeriod = String(entry.period || '').replace(' ', 'T').slice(0, 13);
-      if (!enterpriseMap[lineId]) enterpriseMap[lineId] = {};
-
-      let totalVolume = 0;
-      if (entry.devices && Array.isArray(entry.devices)) {
-        entry.devices.forEach(device => { totalVolume += device.volume || 0; });
-      } else if (entry.total_volume !== undefined) {
-        totalVolume = entry.total_volume;
-      }
-      enterpriseMap[lineId][normalizedPeriod] = totalVolume;
-    });
+    // Enterprise lookup keyed by line then YYYY-MM-DDTHH (shared helper — same
+    // reduction the archives/trends use). API returns "2025-12-01T03:00:00",
+    // cache returns "2025-12-01T03" — the helper normalizes both.
+    const enterpriseMap = buildEnterpriseByLinePeriod(enterpriseData, 'hourly');
 
     const wantHours = new Set([...MIN_HOURS, ...NIGHT_HOURS]);
     const map = {}; // commDate -> lineId -> hour -> net
@@ -272,7 +260,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
       // calendar date C is part of commercial day C−1; 21:00–23:00 stay on C).
       const commDate = commercialDayOf(date, hour);
 
-      const normalizedPeriod = periodStr.replace(' ', 'T').slice(0, 13);
+      const normalizedPeriod = enterprisePeriodKey(periodStr, 'hourly');
       const gsVolume = record.volume !== undefined ? record.volume : (record.flow || 0);
       const enterpriseVolume = (enterpriseMap[lineId]?.[normalizedPeriod]) || 0;
       const netVolume = Math.max(0, gsVolume - enterpriseVolume);

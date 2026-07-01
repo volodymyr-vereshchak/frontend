@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { enterpriseApi, enterpriseVirtualApi } from '../services/api';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
+import { enterprisePeriodKey, enterpriseRecordTotal, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { useLanguage } from '../contexts/LanguageContext';
 import './SimplifiedEnterpriseControl.css';
 
@@ -28,27 +28,16 @@ const SimplifiedEnterpriseControl = ({
 
   // Process raw API data into period-based structure
   const processEnterpriseData = (rawData) => {
+    const periodType = archiveType === 'hourly' ? 'hourly' : 'daily';
     const byPeriod = {};
 
     rawData.forEach(item => {
-      // Normalize period key to match archive data format regardless of source
-      // (cached records have short "YYYY-MM-DDTHH", API returns "YYYY-MM-DDTHH:MM:SS")
-      const raw = String(item.period || '').replace(' ', 'T');
-      const period = archiveType === 'hourly'
-        ? raw.slice(0, 13)   // YYYY-MM-DDTHH
-        : raw.slice(0, 10);  // YYYY-MM-DD
-
+      const period = enterprisePeriodKey(item.period, periodType);
       if (!byPeriod[period]) {
-        byPeriod[period] = {
-          period: period,
-          totalEnterpriseVolume: 0
-        };
+        byPeriod[period] = { period, totalEnterpriseVolume: 0 };
       }
-
-      // Sum up all enterprise volumes for this period
-      item.devices?.forEach(device => {
-        byPeriod[period].totalEnterpriseVolume += device.volume || 0;
-      });
+      // Sum all enterprise volumes for this period (across lines/devices)
+      byPeriod[period].totalEnterpriseVolume += enterpriseRecordTotal(item);
     });
 
     console.log('Processed enterprise data by period:', {
@@ -131,9 +120,7 @@ const SimplifiedEnterpriseControl = ({
         periodType
       });
 
-      const fetchFn = isVirtualLine
-        ? (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
-        : (lines, from, to, type) => enterpriseApi.getEnterpriseVolumes(lines, from, to, type);
+      const fetchFn = getEnterpriseFetchFn(isVirtualLine);
 
       const data = await getEnterpriseWithCache(
         selectedLines,
