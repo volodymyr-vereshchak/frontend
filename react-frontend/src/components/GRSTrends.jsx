@@ -7,8 +7,7 @@ import {
   lineApi,
 } from '../services/api';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
-import { enterprisePeriodKey, buildEnterpriseByLinePeriod, makeEnterpriseStreamFetch } from '../utils/enterpriseVolumes';
-import EnterprisePollProgress from './EnterprisePollProgress';
+import { enterprisePeriodKey, buildEnterpriseByLinePeriod, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { commercialHourlyRange } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
@@ -23,7 +22,6 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [linesLoading, setLinesLoading] = useState(false);
   const [showEnterprise, setShowEnterprise] = useState(false);
   const [periodType, setPeriodType]   = useState('daily'); // 'daily' | 'hourly'
-  const [entProgress, setEntProgress] = useState(null); // {done,total} while polling enterprises
 
   // Raw volume data from last load (needed for enterprise toggle without re-fetch)
   const [rawData, setRawData]                 = useState([]);
@@ -159,10 +157,9 @@ const GRSTrends = ({ isOpen, onClose }) => {
 
       let entData = [];
       if (showEnterprise) {
-        setEntProgress(null);
         entData = await getEnterpriseWithCache(
           grsLines, range.from, range.to, periodType,
-          makeEnterpriseStreamFetch((done, total) => setEntProgress({ done, total }))
+          getEnterpriseFetchFn(true)
         ) || [];
       }
 
@@ -172,7 +169,6 @@ const GRSTrends = ({ isOpen, onClose }) => {
       console.error('Error calculating GRS trends:', err);
     } finally {
       setIsLoading(false);
-      setEntProgress(null);
     }
   };
 
@@ -184,7 +180,6 @@ const GRSTrends = ({ isOpen, onClose }) => {
     if (rawData.length === 0 || !loadedDateRange) return; // no data loaded yet
 
     setIsLoading(true);
-    setEntProgress(null);
     try {
       let entData = [];
       if (checked) {
@@ -193,7 +188,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
           : { from: loadedDateRange.fromDate, to: loadedDateRange.toDate };
         entData = await getEnterpriseWithCache(
           loadedLines.all, range.from, range.to, loadedPeriodType,
-          makeEnterpriseStreamFetch((done, total) => setEntProgress({ done, total }))
+          getEnterpriseFetchFn(true)
         ) || [];
       }
       recalculate(rawData, loadedPeriodType, loadedLines.all, entData);
@@ -201,7 +196,6 @@ const GRSTrends = ({ isOpen, onClose }) => {
       console.error('Error loading enterprise data:', err);
     } finally {
       setIsLoading(false);
-      setEntProgress(null);
     }
   };
 
@@ -321,7 +315,6 @@ const GRSTrends = ({ isOpen, onClose }) => {
             <div className="loading-container">
               <div className="loading-spinner"></div>
               <p>{t('calculatingTrends')}</p>
-              <EnterprisePollProgress progress={entProgress} />
             </div>
           )}
 

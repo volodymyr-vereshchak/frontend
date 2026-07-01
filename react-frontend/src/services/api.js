@@ -582,64 +582,6 @@ export const enterpriseVirtualApi = {
   }
 };
 
-/**
- * Stream enterprise volumes (NDJSON) with live per-device progress.
- *
- * Calls onProgress(done, total) as each enterprise device is polled and
- * resolves with the final records array — the SAME shape as
- * getEnterpriseVolumesVirtual, so it drops straight into getEnterpriseWithCache.
- * The stream endpoint resolves both physical and virtual line IDs.
- */
-export async function streamEnterpriseVolumesVirtual(lineIds, fromDate, toDate, periodType = 'daily', onProgress = null) {
-  const base = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || import.meta.env.VITE_API_URL || DEFAULT_API_URL;
-  const params = new URLSearchParams();
-  (lineIds || []).forEach(id => params.append('line_id', id));
-  params.append('from_date', fromDate);
-  params.append('to_date', toDate);
-  params.append('period_type', periodType);
-
-  const resp = await fetch(`${base}/enterprise/volumes_virtual/stream?${params.toString()}`, {
-    credentials: 'include',
-    headers: { 'Accept': 'application/x-ndjson' },
-  });
-  if (!resp.ok || !resp.body) {
-    throw new APIError(`Enterprise stream failed: ${resp.status}`, resp.status, '/enterprise/volumes_virtual/stream');
-  }
-
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let result = [];
-
-  const handleLine = (line) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    let msg;
-    try { msg = JSON.parse(trimmed); } catch { return; }
-    if (msg.type === 'progress') {
-      if (onProgress) onProgress(msg.done, msg.total);
-    } else if (msg.type === 'result') {
-      result = msg.data || [];
-    } else if (msg.type === 'error') {
-      throw new APIError(msg.detail || 'Enterprise stream error', null, '/enterprise/volumes_virtual/stream');
-    }
-  };
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let nl;
-    while ((nl = buffer.indexOf('\n')) >= 0) {
-      const line = buffer.slice(0, nl);
-      buffer = buffer.slice(nl + 1);
-      handleLine(line);
-    }
-  }
-  if (buffer) handleLine(buffer); // trailing line without newline
-  return result;
-}
-
 // Virtual lines helper utilities
 export const virtualLinesHelper = {
   isVirtualLine(lineId) {

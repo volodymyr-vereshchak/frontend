@@ -7,8 +7,7 @@ import {
   lineApi,
 } from '../services/api';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
-import { enterprisePeriodKey, buildEnterpriseByLinePeriod, makeEnterpriseStreamFetch } from '../utils/enterpriseVolumes';
-import EnterprisePollProgress from './EnterprisePollProgress';
+import { enterprisePeriodKey, buildEnterpriseByLinePeriod, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { commercialHourlyRange, commercialDayOf } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
 import DateTimePickers from './DateTimePickers';
@@ -28,7 +27,6 @@ const NightConsumption = ({ isOpen, onClose }) => {
   const { t, getLocale } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [entProgress, setEntProgress] = useState(null); // {done,total} while polling enterprises
   const [tableData, setTableData] = useState([]);
   // Per-line hourly export tabs (ALL lines), built once on "Load" so the Excel
   // export is instant and never re-queries the API. Keyed by lineId.
@@ -160,7 +158,6 @@ const NightConsumption = ({ isOpen, onClose }) => {
 
     setIsLoading(true);
     setError(null);
-    setEntProgress(null);
 
     try {
       // Commercial day: covers commercial days fromDate..toDate, i.e. the hourly
@@ -181,7 +178,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
           : Promise.resolve([]),
         getEnterpriseWithCache(
           grsLines, commercialFrom, commercialTo, 'hourly',
-          makeEnterpriseStreamFetch((done, total) => setEntProgress({ done, total }))
+          getEnterpriseFetchFn(true)
         )
       ]);
       const hourlyData = [...(physHourly || []), ...(virtHourly || [])];
@@ -212,7 +209,6 @@ const NightConsumption = ({ isOpen, onClose }) => {
       console.error('Error calculating night consumption:', err);
     } finally {
       setIsLoading(false);
-      setEntProgress(null);
     }
   };
 
@@ -482,7 +478,6 @@ const NightConsumption = ({ isOpen, onClose }) => {
             <div className="loading-container">
               <div className="loading-spinner"></div>
               <p>{t('loading')}</p>
-              <EnterprisePollProgress progress={entProgress} />
             </div>
           )}
 

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
-import { enterprisePeriodKey, enterpriseRecordTotal, makeEnterpriseStreamFetch } from '../utils/enterpriseVolumes';
+import { enterprisePeriodKey, enterpriseRecordTotal, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { useLanguage } from '../contexts/LanguageContext';
-import EnterprisePollProgress from './EnterprisePollProgress';
 import './SimplifiedEnterpriseControl.css';
 
 const SimplifiedEnterpriseControl = ({
@@ -20,7 +19,6 @@ const SimplifiedEnterpriseControl = ({
   const [showNetVolume, setShowNetVolume] = useState(true);
   const [showTotal, setShowTotal] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(null); // {done,total} while polling enterprises
   const [enterpriseData, setEnterpriseData] = useState(null);
 
   // Refs
@@ -111,7 +109,6 @@ const SimplifiedEnterpriseControl = ({
 
     previousParamsRef.current = currentParams;
     setLoading(true);
-    setProgress(null);
 
     try {
       const periodType = archiveType === 'hourly' ? 'hourly' : 'daily';
@@ -123,7 +120,7 @@ const SimplifiedEnterpriseControl = ({
         periodType
       });
 
-      const fetchFn = makeEnterpriseStreamFetch((done, total) => setProgress({ done, total }));
+      const fetchFn = getEnterpriseFetchFn(isVirtualLine);
 
       const data = await getEnterpriseWithCache(
         selectedLines,
@@ -152,7 +149,6 @@ const SimplifiedEnterpriseControl = ({
       setEnterpriseData(null);
     } finally {
       setLoading(false);
-      setProgress(null);
     }
   }, [selectedLines, dateRange, archiveType]);
 
@@ -248,9 +244,6 @@ const SimplifiedEnterpriseControl = ({
           <span className="button-icon">⚙️</span>
         </button>
       </div>
-
-      {/* Live % of enterprises polled (visible even when the dropdown is closed) */}
-      {loading && <EnterprisePollProgress progress={progress} />}
 
       {/* Dropdown Panel (visible when dropdown is open) */}
       {isActive && isDropdownOpen && (
