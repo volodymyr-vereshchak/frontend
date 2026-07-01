@@ -13,7 +13,7 @@
  * because they differ on purpose (trends/night clamp with Math.max(0, …); the
  * chart overlay and Excel export show the raw line − enterprise difference).
  */
-import { enterpriseApi, enterpriseVirtualApi } from '../services/api';
+import { enterpriseApi, enterpriseVirtualApi, streamEnterpriseVolumesVirtual } from '../services/api';
 
 /**
  * Normalize a period value to the key used to join enterprise records with
@@ -46,6 +46,16 @@ export function getEnterpriseFetchFn(isVirtualLine) {
   return isVirtualLine
     ? (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
     : (lines, from, to, type) => enterpriseApi.getEnterpriseVolumes(lines, from, to, type);
+}
+
+/**
+ * fetchFn for getEnterpriseWithCache that streams progress. Works for physical
+ * and virtual lines (the stream endpoint resolves both). onProgress(done, total)
+ * is called as devices are polled. Returns the same records array as the plain
+ * fetch, so the cache/aggregation layers stay unchanged.
+ */
+export function makeEnterpriseStreamFetch(onProgress) {
+  return (lines, from, to, type) => streamEnterpriseVolumesVirtual(lines, from, to, type, onProgress);
 }
 
 /**
