@@ -153,7 +153,9 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
   // Ctrl+Shift+E — clear enterprise cache and re-fetch in all open components
   useEffect(() => {
     const handler = (e) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+      // Use e.code (physical key) not e.key — e.key is 'У' on a Cyrillic layout,
+      // so the shortcut would otherwise silently fail when RU/UK is active.
+      if (e.ctrlKey && e.shiftKey && e.code === 'KeyE') {
         e.preventDefault();
         clearEnterpriseCache();
         console.log('[EnterpriseCache] Cache cleared via Ctrl+Shift+E');
