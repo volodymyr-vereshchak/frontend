@@ -1,15 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  archiveDataApi,
-  archiveDataVirtualApi,
-  branchApi,
-  lumgApi,
-  lineApi,
-} from '../services/api';
+import { archiveDataApi, archiveDataVirtualApi } from '../services/api';
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { enterprisePeriodKey, buildEnterpriseByLinePeriod, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { commercialHourlyRange } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useBranchLines } from '../hooks/useBranchLines';
+import ReportModalShell, { BranchSelect, ErrorBlock, LoadingBlock } from './common/ReportModalShell';
 import DateTimePickers from './DateTimePickers';
 import InteractiveChart from './InteractiveChart';
 import './GRSTrends.css';
@@ -19,7 +15,6 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [isLoading, setIsLoading]     = useState(false);
   const [error, setError]             = useState(null);
   const [chartData, setChartData]     = useState([]);
-  const [linesLoading, setLinesLoading] = useState(false);
   const [showEnterprise, setShowEnterprise] = useState(false);
   const [periodType, setPeriodType]   = useState('daily'); // 'daily' | 'hourly'
 
@@ -29,14 +24,16 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [loadedPeriodType, setLoadedPeriodType] = useState('daily');
   const [loadedLines, setLoadedLines]         = useState({ phys: [], virt: [], all: [] });
 
-  // Branch + lumg data
-  const [branches, setBranches]       = useState([]);
-  const [lumgs, setLumgs]             = useState([]);
-  const [selectedBranchId, setSelectedBranchId] = useState(null);
-
-  // Physical and virtual lines for selected branch
-  const [physicalLines, setPhysicalLines] = useState([]);
-  const [virtualLines,  setVirtualLines]  = useState([]);
+  // Branch + line data (shared hook); trends use only include_in_trends lines
+  const {
+    branches,
+    selectedBranchId,
+    setSelectedBranchId,
+    physicalLines: allPhysicalLines,
+    virtualLines: allVirtualLines,
+    lineNames,
+    linesLoading,
+  } = useBranchLines(isOpen);
 
   const getInitialDateRange = () => {
     const today = new Date();
@@ -48,63 +45,25 @@ const GRSTrends = ({ isOpen, onClose }) => {
 
   const [dateRange, setDateRange] = useState(getInitialDateRange);
 
-  // Load branches + lumgs on open
-  useEffect(() => {
-    if (!isOpen) return;
-    Promise.all([branchApi.getAll(), lumgApi.getAll()])
-      .then(([branchData, lumgData]) => {
-        const list = Array.isArray(branchData) ? branchData : [];
-        setBranches(list);
-        setLumgs(Array.isArray(lumgData) ? lumgData : []);
-        if (list.length > 0) setSelectedBranchId(list[0].id);
-      })
-      .catch(err => console.error('Failed to load branches/lumgs:', err));
-  }, [isOpen]);
+  const physicalLineIds = useMemo(
+    () => allPhysicalLines.filter(l => l.include_in_trends).map(l => l.id),
+    [allPhysicalLines]
+  );
+  const virtualLineIds = useMemo(
+    () => allVirtualLines.filter(l => l.include_in_trends).map(l => l.id),
+    [allVirtualLines]
+  );
+  const grsLines = useMemo(
+    () => [...physicalLineIds, ...virtualLineIds],
+    [physicalLineIds, virtualLineIds]
+  );
 
-  // Load lines per branch (include_in_trends only)
-  useEffect(() => {
-    if (!isOpen || !selectedBranchId) return;
-
-    const load = async () => {
-      setLinesLoading(true);
-      try {
-        const branchLumgIds = lumgs.filter(l => l.branch_id === selectedBranchId).map(l => l.id);
-
-        // Physical lines with include_in_trends=true
-        let phys = [];
-        if (branchLumgIds.length > 0) {
-          const arrays = await Promise.all(branchLumgIds.map(lid => lineApi.getLinesByLumg(lid)));
-          phys = arrays.flat().filter(l => l && l.include_in_trends);
-        }
-
-        // Virtual lines with include_in_trends=true for this branch
-        const virt = await fetch(
-          `${(window.APP_CONFIG?.API_URL || '/api')}/virtual_lines/?include_in_trends=true&branch_id=${selectedBranchId}`,
-          { credentials: 'include' }
-        ).then(r => r.ok ? r.json() : []).catch(() => []);
-
-        setPhysicalLines(phys);
-        setVirtualLines(virt);
-      } catch (err) {
-        console.error('Error loading lines for branch:', err);
-      } finally {
-        setLinesLoading(false);
-      }
-    };
-
-    load();
-  }, [isOpen, selectedBranchId, lumgs]);
-
-  const physicalLineIds = useMemo(() => physicalLines.map(l => l.id), [physicalLines]);
-  const virtualLineIds  = useMemo(() => virtualLines.map(l => l.id),  [virtualLines]);
-  const grsLines        = useMemo(() => [...physicalLineIds, ...virtualLineIds], [physicalLineIds, virtualLineIds]);
-
-  // Line names map
-  const lineNames = useMemo(() => {
-    const map = {};
-    [...physicalLines, ...virtualLines].forEach(l => { map[l.id] = l.name || `Лінія ${l.id}`; });
-    return map;
-  }, [physicalLines, virtualLines]);
+  const handleBranchChange = (e) => {
+    setSelectedBranchId(Number(e.target.value));
+    setChartData([]);
+    setRawData([]);
+    setShowEnterprise(false);
+  };
 
   // Recalculate chart from already-fetched raw data (no new API calls for volumes)
   const recalculate = (data, pType, lines, entData = []) => {
@@ -251,112 +210,87 @@ const GRSTrends = ({ isOpen, onClose }) => {
     return () => window.removeEventListener('enterprise-cache-cleared', handler);
   }, [isOpen, dateRange, selectedBranchId, showEnterprise, periodType]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content grs-trends-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3 className="modal-title">{t('grsTrends')}</h3>
-          <button className="close-button" onClick={onClose}>×</button>
-        </div>
+    <ReportModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('grsTrends')}
+      className="grs-trends-modal"
+    >
+      <div className="grs-trends-modal-body">
+        {/* Controls row */}
+        <div className="grs-controls-row">
+          <BranchSelect
+            branches={branches}
+            value={selectedBranchId}
+            onChange={handleBranchChange}
+            label={t('branch')}
+          />
 
-        <div className="grs-trends-modal-body">
-          {/* Controls row */}
-          <div className="grs-controls-row">
-            {/* Branch */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <label style={{ color: '#B9E42B', fontSize: 13, whiteSpace: 'nowrap' }}>{t('branch')}:</label>
-              <select
-                style={{ background: '#2a2a2a', color: '#e0e0e0', border: '1px solid #404040', borderRadius: 4, padding: '5px 10px', fontSize: 13, minWidth: 180 }}
-                value={selectedBranchId || ''}
-                onChange={e => { setSelectedBranchId(Number(e.target.value)); setChartData([]); setRawData([]); setShowEnterprise(false); }}
-              >
-                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </div>
-
-            {/* Period toggle */}
-            <div className="grs-period-toggle">
-              <button
-                className={`grs-toggle-btn ${periodType === 'daily' ? 'active' : ''}`}
-                onClick={() => setPeriodType('daily')}
-              >
-                Добові
-              </button>
-              <button
-                className={`grs-toggle-btn ${periodType === 'hourly' ? 'active' : ''}`}
-                onClick={() => setPeriodType('hourly')}
-              >
-                Годинні
-              </button>
-            </div>
-
-            {/* Date pickers */}
-            <DateTimePickers
-              onDateRangeChange={setDateRange}
-              onDateFilterToggle={() => {}}
-              archiveType="daily"
-              initialDateRange={dateRange}
-            />
-
-            {/* Load button */}
+          {/* Period toggle */}
+          <div className="grs-period-toggle">
             <button
-              className="btn btn-primary grs-load-btn"
-              onClick={handleLoad}
-              disabled={isLoading || linesLoading}
+              className={`grs-toggle-btn ${periodType === 'daily' ? 'active' : ''}`}
+              onClick={() => setPeriodType('daily')}
             >
-              {isLoading ? t('loading') : 'Завантажити'}
+              Добові
+            </button>
+            <button
+              className={`grs-toggle-btn ${periodType === 'hourly' ? 'active' : ''}`}
+              onClick={() => setPeriodType('hourly')}
+            >
+              Годинні
             </button>
           </div>
 
-          {/* Loading */}
-          {isLoading && (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>{t('calculatingTrends')}</p>
-            </div>
-          )}
+          {/* Date pickers */}
+          <DateTimePickers
+            onDateRangeChange={setDateRange}
+            onDateFilterToggle={() => {}}
+            archiveType="daily"
+            initialDateRange={dateRange}
+          />
 
-          {/* Error */}
-          {error && (
-            <div className="error-container">
-              <div className="error-icon">⚠️</div>
-              <p className="error-message">{t('error')}: {error}</p>
-            </div>
-          )}
-
-          {/* Chart */}
-          {!isLoading && !error && chartData.length > 0 && (
-            <div className="chart-section">
-              <h4>{t('grsConsumptionTrends')}</h4>
-              <div className="chart-description">
-                <p>{t('grsTracksDescription')}</p>
-              </div>
-              <InteractiveChart
-                data={chartData}
-                archiveType="trends"
-                selectedLines={grsLines}
-                lineNames={lineNames}
-                trendsEnterpriseChecked={showEnterprise}
-                onTrendsEnterpriseChange={handleEnterpriseChange}
-              />
-            </div>
-          )}
-
-          {/* No data */}
-          {!isLoading && !error && chartData.length === 0 && (
-            <div className="no-data-container">
-              <p>{t('selectPeriod')}</p>
-            </div>
-          )}
+          {/* Load button */}
+          <button
+            className="btn btn-primary grs-load-btn"
+            onClick={handleLoad}
+            disabled={isLoading || linesLoading}
+          >
+            {isLoading ? t('loading') : 'Завантажити'}
+          </button>
         </div>
 
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>{t('close')}</button>
-        </div>
+        {isLoading && <LoadingBlock text={t('calculatingTrends')} />}
+
+        {error && <ErrorBlock error={error} />}
+
+        {/* Chart */}
+        {!isLoading && !error && chartData.length > 0 && (
+          <div className="chart-section">
+            <h4>{t('grsConsumptionTrends')}</h4>
+            <div className="chart-description">
+              <p>{t('grsTracksDescription')}</p>
+            </div>
+            <InteractiveChart
+              data={chartData}
+              archiveType="trends"
+              selectedLines={grsLines}
+              lineNames={lineNames}
+              trendsEnterpriseChecked={showEnterprise}
+              onTrendsEnterpriseChange={handleEnterpriseChange}
+            />
+          </div>
+        )}
+
+        {/* No data */}
+        {!isLoading && !error && chartData.length === 0 && (
+          <div className="no-data-container">
+            <p>{t('selectPeriod')}</p>
+          </div>
+        )}
       </div>
-    </div>
+    </ReportModalShell>
   );
 };
 

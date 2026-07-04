@@ -18,7 +18,6 @@ import { useIsMobile } from './hooks/useIsMobile'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { UserProvider } from './contexts/UserContext'
 import { useUser } from './contexts/UserContext'
-import { virtualLinesHelper } from './services/api'
 import { clearEnterpriseCache, cleanExpired, enforceCacheBudget } from './services/enterpriseCache'
 
 function safeSetItem(key, value) {
@@ -194,7 +193,7 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
     // Определить, является ли выбранная линия виртуальной
     if (lineIds && lineIds.length > 0) {
       const firstLineId = lineIds[0];
-      const isVirtual = lineMetadata?.is_virtual || virtualLinesHelper.isVirtualLine(firstLineId);
+      const isVirtual = lineMetadata?.is_virtual === true;
       setSelectedLineIsVirtual(isVirtual);
       setSelectedLineUnits(
         lineMetadata && !lineMetadata.is_virtual

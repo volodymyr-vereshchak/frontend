@@ -547,6 +547,13 @@ export const virtualLineApi = {
 export const virtualLinesApi = {
   async getVisibleLines() {
     return await apiClient.get('/virtual_lines/visible');
+  },
+
+  // Всі віртуальні лінії філії (опційно лише з include_in_trends)
+  async getByBranch(branchId, { trendsOnly = false } = {}) {
+    const params = { branch_id: branchId };
+    if (trendsOnly) params.include_in_trends = true;
+    return await apiClient.get('/virtual_lines/', params);
   }
 };
 
@@ -584,11 +591,6 @@ export const enterpriseVirtualApi = {
 
 // Virtual lines helper utilities
 export const virtualLinesHelper = {
-  isVirtualLine(lineId) {
-    // No longer reliable without the numeric convention; use lineMetadata.is_virtual instead
-    return false;
-  },
-
   isVirtualLineObject(line) {
     return line && line.is_virtual === true;
   }

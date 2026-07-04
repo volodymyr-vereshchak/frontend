@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { calcTypeApi } from '../../services/api';
+import { useStatusMessage } from './common/useStatusMessage';
 
 export default function CalcTypesTab() {
   const [items, setItems] = useState([]);
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState({});
   const [form, setForm] = useState({ type_id: '', type_name: '' });
-  const [status, setStatus] = useState(null);
+  const [status, showStatus] = useStatusMessage();
   const [isExporting, setIsExporting] = useState(false);
 
   const load = async () => {
@@ -15,8 +16,6 @@ export default function CalcTypesTab() {
   };
 
   useEffect(() => { load(); }, []);
-
-  const showStatus = (ok, msg) => { setStatus({ ok, msg }); setTimeout(() => setStatus(null), 3000); };
 
   const filtered = items.filter(i =>
     !search ||

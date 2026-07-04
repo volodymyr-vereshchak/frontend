@@ -1,3 +1,32 @@
+/* ── Глобальна палітра ────────────────────────────────────────────────────────
+   Єдине місце для кольорів теми. Нові стилі МАЮТЬ використовувати var(...);
+   існуючі hardcoded-кольори мігруються поступово. */
+:root {
+  /* Акцент (лаймовий бренд-колір) */
+  --accent: #B9E42B;
+  --accent-dim: #8fb022;
+
+  /* Фони, від найглибшого до карток/контролів */
+  --bg-page: #141414;
+  --bg-panel: #1a1a1a;
+  --bg-control: #2a2a2a;
+  --bg-hover: #3e3e3e;
+
+  /* Межі */
+  --border: #3a3a3a;
+  --border-light: #404040;
+
+  /* Текст */
+  --text-primary: #e0e0e0;
+  --text-secondary: #aaa;
+  --text-muted: #555;
+
+  /* Стани */
+  --success: #4caf50;
+  --danger: #f44336;
+  --info: #1565c0;
+}
+
 /* Global CSS Reset */
 html, body {
   margin: 0;
@@ -5,10 +34,10 @@ html, body {
   width: 100%;
   height: 100%;
   overflow-x: hidden;
-  background-color: #141414;
+  background-color: var(--bg-page);
 }
 
 #root {
   min-height: 100vh;
-  background-color: #141414;
+  background-color: var(--bg-page);
 }

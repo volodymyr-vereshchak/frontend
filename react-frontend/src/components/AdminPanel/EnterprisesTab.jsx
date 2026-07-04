@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { enterpriseApi, lineApi, lumgApi, branchApi, gasVolumeApi, deviceCatalogApi } from '../../services/api';
+import Pagination from './common/Pagination';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -479,34 +480,17 @@ export default function EnterprisesTab() {
         const paginated  = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
         return (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+            <Pagination
+              pageSize={pageSize}
+              onPageSizeChange={setPageSize}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            >
               <span style={{ color: '#666', fontSize: 12 }}>
                 Показано: {filtered.length} / {enterprises.length}
               </span>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {[10, 50, 100].map(size => (
-                  <button key={size} onClick={() => setPageSize(size)} style={{
-                    padding: '2px 8px', fontSize: 12, cursor: 'pointer', borderRadius: 4,
-                    border: '1px solid #3a3a3a',
-                    background: pageSize === size ? '#1565c0' : '#2a2a2a',
-                    color: pageSize === size ? '#fff' : '#aaa',
-                  }}>{size}</button>
-                ))}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  style={{ padding: '2px 8px', fontSize: 16, cursor: 'pointer', borderRadius: 4, border: '1px solid #3a3a3a', background: '#2a2a2a', color: '#aaa', lineHeight: 1 }}>
-                  ‹
-                </button>
-                <span style={{ color: '#aaa', fontSize: 12 }}>{currentPage} / {totalPages}</span>
-                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  style={{ padding: '2px 8px', fontSize: 16, cursor: 'pointer', borderRadius: 4, border: '1px solid #3a3a3a', background: '#2a2a2a', color: '#aaa', lineHeight: 1 }}>
-                  ›
-                </button>
-              </div>
-            </div>
+            </Pagination>
 
       {/* ── Table ────────────────────────────────────────────────────────── */}
       {loading ? (

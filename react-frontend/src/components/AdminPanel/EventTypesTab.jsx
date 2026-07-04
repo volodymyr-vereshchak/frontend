@@ -1,5 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { calcTypeApi, sysTypeApi, editTypeApi } from '../../services/api';
+import Pagination from './common/Pagination';
+import { useStatusMessage } from './common/useStatusMessage';
 
 // ─── Generic event type table (server-side pagination + search) ───────────────
 
@@ -12,7 +14,7 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
   const [search, setSearch]             = useState('');
   const [editing, setEditing]       = useState({});
   const [form, setForm]             = useState({ [idField]: '', gas_volume_calc_type_id: '', [nameField]: '' });
-  const [status, setStatus]         = useState(null);
+  const [status, showStatus]        = useStatusMessage();
   const [pageSize, setPageSize]     = useState(50);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -50,8 +52,6 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
     doLoad();
     return () => { cancelled = true; };
   }, [filterCalcId, search, currentPage, pageSize]);
-
-  const showStatus = (ok, msg) => { setStatus({ ok, msg }); setTimeout(() => setStatus(null), 3000); };
 
   const calcTypeLabel = (typeId) => {
     const c = calcTypes.find(c => c.type_id === typeId);
@@ -171,31 +171,13 @@ function EventTypeSection({ title, api, calcTypes, idField, nameField }) {
       {status && <div className={`admin-status ${status.ok ? 'ok' : 'error'}`} style={{ marginBottom: 8 }}>{status.msg}</div>}
 
       {/* ── Pagination controls ───────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {[10, 50, 100].map(size => (
-            <button key={size} onClick={() => { setPageSize(size); setCurrentPage(1); }} style={{
-              padding: '2px 8px', fontSize: 12, cursor: 'pointer', borderRadius: 4,
-              border: '1px solid #3a3a3a',
-              background: pageSize === size ? '#1565c0' : '#2a2a2a',
-              color: pageSize === size ? '#fff' : '#aaa',
-            }}>{size}</button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            style={{ padding: '2px 8px', fontSize: 16, cursor: 'pointer', borderRadius: 4, border: '1px solid #3a3a3a', background: '#2a2a2a', color: '#aaa', lineHeight: 1 }}>
-            ‹
-          </button>
-          <span style={{ color: '#aaa', fontSize: 12 }}>{currentPage} / {totalPages}</span>
-          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            style={{ padding: '2px 8px', fontSize: 16, cursor: 'pointer', borderRadius: 4, border: '1px solid #3a3a3a', background: '#2a2a2a', color: '#aaa', lineHeight: 1 }}>
-            ›
-          </button>
-        </div>
-      </div>
+      <Pagination
+        pageSize={pageSize}
+        onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
 
       {/* ── Table ────────────────────────────────────────────────────────── */}
       {loading ? (

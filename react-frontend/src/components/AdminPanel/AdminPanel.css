@@ -3,7 +3,7 @@
   display: flex;
   min-height: 600px;
   color: #e0e0e0;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--bg-control);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -13,7 +13,7 @@
   width: 180px;
   min-width: 180px;
   background: #161616;
-  border-right: 1px solid #2a2a2a;
+  border-right: 1px solid var(--bg-control);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -28,8 +28,8 @@
   font-weight: 700;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: #B9E42B;
-  border-bottom: 1px solid #2a2a2a;
+  color: var(--accent);
+  border-bottom: 1px solid var(--bg-control);
   flex-shrink: 0;
 }
 
@@ -105,9 +105,9 @@
 }
 
 .admin-nav-item.active {
-  color: #B9E42B;
+  color: var(--accent);
   background: #1a2300;
-  border-left-color: #B9E42B;
+  border-left-color: var(--accent);
   font-weight: 500;
 }
 
@@ -126,8 +126,8 @@
   align-items: center;
   font-size: 15px;
   font-weight: 600;
-  color: #B9E42B;
-  border-bottom: 1px solid #2a2a2a;
+  color: var(--accent);
+  border-bottom: 1px solid var(--bg-control);
   background: #161616;
   flex-shrink: 0;
 }
@@ -136,7 +136,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 16px 20px;
-  background: #1a1a1a;
+  background: var(--bg-panel);
 }
 
 /* Table */
@@ -147,7 +147,7 @@
 }
 
 .admin-table th {
-  color: #B9E42B;
+  color: var(--accent);
   text-align: left;
   padding: 6px 10px;
   border-bottom: 1px solid #373a3c;
@@ -156,7 +156,7 @@
 
 .admin-table td {
   padding: 6px 10px;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--bg-control);
   color: #d0d0d0;
 }
 
@@ -187,7 +187,7 @@
 }
 
 .admin-input {
-  background: #2a2a2a;
+  background: var(--bg-control);
   border: 1px solid #444;
   color: #e0e0e0;
   padding: 5px 10px;
@@ -198,11 +198,11 @@
 
 .admin-input:focus {
   outline: none;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 
 .admin-select {
-  background: #2a2a2a;
+  background: var(--bg-control);
   border: 1px solid #444;
   color: #e0e0e0;
   padding: 5px 10px;
@@ -213,13 +213,13 @@
 
 .admin-select:focus {
   outline: none;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 
 /* Buttons */
 .btn-primary {
-  background: #B9E42B;
-  color: #1a1a1a;
+  background: var(--accent);
+  color: var(--bg-panel);
   border: none;
   padding: 6px 14px;
   border-radius: 4px;
@@ -271,8 +271,8 @@
 
 .btn-edit {
   background: none;
-  color: #B9E42B;
-  border: 1px solid #B9E42B;
+  color: var(--accent);
+  border: 1px solid var(--accent);
   padding: 3px 10px;
   border-radius: 4px;
   cursor: pointer;
@@ -282,8 +282,8 @@
 }
 
 .btn-edit:hover {
-  background: #B9E42B;
-  color: #1a1a1a;
+  background: var(--accent);
+  color: var(--bg-panel);
 }
 
 .btn-edit:disabled {
@@ -297,12 +297,12 @@
   padding: 4px 0;
 }
 
-.admin-status.ok { color: #B9E42B; }
+.admin-status.ok { color: var(--accent); }
 .admin-status.error { color: #e05252; }
 
 .badge-active {
   background: #2a3a0a;
-  color: #B9E42B;
+  color: var(--accent);
   padding: 1px 7px;
   border-radius: 10px;
   font-size: 11px;

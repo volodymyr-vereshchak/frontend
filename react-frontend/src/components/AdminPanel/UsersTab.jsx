@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { userManagementApi, branchApi } from '../../services/api';
+import { useStatusMessage } from './common/useStatusMessage';
 
 const ROLES = ['viewer', 'admin'];
 
 export default function UsersTab() {
   const [users, setUsers] = useState([]);
   const [branches, setBranches] = useState([]);
-  const [status, setStatus] = useState(null);
+  const [status, showStatus] = useStatusMessage(4000);
   const [shownPassword, setShownPassword] = useState(null); // { userId, username, password }
 
   // Create form state
@@ -26,11 +27,6 @@ export default function UsersTab() {
   };
 
   useEffect(() => { load(); }, []);
-
-  const showStatus = (ok, msg) => {
-    setStatus({ ok, msg });
-    setTimeout(() => setStatus(null), 4000);
-  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
