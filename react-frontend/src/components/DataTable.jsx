@@ -1,42 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './DataTable.css';
-import apiClient, { archiveCountsApi, archiveDataApi, editArchiveApi, sysArchiveApi, commercialDayUtils, archiveDataVirtualApi } from '../services/api';
-import { enterprisePeriodKey, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { formatEditValue } from '../utils/valueConverter';
 import { PRESSURE_UNIT_DEFAULT, DP_UNIT_DEFAULT, convertPressureValue } from '../constants/pressureUnits';
-
-const EDIT_CHANNEL_NAMES = ["P", "T", "dP", "dPL", "Густ"];
-
-function resolveEditName(editName, rawOldValue, rawNewValue) {
-  if (!editName || !editName.includes('%s')) return editName;
-  const isChannelIdx = (v) =>
-    typeof v === 'number' && Number.isInteger(v) && v >= 0 && v < EDIT_CHANNEL_NAMES.length;
-  const idx = isChannelIdx(rawOldValue) ? rawOldValue
-             : isChannelIdx(rawNewValue) ? rawNewValue
-             : null;
-  const channelName = idx !== null ? EDIT_CHANNEL_NAMES[idx] : String(rawOldValue ?? '?');
-  return editName.replace('%s', channelName);
-}
-import { getEnterpriseWithCache } from '../services/enterpriseCache';
-import { addDays } from '../utils/commercialDay';
-import * as XLSX from 'xlsx';
+import { getArchiveColumns, resolveEditName } from '../utils/archiveColumns';
+import { exportArchiveToExcel } from '../utils/exportArchiveToExcel';
+import { useArchiveData } from '../hooks/useArchiveData';
 import { useLanguage } from '../contexts/LanguageContext';
-
 import ExcelIcon from './common/ExcelIcon';
 
 const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType, onDataChange, isVirtualLine, lineUnits }) => {
   const { t, getLocale } = useLanguage();
-  const [rowData, setRowData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'period', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [pageInput, setPageInput] = useState('1');
-  const [totalRows, setTotalRows] = useState(0);
   const [exportWithEnterprise, setExportWithEnterprise] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const fetchCountRef = useRef(0);
 
   // Alarm (sys) and change (edit) archives can hold tens of thousands of rows per
   // day, so for physical lines they are fetched one page at a time from the
@@ -44,302 +23,19 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   // (daily/hourly/param, and virtual lines) loads fully and sorts client-side.
   const serverPaged = !isVirtualLine && (archiveType === 'sys' || archiveType === 'edit');
 
-  // Format period value for Excel export
-  const formatPeriodForExcel = (value) => {
-    const date = new Date(value);
-    if (isNaN(date.getTime())) return value || '';
-    const locale = getLocale();
-    if (archiveType === 'daily') {
-      return date.toLocaleDateString(locale);
-    } else if (archiveType === 'hourly') {
-      return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
-    } else if (archiveType === 'edit' || archiveType === 'sys') {
-      return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-    } else {
-      return date.toLocaleDateString(locale) + ' ' + date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
-    }
-  };
-
-  // Excel export function
-  const exportToExcel = async () => {
-    if (!rowData || rowData.length === 0) {
-      alert(t('noDataExport'));
-      return;
-    }
-
-    setIsExporting(true);
-    try {
-      const columns = getColumns();
-
-      // ── Enterprise export (daily/hourly only) ──────────────────────────────
-      if (exportWithEnterprise && (archiveType === 'daily' || archiveType === 'hourly') && selectedLines && selectedLines.length > 0) {
-        // Sort data chronologically
-        const sortedData = [...processedRowData].sort((a, b) => new Date(a.period) - new Date(b.period));
-        const firstDate = String(sortedData[0].period).slice(0, 10);
-        const toDate   = String(sortedData[sortedData.length - 1].period).slice(0, 10);
-        const periodType = archiveType === 'hourly' ? 'hourly' : 'daily';
-        // Enterprise is commercial-day aligned (07:00 start); for hourly fetch a day
-        // earlier so the first date's 00:00–06:00 hours (tail of the previous
-        // commercial day) are included.
-        const fromDate = periodType === 'hourly' ? addDays(firstDate, -1) : firstDate;
-
-        // Excel needs full per-enterprise breakdown — always fetch fresh from API
-        // (cache stores only total volumes, which is enough for the chart overlay).
-        const rawEnterprise = await getEnterpriseFetchFn(isVirtualLine)(
-          selectedLines, fromDate, toDate, periodType
-        ) || [];
-
-        // Build per-period, per-enterprise breakdown
-        const entByPeriod = {}; // period key -> { entName -> volume }
-        const entNames = new Set();
-
-        rawEnterprise.forEach(record => {
-          const pk = enterprisePeriodKey(record.period, periodType);
-          if (!entByPeriod[pk]) entByPeriod[pk] = {};
-          (record.devices || []).forEach(device => {
-            const name = device.enterprise_name || 'Unknown';
-            entNames.add(name);
-            if (device.volume != null) {
-              // Polled: add to sum (even if 0)
-              entByPeriod[pk][name] = (entByPeriod[pk][name] ?? 0) + device.volume;
-            } else if (entByPeriod[pk][name] === undefined) {
-              // Not polled and no prior data: mark explicitly as null (no data)
-              entByPeriod[pk][name] = null;
-            }
-            // If already has a value from another device, leave it (partial poll)
-          });
-        });
-
-        const sortedEntNames = [...entNames].sort();
-
-        // Build headers: archive columns + enterprise columns + totals
-        const archiveHeaders = columns.map(col => col.label);
-        const entHeaders     = sortedEntNames;
-        const extraHeaders   = [t('totalEnterpriseVolume'), t('netVolume')];
-        const headers        = [...archiveHeaders, ...entHeaders, ...extraHeaders];
-
-        // Build data rows
-        const dataRows = sortedData.map(row => {
-          const archiveCells = columns.map(col => {
-            const value = row[col.key];
-            if (col.key === 'period' && value) return formatPeriodForExcel(value);
-            if (typeof value === 'number') return value;
-            return value || '';
-          });
-
-          const pk = enterprisePeriodKey(row.period, periodType);
-          const entData = entByPeriod[pk] || {};
-
-          const entCells = sortedEntNames.map(name => entData[name] != null ? entData[name] : '');
-          const totalEnt = entCells.reduce((s, v) => s + (v !== '' ? v : 0), 0);
-          const lineVol  = row.volume || 0;
-          const netVol   = lineVol - totalEnt;
-
-          return [...archiveCells, ...entCells, totalEnt, netVol];
-        });
-
-        // Summary row
-        const summaryArchive = columns.map(col => {
-          if (col.key === 'period') return t('total');
-          if (col.isSummable) return sortedData.reduce((s, row) => s + (parseFloat(row[col.key]) || 0), 0);
-          return '';
-        });
-        const summaryEnt = sortedEntNames.map(name =>
-          sortedData.reduce((s, row) => {
-            const pk = enterprisePeriodKey(row.period, periodType);
-            return s + ((entByPeriod[pk] || {})[name] || 0);
-          }, 0)
-        );
-        const summaryTotalEnt = summaryEnt.reduce((s, v) => s + v, 0);
-        const summaryLineVol  = sortedData.reduce((s, row) => s + (row.volume || 0), 0);
-        const summaryNetVol   = summaryLineVol - summaryTotalEnt;
-        const summaryRow      = [...summaryArchive, ...summaryEnt, summaryTotalEnt, summaryNetVol];
-
-        // Build workbook
-        const allRows = [headers, ...dataRows, summaryRow];
-        const workbook  = XLSX.utils.book_new();
-        const worksheet = XLSX.utils.aoa_to_sheet(allRows);
-
-        // Column widths
-        worksheet['!cols'] = headers.map((h, i) => {
-          const maxLen = Math.max(h.length, ...dataRows.map(r => String(r[i] ?? '').length));
-          return { wch: Math.min(Math.max(maxLen + 3, 12), 50) };
-        });
-
-        // Number format
-        const range = XLSX.utils.decode_range(worksheet['!ref']);
-        for (let r = 1; r <= range.e.r; r++) {
-          for (let c = range.s.c; c <= range.e.c; c++) {
-            const addr = XLSX.utils.encode_cell({ r, c });
-            if (worksheet[addr] && typeof worksheet[addr].v === 'number') {
-              worksheet[addr].z = '#,##0.00';
-            }
-          }
-        }
-
-        const archiveTypeNames = { daily: t('dailyArchive'), hourly: t('hourlyArchive') };
-        XLSX.utils.book_append_sheet(workbook, worksheet, archiveTypeNames[archiveType] || archiveType);
-
-        const now = new Date();
-        const ts  = now.toISOString().slice(0, 19).replace(/[T:]/g, '_');
-        const fileArchiveNames = { daily: t('dailyArchiveFile'), hourly: t('hourlyArchiveFile') };
-        XLSX.writeFile(workbook, `${fileArchiveNames[archiveType] || archiveType}_enterprise_${ts}.xlsx`);
-        return;
-      }
-
-      // ── Standard export ────────────────────────────────────────────────────
-
-      // Server-paginated archives (sys / edit) only keep the current page in
-      // memory; pull the full dataset so the export is complete.
-      const rawExportData = serverPaged
-        ? ((archiveType === 'sys'
-            ? await sysArchiveApi.getSysData(selectedLines, dateRange.fromDate, dateRange.toDate)
-            : await editArchiveApi.getEditData(selectedLines, dateRange.fromDate, dateRange.toDate)) || [])
-        : processedRowData;
-
-      // The API does not guarantee chronological row order (re-polled/backfilled
-      // periods can arrive out of sequence), and the on-screen table sorts a
-      // separate copy. Sort the export itself by period so every archive's
-      // spreadsheet is strictly chronological. Rows without a period keep a
-      // stable relative order at the end.
-      const exportData = rawExportData.slice().sort((a, b) => {
-        const ta = a.period ? new Date(a.period).getTime() : NaN;
-        const tb = b.period ? new Date(b.period).getTime() : NaN;
-        if (isNaN(ta) && isNaN(tb)) return 0;
-        if (isNaN(ta)) return 1;
-        if (isNaN(tb)) return -1;
-        return ta - tb;
-      });
-
-      // Prepare header row
-      const headers = columns.map(col => col.label);
-
-      // Prepare data rows
-      const dataRows = exportData.map(row => {
-        return columns.map(col => {
-          let value = row[col.key];
-          if (col.key === 'period' && value) return formatPeriodForExcel(value);
-          if (archiveType === 'edit' && col.key === 'edit_name') {
-            return resolveEditName(value, row.old_value, row.new_value) || '';
-          }
-          if (archiveType === 'edit' && (col.key === 'old_value' || col.key === 'new_value')) {
-            return formatEditValue(value, row.edit_type_id ?? null, row.gas_volume_calc_type_id ?? null);
-          }
-          if (typeof value === 'number') return value;
-          return value || '';
-        });
-      });
-
-      // Add summary row for daily and hourly archives
-      let summaryRow = null;
-      if (archiveType === 'daily' || archiveType === 'hourly') {
-        summaryRow = columns.map(col => {
-          if (col.key === 'period') {
-            return t('total');
-          } else if (col.isSummable) {
-            // Calculate sum for volume, edit_counts, sys_counts
-            const sum = processedRowData.reduce((acc, row) => {
-              const value = parseFloat(row[col.key]) || 0;
-              return acc + value;
-            }, 0);
-            return sum;
-          } else if (col.isAveragable) {
-            // Calculate average for other numeric columns
-            const validValues = processedRowData
-              .map(row => parseFloat(row[col.key]))
-              .filter(value => !isNaN(value));
-
-            if (validValues.length > 0) {
-              const avg = validValues.reduce((sum, value) => sum + value, 0) / validValues.length;
-              return avg;
-            }
-            return '';
-          }
-          return '';
-        });
-      }
-
-      // Combine all rows
-      const allRows = [headers, ...dataRows];
-      if (summaryRow) {
-        allRows.push(summaryRow);
-      }
-
-      // Create workbook and worksheet
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.aoa_to_sheet(allRows);
-
-      // Auto-size columns with better width calculation
-      const columnWidths = columns.map((col, colIndex) => {
-        const headerLength = col.label.length;
-        const maxDataLength = Math.max(
-          ...exportData.map(row => {
-            const value = row[col.key];
-            if (value === null || value === undefined) return 0;
-            // For numbers, consider decimal places
-            if (typeof value === 'number') {
-              return value.toFixed(2).length + 2;
-            }
-            return String(value).length;
-          })
-        );
-        const width = Math.max(headerLength, maxDataLength) + 3;
-        return { wch: Math.min(Math.max(width, 12), 50) };
-      });
-      worksheet['!cols'] = columnWidths;
-
-      // Apply number format to numeric cells
-      // Excel will automatically use system locale (comma for Russian, period for English)
-      const range = XLSX.utils.decode_range(worksheet['!ref']);
-
-      for (let row = 1; row <= range.e.r; row++) {
-        for (let col = range.s.c; col <= range.e.c; col++) {
-          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-          if (!worksheet[cellAddress]) continue;
-
-          const cell = worksheet[cellAddress];
-
-          // Apply number format for 2 decimal places
-          // The format will be adapted by Excel to user's regional settings
-          if (typeof cell.v === 'number') {
-            cell.z = '#,##0.00'; // Number format with thousand separator and 2 decimals
-          }
-        }
-      }
-
-      // Add worksheet to workbook
-      const archiveTypeNames = {
-        'daily': t('dailyArchive'),
-        'hourly': t('hourlyArchive'),
-        'sys': t('systemArchive'),
-        'edit': t('editArchive'),
-        'param': t('parameters')
-      };
-      const sheetName = archiveTypeNames[archiveType] || archiveType;
-      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-
-      // Generate filename
-      const now = new Date();
-      const timestamp = now.toISOString().slice(0, 19).replace(/[T:]/g, '_');
-      const fileArchiveNames = {
-        'daily': t('dailyArchiveFile'),
-        'hourly': t('hourlyArchiveFile'),
-        'sys': t('systemArchiveFile'),
-        'edit': t('editArchiveFile'),
-        'param': t('parametersFile')
-      };
-      const filename = `${fileArchiveNames[archiveType] || archiveType}_${timestamp}.xlsx`;
-
-      // Download file
-      XLSX.writeFile(workbook, filename);
-
-    } catch (error) {
-      console.error('Error exporting to Excel:', error);
-      alert(t('exportError'));
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  const { rowData, loading, error, totalRows } = useArchiveData({
+    selectedLines,
+    dateRange,
+    isDateFilterEnabled,
+    archiveType,
+    isVirtualLine,
+    serverPaged,
+    currentPage,
+    itemsPerPage,
+    sortConfig,
+    onDataChange,
+    t,
+  });
 
   // Sync scroll between header and body
   const handleTableScroll = (e) => {
@@ -361,307 +57,15 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     !lineUnits.is_high_pressure &&
     (archiveType === 'daily' || archiveType === 'hourly');
 
-  const getColumns = () => {
-    // Meter lines store working volume (m³) in w_volume_dp; others store dP.
-    const wVolumeDpLabel = lineUnits?.meter
-      ? `${t('workingVolume')}, ${t('volumeUnit')}`
-      : `${t('differentialPressure')}, ${dpUnit}`;
-    switch (archiveType) {
-      case 'daily':
-      case 'hourly':
-        // Для виртуальных линий - ТОЛЬКО period и volume
-        if (isVirtualLine) {
-          return [
-            { key: 'period', label: t('period'), sortable: true },
-            { key: 'volume', label: t('volume'), sortable: true, isSummable: true }
-          ];
-        }
-
-        // Для физических линий - все колонки
-        return [
-          { key: 'period', label: t('period'), sortable: true },
-          { key: 'volume', label: t('volume'), sortable: true, isSummable: true },
-          { key: 'w_volume_dp', label: wVolumeDpLabel, sortable: true, isAveragable: true },
-          { key: 'pressure', label: `${t('pressure')}, ${pressureUnit}`, sortable: true, isAveragable: true },
-          ...(showOutputPressure
-            ? [{ key: 'output_pressure', label: `${t('outputPressure')}, ${pressureUnit}`, sortable: true, isAveragable: true }]
-            : []),
-          { key: 'temperature', label: t('temperature'), sortable: true, isAveragable: true },
-          { key: 'density', label: t('density'), sortable: true, isAveragable: true },
-          { key: 'edit_counts', label: t('editCounts'), sortable: true, isSummable: true, tooltip: t('changesCount') },
-          { key: 'sys_counts', label: t('sysCounts'), sortable: true, isSummable: true, tooltip: t('alarmsCount') }
-        ];
-      case 'edit':
-        return [
-          { key: 'period', label: t('period'), sortable: true },
-          { key: 'edit_name', label: t('editType'), sortable: true },
-          { key: 'old_value', label: t('oldValue'), sortable: true },
-          { key: 'new_value', label: t('newValue'), sortable: true }
-        ];
-      case 'sys':
-        return [
-          { key: 'period', label: t('period'), sortable: true },
-          { key: 'sys_name', label: t('operationType'), sortable: true },
-          { key: 'volume', label: t('value'), sortable: true, isSummable: true }
-        ];
-      case 'param':
-        return [
-          { key: 'period', label: t('period'), sortable: true },
-          { key: 'density', label: t('density'), sortable: true, isAveragable: true },
-          { key: 'co2', label: 'CO2 (%)', sortable: true, isAveragable: true },
-          { key: 'n2', label: 'N2 (%)', sortable: true, isAveragable: true },
-          { key: 'D20', label: 'D20', sortable: true, isAveragable: true },
-          { key: 'd20', label: 'd20', sortable: true, isAveragable: true },
-          { key: 'cutoff', label: 'Cutoff', sortable: true, isAveragable: true },
-          { key: 'roughness', label: 'Roughness', sortable: true, isAveragable: true },
-          { key: 'max_dp', label: t('paramMaxDp'), sortable: true, isAveragable: true },
-          { key: 'min_dp', label: t('paramMinDp'), sortable: true, isAveragable: true },
-          { key: 'A0su', label: 'A0su', sortable: true, isAveragable: true },
-          { key: 'A1su', label: 'A1su', sortable: true, isAveragable: true },
-          { key: 'A2su', label: 'A2su', sortable: true, isAveragable: true },
-          { key: 'A0pipe', label: 'A0pipe', sortable: true, isAveragable: true },
-          { key: 'A1pipe', label: 'A1pipe', sortable: true, isAveragable: true },
-          { key: 'A2pipe', label: 'A2pipe', sortable: true, isAveragable: true },
-          { key: 'radius', label: t('paramRadius'), sortable: true, isAveragable: true },
-          { key: 'su_year', label: t('paramSuYear'), sortable: true, isAveragable: true },
-          { key: 'max_p', label: t('paramMaxP'), sortable: true, isAveragable: true },
-          { key: 'min_p', label: t('paramMinP'), sortable: true, isAveragable: true },
-          { key: 'max_t', label: t('paramMaxT'), sortable: true, isAveragable: true },
-          { key: 'min_t', label: t('paramMinT'), sortable: true, isAveragable: true }
-        ];
-      default:
-        return [];
-    }
-  };
-
-  const columns = getColumns();
-
-  const fetchData = async (abortController) => {
-    const myFetchId = ++fetchCountRef.current;
-    if (!selectedLines || selectedLines.length === 0) {
-      setRowData([]);
-      setLoading(false);
-      if (onDataChange) {
-        onDataChange([]);
-      }
-      return;
-    }
-
-    if (!isDateFilterEnabled) {
-      setRowData([]);
-      setLoading(false);
-      if (onDataChange) {
-        onDataChange([]);
-      }
-      return;
-    }
-
-    // Clear old data immediately when starting new request
-    setRowData([]);
-    setLoading(true);
-    setError(null);
-
-    const startTime = performance.now();
-
-    try {
-      // Для виртуальных линий используем виртуальные endpoints
-      if (isVirtualLine) {
-        // Виртуальные линии поддерживают только daily и hourly
-        if (archiveType !== 'daily' && archiveType !== 'hourly') {
-          setError(t('virtualLinesSupportOnlyDailyHourly'));
-          setRowData([]);
-          if (onDataChange) onDataChange([]);
-          return;
-        }
-
-        // Fetch archive data (VIRTUAL)
-        let archiveData;
-        if (archiveType === 'daily') {
-          archiveData = await archiveDataVirtualApi.getDailyDataVirtual(
-            selectedLines,
-            dateRange.fromDate,
-            dateRange.toDate
-          );
-        } else {
-          archiveData = await archiveDataVirtualApi.getHourlyDataVirtual(
-            selectedLines,
-            dateRange.fromDate,
-            dateRange.toDate
-          );
-        }
-
-        if (abortController?.signal?.aborted || fetchCountRef.current !== myFetchId) return;
-
-        setRowData(archiveData || []);
-        if (onDataChange) onDataChange(archiveData || []);
-        return;
-      }
-
-      // ФИЗИЧЕСКИЕ ЛИНИИ - существующая логика
-
-      // Server-paginated archives (alarms / changes): fetch only the current
-      // page with server-side sorting; never pull the whole archive into memory.
-      if (serverPaged) {
-        const opts = {
-          skip: (currentPage - 1) * itemsPerPage,
-          limit: itemsPerPage,
-          orderBy: sortConfig.key,
-          orderDir: sortConfig.direction,
-        };
-        const resp = archiveType === 'sys'
-          ? await sysArchiveApi.getSysDataPaged(selectedLines, dateRange.fromDate, dateRange.toDate, opts)
-          : await editArchiveApi.getEditDataPaged(selectedLines, dateRange.fromDate, dateRange.toDate, opts);
-
-        if (fetchCountRef.current !== myFetchId) return;
-        const items = resp?.items || [];
-        setRowData(items);
-        setTotalRows(resp?.total || 0);
-        if (onDataChange) onDataChange(items);
-        return;
-      }
-
-      // Skip И and А columns for other non-daily/hourly archives
-      if (archiveType !== 'daily' && archiveType !== 'hourly') {
-        // Use apiClient for correct proxy handling
-        const params = {};
-
-        if (selectedLines && selectedLines.length > 0) {
-          params.line_id = selectedLines;
-        }
-
-        if (dateRange.fromDate) {
-          params.from_date = dateRange.fromDate;
-        }
-        if (dateRange.toDate) {
-          params.to_date = dateRange.toDate;
-        }
-
-        const data = await apiClient.get(`/${archiveType}/`, params);
-
-        if (fetchCountRef.current !== myFetchId) return;
-        setRowData(data || []);
-        if (onDataChange) {
-          onDataChange(data || []);
-        }
-        return;
-      }
-
-      // For daily and hourly archives, fetch main data and separate counts (И and А)
-
-      const promises = [];
-
-      // Fetch main archive data
-      if (archiveType === 'daily') {
-        promises.push(archiveDataApi.getDailyData(selectedLines, dateRange.fromDate, dateRange.toDate));
-      } else {
-        promises.push(archiveDataApi.getHourlyData(selectedLines, dateRange.fromDate, dateRange.toDate));
-      }
-
-      // Fetch edit counts (И) and sys counts (А) separately
-      promises.push(archiveCountsApi.getEditCounts(selectedLines, dateRange.fromDate, dateRange.toDate));
-      promises.push(archiveCountsApi.getSysCounts(selectedLines, dateRange.fromDate, dateRange.toDate));
-
-      const [archiveData, editCountsData, sysCountsData] = await Promise.all(promises);
-
-      if (abortController?.signal?.aborted || fetchCountRef.current !== myFetchId) {
-        return;
-      }
-
-      // Process edit counts (И) and sys counts (А) separately
-      let processedEditCounts = [];
-      let processedSysCounts = [];
-
-      if (archiveType === 'daily') {
-        // Aggregate hourly counts to commercial days
-        if (editCountsData) {
-          processedEditCounts = commercialDayUtils.aggregateEditCountsToCommercialDays(editCountsData, selectedLines);
-        }
-        if (sysCountsData) {
-          processedSysCounts = commercialDayUtils.aggregateSysCountsToCommercialDays(sysCountsData, selectedLines);
-        }
-      } else if (archiveType === 'hourly') {
-        // Transform hourly counts to expected format
-        if (editCountsData) {
-          processedEditCounts = editCountsData.map(record => {
-            const periodField = record.period || record.hour_group;
-            const lineId = record.line_id || (selectedLines.length > 0 ? selectedLines[0] : 1);
-            const countValue = record.record_count || 0;
-
-            return {
-              line_id: lineId,
-              period: periodField,
-              edit_counts: countValue
-            };
-          });
-        }
-
-        if (sysCountsData) {
-          processedSysCounts = sysCountsData.map(record => {
-            const periodField = record.period || record.hour_group;
-            const lineId = record.line_id || (selectedLines.length > 0 ? selectedLines[0] : 1);
-            const countValue = record.record_count || 0;
-
-            return {
-              line_id: lineId,
-              period: periodField,
-              sys_counts: countValue
-            };
-          });
-        }
-      }
-
-
-      // Merge archive data with both edit and sys counts
-      const mergedData = (archiveData || []).map((record, index) => {
-        // Find matching edit counts
-        const matchingEditCounts = processedEditCounts.find(count =>
-          count.line_id === record.line_id &&
-          count.period === record.period
-        );
-
-        // Find matching sys counts
-        const matchingSysCounts = processedSysCounts.find(count =>
-          count.line_id === record.line_id &&
-          count.period === record.period
-        );
-
-
-        return {
-          ...record,
-          edit_counts: matchingEditCounts?.edit_counts || 0,
-          sys_counts: matchingSysCounts?.sys_counts || 0
-        };
-      });
-
-
-      setRowData(mergedData);
-      if (onDataChange) {
-        onDataChange(mergedData);
-      }
-
-    } catch (error) {
-      if (error.name === 'AbortError' || fetchCountRef.current !== myFetchId) {
-        return;
-      }
-      console.error('Error fetching data:', error);
-      setError(error.message);
-      setRowData([]);
-      if (onDataChange) {
-        onDataChange([]);
-      }
-    } finally {
-      if (fetchCountRef.current === myFetchId) {
-        setLoading(false);
-      }
-    }
-  };
-
-  // Clear stale data immediately when archive type changes (before 50ms debounce fires)
-  useEffect(() => {
-    setRowData([]);
-    setLoading(isDateFilterEnabled && selectedLines && selectedLines.length > 0);
-    setError(null);
-  }, [archiveType]);
+  const columns = getArchiveColumns({
+    archiveType,
+    isVirtualLine,
+    lineUnits,
+    showOutputPressure,
+    pressureUnit,
+    dpUnit,
+    t,
+  });
 
   // Reset to the first page and default sort whenever the query context changes
   // (lines, dates, archive type). Returning the same state object when already at
@@ -670,26 +74,6 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     setCurrentPage(p => (p === 1 ? p : 1));
     setSortConfig(s => (s.key === 'period' && s.direction === 'asc' ? s : { key: 'period', direction: 'asc' }));
   }, [JSON.stringify(selectedLines), JSON.stringify(dateRange), isDateFilterEnabled, archiveType, isVirtualLine]);
-
-  // Page and sort only drive a re-fetch for server-paginated archives; for
-  // everything else they are handled client-side, so they are excluded from the
-  // fetch key to avoid needless reloads.
-  const fetchKey = JSON.stringify(
-    serverPaged
-      ? [selectedLines, dateRange, isDateFilterEnabled, archiveType, isVirtualLine, currentPage, itemsPerPage, sortConfig]
-      : [selectedLines, dateRange, isDateFilterEnabled, archiveType, isVirtualLine]
-  );
-
-  useEffect(() => {
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(() => {
-      fetchData(abortController);
-    }, 50);
-    return () => {
-      clearTimeout(timeoutId);
-      abortController.abort(); // Cancel pending requests
-    };
-  }, [fetchKey]);
 
   // Keep the manual page-number input in sync when the page changes via the
   // arrows, page-size change, or a context reset.
@@ -779,6 +163,33 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     setCurrentPage(1);
   };
 
+  const handleExport = async () => {
+    if (!rowData || rowData.length === 0) {
+      alert(t('noDataExport'));
+      return;
+    }
+    setIsExporting(true);
+    try {
+      await exportArchiveToExcel({
+        columns,
+        processedRowData,
+        archiveType,
+        serverPaged,
+        selectedLines,
+        dateRange,
+        withEnterprise: exportWithEnterprise,
+        isVirtualLine,
+        locale: getLocale(),
+        t,
+      });
+    } catch (err) {
+      console.error('Error exporting to Excel:', err);
+      alert(t('exportError'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const formatNumber = (value, key) => {
     if (typeof value !== 'number' || isNaN(value)) return value;
 
@@ -847,18 +258,11 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
       return `${year}-${month}-${day}`;
     };
 
-    const formattedStartDate = formatDate(startDate);
-    const formattedEndDate = formatDate(endDate);
-
-    // Get line_id from the row
-    const lineId = row.line_id;
-
-    // Build URL with parameters
     const params = new URLSearchParams({
       archiveType: 'hourly',
-      fromDate: formattedStartDate,
-      toDate: formattedEndDate,
-      lineId: lineId,
+      fromDate: formatDate(startDate),
+      toDate: formatDate(endDate),
+      lineId: row.line_id,
       dateFilterEnabled: 'true'
     });
 
@@ -933,7 +337,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
                   )}
                   <button
                     className="excel-export-btn"
-                    onClick={exportToExcel}
+                    onClick={handleExport}
                     title={t('export')}
                     disabled={isExporting}
                     style={isExporting ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
