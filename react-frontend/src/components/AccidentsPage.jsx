@@ -263,23 +263,24 @@ export default function AccidentsPage() {
             </select>
           </div>
 
-          <div className="acc-field">
-            <label>З</label>
-            <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+          <div className="acc-field acc-field--period">
+            <label>{t('period')}</label>
+            <div className="acc-period">
+              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+              <span className="acc-period-sep">—</span>
+              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
+            </div>
           </div>
 
-          <div className="acc-field">
-            <label>По</label>
-            <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
+          <div className="acc-actions">
+            <button className="acc-btn-primary" onClick={loadData} disabled={loading || initLoading}>
+              {loading ? t('loading') : 'Завантажити дані'}
+            </button>
+
+            <button className="acc-btn-secondary" onClick={exportToExcel} disabled={!dataLoaded}>
+              📊 Експорт в Excel
+            </button>
           </div>
-
-          <button className="acc-btn-primary" onClick={loadData} disabled={loading || initLoading}>
-            {loading ? t('loading') : 'Завантажити дані'}
-          </button>
-
-          <button className="acc-btn-secondary" onClick={exportToExcel} disabled={!dataLoaded}>
-            📊 Експорт в Excel
-          </button>
         </div>
       </div>
 

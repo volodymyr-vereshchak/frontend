@@ -34,6 +34,9 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  /* selects share the leftover width instead of forcing a wrap */
+  flex: 1 1 150px;
+  min-width: 130px;
 }
 .acc-field label {
   font-size: 11px;
@@ -41,6 +44,7 @@
   color: #B9E42B;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 .acc-field input,
 .acc-field select {
@@ -50,8 +54,34 @@
   border-radius: 6px;
   color: #ccc;
   font-size: 13px;
-  min-width: 160px;
+  width: 100%;
+  min-width: 0;
   color-scheme: dark;
+}
+
+/* Period: two date inputs in one field, fixed width */
+.acc-field--period {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.acc-period {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.acc-period input {
+  width: 138px;
+}
+.acc-period-sep {
+  color: #666;
+  user-select: none;
+}
+
+/* Buttons pinned to the right edge of the row */
+.acc-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
 }
 .acc-field input:focus,
 .acc-field select:focus {
