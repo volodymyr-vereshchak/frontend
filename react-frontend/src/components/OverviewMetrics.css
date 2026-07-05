@@ -6,10 +6,10 @@
 }
 
 .metric-card {
-  background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+  background: linear-gradient(135deg, var(--bg-control) 0%, #1f1f1f 100%);
   border-radius: 12px;
   padding: 20px;
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
   display: flex;
   align-items: flex-start;
   gap: 16px;
@@ -25,13 +25,13 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #B9E42B, #8EC621);
+  background: linear-gradient(90deg, var(--accent), #8EC621);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .metric-card:hover {
-  border-color: #B9E42B;
+  border-color: var(--accent);
   box-shadow: 0 4px 16px rgba(185, 228, 43, 0.15);
 }
 
@@ -104,7 +104,7 @@
 }
 
 .lines-count-ok {
-  color: #B9E42B;
+  color: var(--accent);
 }
 
 .lines-count-warn {
@@ -130,12 +130,12 @@
 
 .lines-all-active {
   border-color: rgba(185, 228, 43, 0.35) !important;
-  background: linear-gradient(135deg, #2a2a2a 0%, #2a2f1f 100%) !important;
+  background: linear-gradient(135deg, var(--bg-control) 0%, #2a2f1f 100%) !important;
 }
 
 .lines-partial {
   border-color: rgba(255, 107, 107, 0.35) !important;
-  background: linear-gradient(135deg, #2a2a2a 0%, #2f1f1f 100%) !important;
+  background: linear-gradient(135deg, var(--bg-control) 0%, #2f1f1f 100%) !important;
 }
 
 /* Responsive adjustments */

@@ -321,7 +321,7 @@
   align-items: stretch;
   flex-shrink: 0;
   height: 32px;
-  border: 1px solid #404040;
+  border: 1px solid var(--border-light);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -342,7 +342,7 @@
 }
 
 .nc-toggle-btn.active {
-  background: #B9E42B;
+  background: var(--accent);
   color: #111;
   font-weight: 600;
 }

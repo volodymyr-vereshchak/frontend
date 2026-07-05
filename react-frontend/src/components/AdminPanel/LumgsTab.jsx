@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { lumgApi, branchApi } from '../../services/api';
+import { useStatusMessage } from './common/useStatusMessage';
 
 export default function LumgsTab() {
   const [lumgs, setLumgs] = useState([]);
@@ -8,7 +9,7 @@ export default function LumgsTab() {
   const [branchId, setBranchId] = useState('');
   const [filterBranchId, setFilterBranchId] = useState('');
   const [editId, setEditId] = useState(null);
-  const [status, setStatus] = useState(null);
+  const [status, showStatus] = useStatusMessage();
   const [deletingId, setDeletingId] = useState(null);
 
   const load = async () => {
@@ -21,7 +22,6 @@ export default function LumgsTab() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus(null);
     const payload = { name, branch_id: parseInt(branchId) };
     let result;
     if (editId) {
@@ -30,11 +30,11 @@ export default function LumgsTab() {
       result = await lumgApi.create(payload);
     }
     if (result) {
-      setStatus({ ok: true, msg: editId ? 'Оновлено' : 'Створено' });
+      showStatus(true, editId ? 'Оновлено' : 'Створено');
       setName(''); setBranchId(''); setEditId(null);
       await load();
     } else {
-      setStatus({ ok: false, msg: 'Помилка' });
+      showStatus(false, 'Помилка');
     }
   };
 
@@ -42,7 +42,6 @@ export default function LumgsTab() {
     setEditId(lumg.id);
     setName(lumg.name);
     setBranchId(String(lumg.branch_id || ''));
-    setStatus(null);
   };
 
   const handleDelete = async (id) => {
@@ -53,12 +52,12 @@ export default function LumgsTab() {
     setDeletingId(null);
     if (!ok) {
       await load();
-      setStatus({ ok: false, msg: 'Помилка видалення' });
+      showStatus(false, 'Помилка видалення');
     }
   };
 
   const handleCancel = () => {
-    setEditId(null); setName(''); setBranchId(''); setStatus(null);
+    setEditId(null); setName(''); setBranchId('');
   };
 
   const branchName = (id) => branches.find(b => b.id === id)?.name || id;

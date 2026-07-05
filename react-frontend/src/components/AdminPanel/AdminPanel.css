@@ -2,7 +2,7 @@
 .admin-layout {
   display: flex;
   min-height: 600px;
-  color: #e0e0e0;
+  color: var(--text-primary);
   border: 1px solid var(--bg-control);
   border-radius: 4px;
   overflow: hidden;
@@ -74,7 +74,7 @@
   transition: transform 0.2s;
   transform: rotate(90deg);
   display: inline-block;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .admin-nav-chevron.collapsed {
@@ -100,7 +100,7 @@
 }
 
 .admin-nav-item:hover {
-  color: #e0e0e0;
+  color: var(--text-primary);
   background: #1e1e1e;
 }
 
@@ -189,7 +189,7 @@
 .admin-input {
   background: var(--bg-control);
   border: 1px solid #444;
-  color: #e0e0e0;
+  color: var(--text-primary);
   padding: 5px 10px;
   border-radius: 4px;
   font-size: 13px;
@@ -204,7 +204,7 @@
 .admin-select {
   background: var(--bg-control);
   border: 1px solid #444;
-  color: #e0e0e0;
+  color: var(--text-primary);
   padding: 5px 10px;
   border-radius: 4px;
   font-size: 13px;

@@ -1,6 +1,6 @@
 .overview-tab {
   padding: 24px;
-  background: #1a1a1a;
+  background: var(--bg-panel);
   min-height: calc(100vh - 200px);
 }
 
@@ -10,7 +10,7 @@
   gap: 12px;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 2px solid #3E3E3E;
+  border-bottom: 2px solid var(--bg-hover);
 }
 
 .overview-title-row {
@@ -34,13 +34,13 @@
 
 .selector-label {
   font-size: 13px;
-  color: #aaaaaa;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .overview-select {
-  background: #2a2a2a;
-  border: 1px solid #3E3E3E;
+  background: var(--bg-control);
+  border: 1px solid var(--bg-hover);
   border-radius: 6px;
   color: #ffffff;
   font-size: 14px;
@@ -52,7 +52,7 @@
 
 .overview-select:hover,
 .overview-select:focus {
-  border-color: #B9E42B;
+  border-color: var(--accent);
   outline: none;
 }
 
@@ -79,7 +79,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: linear-gradient(135deg, #B9E42B, #8EC621);
+  background: linear-gradient(135deg, var(--accent), #8EC621);
   border: none;
   border-radius: 6px;
   color: #000000;
@@ -125,7 +125,7 @@
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #B9E42B;
+  accent-color: var(--accent);
 }
 
 .toggle-text {
@@ -144,7 +144,7 @@
   color: #ffffff;
   margin: 0 0 16px 0;
   padding-bottom: 8px;
-  border-bottom: 1px solid #3E3E3E;
+  border-bottom: 1px solid var(--bg-hover);
 }
 
 /* Loading State */
@@ -160,8 +160,8 @@
 .loading-spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid #3E3E3E;
-  border-top-color: #B9E42B;
+  border: 4px solid var(--bg-hover);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -185,9 +185,9 @@
   align-items: center;
   justify-content: center;
   padding: 80px 20px;
-  background: #2a2a2a;
+  background: var(--bg-control);
   border-radius: 8px;
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
 }
 
 .error-icon {
@@ -204,7 +204,7 @@
 
 .retry-button {
   padding: 10px 24px;
-  background: #B9E42B;
+  background: var(--accent);
   border: none;
   border-radius: 6px;
   color: #000000;

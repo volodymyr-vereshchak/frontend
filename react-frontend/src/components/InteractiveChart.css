@@ -1,14 +1,14 @@
 .chart-container {
-  background-color: #1a1a1a;
-  border: 1px solid #2a2a2a;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--bg-control);
   border-radius: 4px;
   margin-top: 20px;
 }
 
 .chart-header {
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   padding: 15px 20px;
-  border-bottom: 1px solid #3a3a3a;
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -52,7 +52,7 @@
 .chart-wrapper {
   position: relative;
   padding: 10px 4px;
-  background-color: #1a1a1a;
+  background-color: var(--bg-panel);
   min-height: 800px;
 }
 
@@ -117,7 +117,7 @@
 
 .custom-tooltip {
   background-color: rgba(42, 42, 42, 0.95);
-  border: 1px solid #3a3a3a;
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
@@ -128,7 +128,7 @@
   font-weight: 600;
   margin: 0 0 8px 0;
   padding-bottom: 4px;
-  border-bottom: 1px solid #3a3a3a;
+  border-bottom: 1px solid var(--border);
 }
 
 .tooltip-value {
@@ -163,9 +163,9 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border: 1px solid #404040;
+  border: 1px solid var(--border-light);
   border-radius: 4px;
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -175,7 +175,7 @@
 }
 
 .chart-enterprise-checkbox:hover {
-  border-color: #4CAF50;
+  border-color: var(--success);
   background-color: #2f2f2f;
 }
 
@@ -183,7 +183,7 @@
   width: 14px;
   height: 14px;
   cursor: pointer;
-  accent-color: #4CAF50;
+  accent-color: var(--success);
   flex-shrink: 0;
 }
 
@@ -194,7 +194,7 @@
 
 .lines-dropdown-trigger {
   padding: 6px 14px;
-  background: #2a2a2a;
+  background: var(--bg-control);
   border: 1px solid #444;
   border-radius: 6px;
   color: #ccc;
@@ -206,8 +206,8 @@
 
 .lines-dropdown-trigger:hover:not(:disabled) {
   background: #333;
-  color: #B9E42B;
-  border-color: #B9E42B;
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .lines-dropdown-menu {
@@ -239,7 +239,7 @@
   background: #2a2a3e;
   border: 1px solid #444;
   border-radius: 4px;
-  color: #aaa;
+  color: var(--text-secondary);
   font-size: 12px;
   cursor: pointer;
 }
@@ -265,7 +265,7 @@
 }
 
 .lines-dropdown-item input[type="checkbox"] {
-  accent-color: #B9E42B;
+  accent-color: var(--accent);
   width: 14px;
   height: 14px;
   cursor: pointer;

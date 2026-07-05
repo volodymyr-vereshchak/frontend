@@ -40,7 +40,7 @@
 .report-page .modal-title {
   font-size: 18px;
   font-weight: 600;
-  color: #B9E42B;
+  color: var(--accent);
 }
 
 /* Hide close (×) button — no modal to close */
@@ -53,7 +53,7 @@
 .report-page .btn-primary,
 .report-page .grs-trends-modal .btn-primary,
 .report-page .night-consumption-modal .btn-primary {
-  background: #B9E42B !important;
+  background: var(--accent) !important;
   color: #111 !important;
   border: none;
 }
@@ -67,13 +67,13 @@
   border: 1px solid #2a2a3e !important;
 }
 .report-page .date-picker-section h4 {
-  color: #B9E42B !important;
+  color: var(--accent) !important;
 }
 
 /* ── Chart description ─────────────────────────────────────────────────── */
 .report-page .chart-description {
   background: #0d1a2a !important;
-  border-left-color: #B9E42B !important;
+  border-left-color: var(--accent) !important;
 }
 .report-page .chart-description p {
   color: #8ab4c8 !important;
@@ -82,13 +82,13 @@
 /* ── Section headings ──────────────────────────────────────────────────── */
 .report-page .chart-section h4,
 .report-page .table-section h4 {
-  color: #B9E42B !important;
+  color: var(--accent) !important;
 }
 
 /* ── Loading ───────────────────────────────────────────────────────────── */
 .report-page .loading-spinner {
   border: 4px solid #2a2a3e !important;
-  border-top-color: #B9E42B !important;
+  border-top-color: var(--accent) !important;
 }
 .report-page .loading-container p {
   color: #888 !important;
@@ -130,7 +130,7 @@
 .report-page .nc-load-btn {
   white-space: nowrap;
   padding: 8px 20px;
-  background: #B9E42B !important;
+  background: var(--accent) !important;
   color: #111 !important;
   border: none;
   border-radius: 6px;
@@ -154,7 +154,7 @@
 }
 
 .report-page .table-header h4 {
-  color: #B9E42B !important;
+  color: var(--accent) !important;
 }
 
 /* Table wrapper — dark background, not white */
@@ -182,8 +182,8 @@
 
 .report-page .night-consumption-table thead th {
   background: #141424 !important;
-  color: #B9E42B !important;
-  border-bottom: 2px solid #B9E42B !important;
+  color: var(--accent) !important;
+  border-bottom: 2px solid var(--accent) !important;
   border-right: 1px solid #2a2a3e !important;
   padding: 8px 10px !important;
   text-align: center !important;
@@ -200,7 +200,7 @@
 }
 
 .report-page .night-consumption-table tbody td:first-child {
-  color: #B9E42B !important;
+  color: var(--accent) !important;
   font-weight: 500;
   font-family: inherit;
 }
@@ -216,7 +216,7 @@
 }
 .report-page .night-consumption-table tbody td:first-child {
   background: inherit !important;
-  color: #B9E42B !important;
+  color: var(--accent) !important;
   font-weight: 500;
   font-family: inherit !important;
 }
@@ -240,7 +240,7 @@
 
 /* Load button in page mode */
 .report-page .grs-load-btn {
-  background: #B9E42B !important;
+  background: var(--accent) !important;
   color: #111 !important;
   border: none;
 }

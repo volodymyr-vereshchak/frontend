@@ -1,6 +1,6 @@
 .lumg-group {
   margin-bottom: 20px;
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
   border-radius: 8px;
   background: #222222;
   overflow: hidden;
@@ -12,9 +12,9 @@
   gap: 12px;
   width: 100%;
   padding: 14px 18px;
-  background: #2a2a2a;
+  background: var(--bg-control);
   border: none;
-  border-bottom: 1px solid #3E3E3E;
+  border-bottom: 1px solid var(--bg-hover);
   cursor: pointer;
   text-align: left;
   transition: background 0.2s;
@@ -30,7 +30,7 @@
 
 .lumg-group-chevron {
   font-size: 14px;
-  color: #B9E42B;
+  color: var(--accent);
   transition: transform 0.2s ease;
   line-height: 1;
   width: 14px;
@@ -50,8 +50,8 @@
 
 .lumg-group-count {
   font-size: 13px;
-  color: #aaaaaa;
-  background: #1a1a1a;
+  color: var(--text-secondary);
+  background: var(--bg-panel);
   padding: 3px 10px;
   border-radius: 12px;
   white-space: nowrap;
@@ -78,8 +78,8 @@
 
 .lumg-groups-toolbar button {
   padding: 6px 14px;
-  background: #2a2a2a;
-  border: 1px solid #3E3E3E;
+  background: var(--bg-control);
+  border: 1px solid var(--bg-hover);
   border-radius: 6px;
   color: #cccccc;
   font-size: 13px;
@@ -88,7 +88,7 @@
 }
 
 .lumg-groups-toolbar button:hover {
-  border-color: #B9E42B;
+  border-color: var(--accent);
   color: #ffffff;
 }
 

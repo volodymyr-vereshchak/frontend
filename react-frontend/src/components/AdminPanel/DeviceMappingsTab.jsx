@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { deviceCatalogApi } from '../../services/api';
+import { useStatusMessage } from './common/useStatusMessage';
 
 // ─── Manufacturers ────────────────────────────────────────────────────────────
 
@@ -8,31 +9,29 @@ function ManufacturersSection({ onManufacturersChanged, manufacturers }) {
   const [fullName, setFullName]   = useState('');
   const [mfDev, setMfDev]         = useState('');
   const [editId, setEditId]       = useState(null);
-  const [status, setStatus]       = useState(null);
+  const [status, showStatus]      = useStatusMessage();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus(null);
     const payload = { short_name: shortName, full_name: fullName, mf_dev: Number(mfDev) };
     try {
       const result = editId
         ? await deviceCatalogApi.updateManufacturer(editId, payload)
         : await deviceCatalogApi.createManufacturer(payload);
       if (result) {
-        setStatus({ ok: true, msg: editId ? 'Оновлено' : 'Додано' });
+        showStatus(true, editId ? 'Оновлено' : 'Додано');
         setShortName(''); setFullName(''); setMfDev(''); setEditId(null);
         onManufacturersChanged();
       } else {
-        setStatus({ ok: false, msg: 'Помилка' });
+        showStatus(false, 'Помилка');
       }
     } catch (err) {
-      setStatus({ ok: false, msg: err.message || 'Помилка' });
+      showStatus(false, err.message || 'Помилка');
     }
   };
 
   const handleEdit = (m) => {
     setEditId(m.id); setShortName(m.short_name); setFullName(m.full_name); setMfDev(m.mf_dev);
-    setStatus(null);
   };
 
   const handleDelete = async (id) => {
@@ -42,7 +41,7 @@ function ManufacturersSection({ onManufacturersChanged, manufacturers }) {
   };
 
   const handleCancel = () => {
-    setEditId(null); setShortName(''); setFullName(''); setMfDev(''); setStatus(null);
+    setEditId(null); setShortName(''); setFullName(''); setMfDev('');
   };
 
   return (
@@ -100,7 +99,7 @@ function CorectorTypesSection({ manufacturers }) {
   const [modelName, setModelName] = useState('');
   const [typeDev, setTypeDev]     = useState('');
   const [editId, setEditId]       = useState(null);
-  const [status, setStatus]       = useState(null);
+  const [status, showStatus]      = useStatusMessage();
 
   const load = async () => {
     const data = await deviceCatalogApi.getCorectorTypes(filterMfrId || null);
@@ -113,27 +112,25 @@ function CorectorTypesSection({ manufacturers }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus(null);
     const payload = { manufacturer_id: Number(mfrId), model_name: modelName, type_dev: Number(typeDev) };
     try {
       const result = editId
         ? await deviceCatalogApi.updateCorectorType(editId, payload)
         : await deviceCatalogApi.createCorectorType(payload);
       if (result) {
-        setStatus({ ok: true, msg: editId ? 'Оновлено' : 'Додано' });
+        showStatus(true, editId ? 'Оновлено' : 'Додано');
         setMfrId(''); setModelName(''); setTypeDev(''); setEditId(null);
         await load();
       } else {
-        setStatus({ ok: false, msg: 'Помилка' });
+        showStatus(false, 'Помилка');
       }
     } catch (err) {
-      setStatus({ ok: false, msg: err.message || 'Помилка' });
+      showStatus(false, err.message || 'Помилка');
     }
   };
 
   const handleEdit = (t) => {
     setEditId(t.id); setMfrId(t.manufacturer_id); setModelName(t.model_name); setTypeDev(t.type_dev);
-    setStatus(null);
   };
 
   const handleDelete = async (id) => {
@@ -143,7 +140,7 @@ function CorectorTypesSection({ manufacturers }) {
   };
 
   const handleCancel = () => {
-    setEditId(null); setMfrId(''); setModelName(''); setTypeDev(''); setStatus(null);
+    setEditId(null); setMfrId(''); setModelName(''); setTypeDev('');
   };
 
   return (

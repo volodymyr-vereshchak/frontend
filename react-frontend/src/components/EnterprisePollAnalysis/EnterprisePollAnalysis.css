@@ -4,7 +4,7 @@
   min-height: calc(100vh - 120px);
   padding: 16px;
   background-color: #1e1e1e;
-  color: #e0e0e0;
+  color: var(--text-primary);
   overflow-y: auto;
 }
 
@@ -18,7 +18,7 @@
 
 .poll-branch-label {
   font-size: 13px;
-  color: #aaa;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -32,7 +32,7 @@
 }
 
 .poll-card {
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   border-radius: 6px;
   overflow: hidden;
   display: flex;
@@ -45,9 +45,9 @@
   font-weight: 700;
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: #B9E42B;
+  color: var(--accent);
   background-color: #222;
-  border-bottom: 1px solid #3a3a3a;
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
@@ -70,7 +70,7 @@
   border: 1px solid #444;
   border-radius: 4px;
   background-color: #333;
-  color: #e0e0e0;
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 13px;
@@ -82,9 +82,9 @@
 }
 
 .period-button.active {
-  background-color: #B9E42B;
+  background-color: var(--accent);
   color: #000;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 
 .branch-selector {
@@ -92,7 +92,7 @@
   border: 1px solid #444;
   border-radius: 4px;
   background-color: #333;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 13px;
   cursor: pointer;
   min-width: 140px;
@@ -100,7 +100,7 @@
 
 .branch-selector:focus {
   outline: none;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 
 /* Date Pickers Section */
@@ -111,7 +111,7 @@
 }
 
 .poll-date-pickers .picker-label {
-  color: #aaa;
+  color: var(--text-secondary);
   font-size: 13px;
   white-space: nowrap;
 }
@@ -121,7 +121,7 @@
   border: 1px solid #444;
   border-radius: 4px;
   background-color: #333;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 13px;
   width: 95px;
   cursor: pointer;
@@ -129,14 +129,14 @@
 
 .poll-date-pickers .datetime-picker:focus {
   outline: none;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 
 .poll-action-button {
   padding: 4px 12px;
   border: none;
   border-radius: 4px;
-  background-color: #B9E42B;
+  background-color: var(--accent);
   color: #000;
   font-weight: 600;
   font-size: 13px;
@@ -190,7 +190,7 @@
   height: 75vh;
   display: flex;
   flex-direction: column;
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -207,7 +207,7 @@
   border: 1px solid #444;
   border-radius: 4px;
   background-color: #333;
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 14px;
   box-sizing: border-box;
 }
@@ -218,7 +218,7 @@
 
 .search-input:focus {
   outline: none;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 
 .enterprise-list {
@@ -234,11 +234,11 @@
 .branch-header {
   padding: 8px 12px;
   background-color: #1a2e1a;
-  border-left: 3px solid #4CAF50;
+  border-left: 3px solid var(--success);
   border-radius: 4px;
   font-weight: 700;
   font-size: 13px;
-  color: #4CAF50;
+  color: var(--success);
   margin-bottom: 2px;
   cursor: pointer;
   display: flex;
@@ -281,7 +281,7 @@
   border-radius: 4px;
   font-weight: 600;
   font-size: 12px;
-  color: #B9E42B;
+  color: var(--accent);
   margin-bottom: 4px;
   cursor: pointer;
   display: flex;
@@ -291,7 +291,7 @@
 }
 
 .line-header:hover {
-  background-color: #3a3a3a;
+  background-color: var(--border);
 }
 
 .line-header .collapse-icon {
@@ -324,11 +324,11 @@
 }
 
 .enterprise-item:hover {
-  background-color: #3a3a3a;
+  background-color: var(--border);
 }
 
 .enterprise-item.selected {
-  background-color: #B9E42B;
+  background-color: var(--accent);
   color: #000;
 }
 
@@ -341,7 +341,7 @@
   padding: 2px 6px;
   background-color: #666;
   border-radius: 3px;
-  color: #aaa;
+  color: var(--text-secondary);
 }
 
 .enterprise-stats {
@@ -360,7 +360,7 @@
   height: 75vh;
   display: flex;
   flex-direction: column;
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -373,7 +373,7 @@
 
 .selected-enterprise-header h3 {
   margin: 0 0 8px 0;
-  color: #B9E42B;
+  color: var(--accent);
 }
 
 .enterprise-details {
@@ -417,11 +417,11 @@
 .poll-results-table td {
   padding: 8px 12px;
   text-align: center;
-  border-bottom: 1px solid #3a3a3a;
+  border-bottom: 1px solid var(--border);
 }
 
 .poll-results-table tbody tr:hover {
-  background-color: #3a3a3a;
+  background-color: var(--border);
 }
 
 /* Fixed Summary Table */
@@ -449,17 +449,17 @@
 
 /* Chart Section (moved outside poll-content) */
 .poll-chart-section {
-  background-color: #1a1a1a;
-  border: 1px solid #2a2a2a;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--bg-control);
   border-radius: 4px;
   margin-top: 20px;
   overflow: hidden;
 }
 
 .chart-toggles {
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   padding: 15px 20px;
-  border-bottom: 1px solid #3a3a3a;
+  border-bottom: 1px solid var(--border);
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
@@ -524,7 +524,7 @@
 }
 
 .poll-chart-container {
-  background-color: #1a1a1a;
+  background-color: var(--bg-panel);
   padding: 20px;
   height: 850px;
   position: relative;
@@ -532,7 +532,7 @@
 
 /* Custom Tooltip */
 .poll-chart-tooltip {
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   border: 1px solid #444;
   border-radius: 4px;
   padding: 10px;
@@ -542,7 +542,7 @@
 .poll-chart-tooltip .tooltip-period {
   font-weight: 600;
   margin-bottom: 6px;
-  color: #B9E42B;
+  color: var(--accent);
 }
 
 /* Messages */
@@ -572,7 +572,7 @@
 }
 
 .modal-content {
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   border-radius: 8px;
   width: 90%;
   max-width: 800px;
@@ -598,7 +598,7 @@
 .modal-close {
   background: none;
   border: none;
-  color: #aaa;
+  color: var(--text-secondary);
   font-size: 24px;
   cursor: pointer;
   padding: 0;
@@ -645,14 +645,14 @@
   text-align: left;
   padding: 10px 12px;
   border-bottom: 2px solid #444;
-  color: #aaa;
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 600;
 }
 
 .unpolled-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #3a3a3a;
+  border-bottom: 1px solid var(--border);
 }
 
 .unpolled-row {
@@ -661,7 +661,7 @@
 }
 
 .unpolled-row:hover {
-  background-color: #3a3a3a;
+  background-color: var(--border);
 }
 
 .no-unpolled-message {
@@ -681,12 +681,12 @@
 
 .status-badge.enabled {
   background-color: rgba(76, 175, 80, 0.2);
-  color: #4CAF50;
+  color: var(--success);
 }
 
 .status-badge.disabled {
   background-color: rgba(244, 67, 54, 0.2);
-  color: #f44336;
+  color: var(--danger);
 }
 
 /* Error Toast */
@@ -694,7 +694,7 @@
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background-color: #f44336;
+  background-color: var(--danger);
   color: white;
   padding: 12px 20px;
   border-radius: 4px;
@@ -724,7 +724,7 @@
 }
 
 .react-datepicker {
-  background-color: #2a2a2a !important;
+  background-color: var(--bg-control) !important;
   border: 1px solid #444 !important;
   font-family: inherit !important;
   border-radius: 8px !important;
@@ -739,11 +739,11 @@
 .react-datepicker__current-month,
 .react-datepicker__day-name,
 .react-datepicker-time__header {
-  color: #e0e0e0 !important;
+  color: var(--text-primary) !important;
 }
 
 .react-datepicker__day {
-  color: #e0e0e0 !important;
+  color: var(--text-primary) !important;
   border-radius: 4px !important;
 }
 
@@ -753,12 +753,12 @@
 
 .react-datepicker__day--selected,
 .react-datepicker__day--keyboard-selected {
-  background-color: #B9E42B !important;
+  background-color: var(--accent) !important;
   color: #000 !important;
 }
 
 .react-datepicker__day--today-highlight {
-  border: 2px solid #B9E42B !important;
+  border: 2px solid var(--accent) !important;
 }
 
 .react-datepicker__day--outside-month {
@@ -770,7 +770,7 @@
 }
 
 .react-datepicker__time {
-  background-color: #2a2a2a !important;
+  background-color: var(--bg-control) !important;
 }
 
 .react-datepicker__time-box {
@@ -778,7 +778,7 @@
 }
 
 .react-datepicker__time-list-item {
-  color: #e0e0e0 !important;
+  color: var(--text-primary) !important;
   height: 30px !important;
   line-height: 30px !important;
 }
@@ -788,13 +788,13 @@
 }
 
 .react-datepicker__time-list-item--selected {
-  background-color: #B9E42B !important;
+  background-color: var(--accent) !important;
   color: #000 !important;
 }
 
 .react-datepicker__today-button {
   background-color: #333 !important;
-  color: #B9E42B !important;
+  color: var(--accent) !important;
   border-top: 1px solid #444 !important;
 }
 
@@ -813,7 +813,7 @@
 .header-arrow {
   background: none;
   border: none;
-  color: #B9E42B;
+  color: var(--accent);
   font-size: 18px;
   cursor: pointer;
   padding: 4px 8px;
@@ -837,7 +837,7 @@
 
 .month-select {
   background-color: #333;
-  color: #e0e0e0;
+  color: var(--text-primary);
   border: 1px solid #444;
   border-radius: 4px;
   padding: 4px 8px;
@@ -847,7 +847,7 @@
 
 .month-select:focus {
   outline: none;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 
 .year-control {
@@ -867,11 +867,11 @@
 }
 
 .year-arrow:hover {
-  color: #B9E42B;
+  color: var(--accent);
 }
 
 .year-display {
-  color: #e0e0e0;
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 600;
   min-width: 50px;
@@ -888,13 +888,13 @@
 .enterprise-list::-webkit-scrollbar-track,
 .poll-results-table-container::-webkit-scrollbar-track,
 .modal-body::-webkit-scrollbar-track {
-  background: #2a2a2a;
+  background: var(--bg-control);
 }
 
 .enterprise-list::-webkit-scrollbar-thumb,
 .poll-results-table-container::-webkit-scrollbar-thumb,
 .modal-body::-webkit-scrollbar-thumb {
-  background: #555;
+  background: var(--text-muted);
   border-radius: 4px;
 }
 
@@ -926,11 +926,11 @@
 }
 
 .enterprise-list::-webkit-scrollbar-track {
-  background: #2a2a2a;
+  background: var(--bg-control);
 }
 
 .enterprise-list::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
+  background: var(--border);
   border-radius: 4px;
 }
 
@@ -955,8 +955,8 @@
 
 .page-size-btn {
   padding: 4px 10px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background: var(--bg-control);
+  border: 1px solid var(--border);
   border-radius: 4px;
   color: #ccc;
   cursor: pointer;
@@ -965,11 +965,11 @@
 }
 
 .page-size-btn:hover {
-  background: #3a3a3a;
+  background: var(--border);
 }
 
 .page-size-btn.active {
-  background: #1565c0;
+  background: var(--info);
   border-color: #1976d2;
   color: #fff;
 }
@@ -983,8 +983,8 @@
 .page-nav-btn {
   width: 28px;
   height: 28px;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background: var(--bg-control);
+  border: 1px solid var(--border);
   border-radius: 4px;
   color: #ccc;
   cursor: pointer;
@@ -997,7 +997,7 @@
 }
 
 .page-nav-btn:hover:not(:disabled) {
-  background: #3a3a3a;
+  background: var(--border);
 }
 
 .page-nav-btn:disabled {

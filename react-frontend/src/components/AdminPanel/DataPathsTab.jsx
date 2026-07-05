@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { branchApi, lumgApi } from '../../services/api';
+import { useStatusMessage } from './common/useStatusMessage';
 
 // ─── Branch Config Section ────────────────────────────────────────────────────
 
@@ -10,12 +11,11 @@ function BranchConfigSection({ branch, allLumgs }) {
   const [mappings, setMappings] = useState([]);
   const [preview, setPreview] = useState(null); // null | 'loading' | 'error' | []
   const [updating, setUpdating] = useState(false);
-  const [status, setStatus] = useState(null);
+  const [status, showStatus] = useStatusMessage();
 
   const branchLumgs = allLumgs.filter(l => l.branch_id === branch.id);
 
   const load = useCallback(async () => {
-    setStatus(null);
     setPreview(null);
     const [pathData, mapsData] = await Promise.all([
       branchApi.getConfigPath(branch.id).catch(() => null),
@@ -38,10 +38,10 @@ function BranchConfigSection({ branch, allLumgs }) {
       const result = await branchApi.setConfigPath(branch.id, editForm);
       setDp(result);
       setEditing(false);
-      setStatus({ ok: true, msg: 'Шлях збережено' });
+      showStatus(true, 'Шлях збережено');
       setPreview(null);
     } catch (err) {
-      setStatus({ ok: false, msg: err?.message || 'Помилка збереження' });
+      showStatus(false, err?.message || 'Помилка збереження');
     }
   };
 
@@ -51,12 +51,11 @@ function BranchConfigSection({ branch, allLumgs }) {
     setDp(null);
     setMappings([]);
     setPreview(null);
-    setStatus({ ok: true, msg: 'Видалено' });
+    showStatus(true, 'Видалено');
   };
 
   const handlePreview = async () => {
     setPreview('loading');
-    setStatus(null);
     const result = await branchApi.previewConfig(branch.id);
     if (result && Array.isArray(result)) {
       setPreview(result);
@@ -68,7 +67,7 @@ function BranchConfigSection({ branch, allLumgs }) {
       })));
     } else {
       setPreview('error');
-      setStatus({ ok: false, msg: 'Не вдалося прочитати файл' });
+      showStatus(false, 'Не вдалося прочитати файл');
     }
   };
 
@@ -76,20 +75,19 @@ function BranchConfigSection({ branch, allLumgs }) {
     try {
       const result = await branchApi.setConfigMappings(branch.id, mappings);
       if (result) setMappings(result);
-      setStatus({ ok: true, msg: 'Маппінг збережено' });
+      showStatus(true, 'Маппінг збережено');
     } catch (err) {
-      setStatus({ ok: false, msg: err?.message || 'Помилка збереження маппінгу' });
+      showStatus(false, err?.message || 'Помилка збереження маппінгу');
     }
   };
 
   const handleUpdateNames = async () => {
     setUpdating(true);
-    setStatus(null);
     try {
       await branchApi.updateNames(branch.id);
-      setStatus({ ok: true, msg: 'Імена оновлено' });
+      showStatus(true, 'Імена оновлено');
     } catch (err) {
-      setStatus({ ok: false, msg: err?.message || 'Помилка оновлення імен' });
+      showStatus(false, err?.message || 'Помилка оновлення імен');
     } finally {
       setUpdating(false);
     }
@@ -217,10 +215,10 @@ function LumgRow({ lumg, initialDp, eisCodes, allUsedElsewhere, onAddEis, onDele
   const [dp, setDp] = useState(initialDp ?? null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ path: '', active: true });
-  const [status, setStatus] = useState(null);
+  const [status, showStatus] = useStatusMessage();
   const [eisOpen, setEisOpen] = useState(false);
   const [eisInput, setEisInput] = useState('');
-  const [eisStatus, setEisStatus] = useState(null);
+  const [eisStatus, showEisStatus] = useStatusMessage();
   const [scan, setScan] = useState(null); // null | 'loading' | string[]
   const [scanSelected, setScanSelected] = useState(new Set());
   const [scanSearch, setScanSearch] = useState('');
@@ -235,9 +233,9 @@ function LumgRow({ lumg, initialDp, eisCodes, allUsedElsewhere, onAddEis, onDele
       const result = await lumgApi.setDataPath(lumg.id, editForm);
       setDp(result);
       setEditing(false);
-      setStatus({ ok: true, msg: 'Збережено' });
+      showStatus(true, 'Збережено');
     } catch (err) {
-      setStatus({ ok: false, msg: err?.message || 'Помилка' });
+      showStatus(false, err?.message || 'Помилка');
     }
   };
 
@@ -246,9 +244,9 @@ function LumgRow({ lumg, initialDp, eisCodes, allUsedElsewhere, onAddEis, onDele
     try {
       await lumgApi.deleteDataPath(lumg.id);
       setDp(null);
-      setStatus({ ok: true, msg: 'Видалено' });
+      showStatus(true, 'Видалено');
     } catch (err) {
-      setStatus({ ok: false, msg: err?.message || 'Помилка' });
+      showStatus(false, err?.message || 'Помилка');
     }
   };
 
@@ -256,24 +254,24 @@ function LumgRow({ lumg, initialDp, eisCodes, allUsedElsewhere, onAddEis, onDele
     const code = eisInput.trim().toUpperCase();
     if (!code) return;
     if (eisCodes.some(e => e.eis_code === code)) {
-      setEisStatus({ ok: false, msg: `Код ${code} вже додано до цього ЛУМГ` });
+      showEisStatus(false, `Код ${code} вже додано до цього ЛУМГ`);
       return;
     }
     if (allUsedElsewhere.has(code)) {
-      setEisStatus({ ok: false, msg: `Код ${code} вже прив'язаний до іншого ЛУМГ` });
+      showEisStatus(false, `Код ${code} вже прив'язаний до іншого ЛУМГ`);
       return;
     }
     try {
       const result = await lumgApi.addEisCode(lumg.id, { eis_code: code });
       onAddEis(lumg.id, result);
       setEisInput('');
-      setEisStatus({ ok: true, msg: 'Додано' });
+      showEisStatus(true, 'Додано');
     } catch (err) {
       // Fallback: code was taken by another session between check and save
       const msg = err?.message?.includes('already assigned')
         ? `Код ${code} вже зайнятий (інший ЛУМГ)`
         : err?.message || 'Помилка';
-      setEisStatus({ ok: false, msg });
+      showEisStatus(false, msg);
     }
   };
 
@@ -282,7 +280,7 @@ function LumgRow({ lumg, initialDp, eisCodes, allUsedElsewhere, onAddEis, onDele
       await lumgApi.deleteEisCode(lumg.id, code);
       onDeleteEis(lumg.id, code);
     } catch (err) {
-      setEisStatus({ ok: false, msg: err?.message || 'Помилка видалення' });
+      showEisStatus(false, err?.message || 'Помилка видалення');
     }
   };
 
@@ -300,11 +298,11 @@ function LumgRow({ lumg, initialDp, eisCodes, allUsedElsewhere, onAddEis, onDele
         setScanSelected(new Set(newOnes));
       } else {
         setScan([]);
-        setEisStatus({ ok: false, msg: 'Помилка сканування' });
+        showEisStatus(false, 'Помилка сканування');
       }
     } catch (err) {
       setScan([]);
-      setEisStatus({ ok: false, msg: err?.message || 'Помилка сканування' });
+      showEisStatus(false, err?.message || 'Помилка сканування');
     }
   };
 
@@ -319,7 +317,7 @@ function LumgRow({ lumg, initialDp, eisCodes, allUsedElsewhere, onAddEis, onDele
     }
     setScan(null);
     setScanSearch('');
-    setEisStatus({ ok: true, msg: `Додано ${added} кодів` });
+    showEisStatus(true, `Додано ${added} кодів`);
   };
 
   const filteredScan = useMemo(() => {

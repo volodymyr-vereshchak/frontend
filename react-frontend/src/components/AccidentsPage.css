@@ -9,7 +9,7 @@
 .acc-header h2 {
   font-size: 20px;
   font-weight: 600;
-  color: #B9E42B;
+  color: var(--accent);
   margin-bottom: 4px;
 }
 .acc-header p {
@@ -41,7 +41,7 @@
 .acc-field label {
   font-size: 11px;
   font-weight: 600;
-  color: #B9E42B;
+  color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
@@ -86,11 +86,11 @@
 .acc-field input:focus,
 .acc-field select:focus {
   outline: none;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 .acc-btn-primary {
   padding: 8px 20px;
-  background: #B9E42B;
+  background: var(--accent);
   color: #111;
   border: none;
   border-radius: 6px;
@@ -140,7 +140,7 @@
 .acc-stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #B9E42B;
+  color: var(--accent);
 }
 .acc-stat-value--sm {
   font-size: 20px;
@@ -175,7 +175,7 @@
   width: 32px;
   height: 32px;
   border: 3px solid #333;
-  border-top-color: #B9E42B;
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: acc-spin 0.8s linear infinite;
 }

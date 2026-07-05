@@ -1,6 +1,6 @@
 .App {
   min-height: 100vh;
-  background-color: #141414;
+  background-color: var(--bg-page);
   color: white;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -17,7 +17,7 @@
 .separator {
   border: none;
   height: 1px;
-  background-color: #3E3E3E;
+  background-color: var(--bg-hover);
   margin: 15px 0;
 }
 
@@ -32,7 +32,7 @@
   flex: 1;
   min-height: 600px;
   height: 100%;
-  background-color: #141414;
+  background-color: var(--bg-page);
 }
 
 .sidebar {
@@ -41,8 +41,8 @@
 }
 
 .placeholder-content {
-  background-color: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background-color: var(--bg-control);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 40px;
   text-align: center;

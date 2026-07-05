@@ -37,7 +37,7 @@
 
 .language-button {
   padding: 8px 12px;
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
   background-color: #373a3c;
   color: white;
   cursor: pointer;
@@ -67,7 +67,7 @@
   top: 100%;
   right: 0;
   background-color: #373a3c;
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
   border-radius: 4px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   z-index: 1000;
@@ -94,7 +94,7 @@
 }
 
 .language-option.active {
-  background-color: #B9E42B;
+  background-color: var(--accent);
   color: #000000;
 }
 
@@ -108,7 +108,7 @@
 
 .menu-button {
   padding: 8px 12px;
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
   background-color: #373a3c;
   color: white;
   cursor: pointer;
@@ -126,8 +126,8 @@
 }
 
 .menu-button.active {
-  background: linear-gradient(135deg, #B9E42B, #A5D323);
-  border-color: #B9E42B;
+  background: linear-gradient(135deg, var(--accent), #A5D323);
+  border-color: var(--accent);
   color: #000000;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(185, 228, 43, 0.3);
@@ -142,7 +142,7 @@
 .menu-button:disabled:hover,
 .menu-button.disabled:hover {
   background-color: #373a3c;
-  border-color: #3E3E3E;
+  border-color: var(--bg-hover);
 }
 
 .info-button {
@@ -214,8 +214,8 @@
   top: 100%;
   left: 0;
   right: 0;
-  background-color: #2a2a2a;
-  border: 1px solid #3E3E3E;
+  background-color: var(--bg-control);
+  border: 1px solid var(--bg-hover);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   z-index: 1000;
@@ -238,7 +238,7 @@
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s ease;
-  border-bottom: 1px solid #3E3E3E;
+  border-bottom: 1px solid var(--bg-hover);
 }
 
 .dropdown-item:last-child {
@@ -246,8 +246,8 @@
 }
 
 .dropdown-item:hover {
-  background-color: #3a3a3a;
-  color: #B9E42B;
+  background-color: var(--border);
+  color: var(--accent);
 }
 
 .dropdown-item:active {
@@ -275,8 +275,8 @@
 }
 
 .menu-button.dropdown-toggle.active {
-  background: linear-gradient(135deg, #B9E42B, #A5D323);
-  border-color: #B9E42B;
+  background: linear-gradient(135deg, var(--accent), #A5D323);
+  border-color: var(--accent);
   color: #000000;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(185, 228, 43, 0.3);

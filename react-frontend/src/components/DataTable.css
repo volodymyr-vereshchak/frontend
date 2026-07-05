@@ -10,15 +10,15 @@
   max-width: 100%; /* Prevent container from expanding */
   display: flex;
   flex-direction: column;
-  background-color: #1a1a1a;
+  background-color: var(--bg-panel);
   border: none;
   overflow: hidden; /* Prevent container from expanding */
 }
 
 .table-header {
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   padding: 12px 16px;
-  border-bottom: 1px solid #3a3a3a;
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -45,8 +45,8 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: linear-gradient(135deg, #B9E42B, #A5D323);
-  border: 1px solid #B9E42B;
+  background: linear-gradient(135deg, var(--accent), #A5D323);
+  border: 1px solid var(--accent);
   border-radius: 4px;
   color: #000000;
   font-size: 11px;
@@ -74,7 +74,7 @@
   flex-direction: column;
   overflow: hidden; /* Prevent table from expanding */
   min-height: 0; /* Allow flex shrinking */
-  background-color: #1a1a1a;
+  background-color: var(--bg-panel);
 }
 
 .table-wrapper {
@@ -86,7 +86,7 @@
   min-height: 0; /* Allow flex child to shrink */
   max-height: 100%; /* Prevent wrapper from exceeding parent */
   width: 100%; /* Ensure wrapper doesn't expand beyond container */
-  background-color: #1a1a1a;
+  background-color: var(--bg-panel);
 }
 
 .table-header-wrapper {
@@ -112,7 +112,7 @@
   overflow-y: auto;
   overflow-x: auto; /* Enable horizontal scroll */
   min-height: 0; /* Allow flex child to shrink */
-  background-color: #1a1a1a;
+  background-color: var(--bg-panel);
 }
 
 .body-table {
@@ -128,19 +128,19 @@
   padding: 40px;
   text-align: center;
   color: #9e9e9e;
-  background-color: #1a1a1a;
+  background-color: var(--bg-panel);
   border-radius: 4px;
   margin: 16px;
 }
 
 .error-message {
-  color: #f44336;
+  color: var(--danger);
 }
 
 .placeholder-content {
   flex: 1;
-  background-color: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background-color: var(--bg-control);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 40px;
   text-align: center;
@@ -161,7 +161,7 @@
   width: 100%; /* Default table width */
   border-collapse: collapse;
   border-spacing: 0;
-  background-color: #1a1a1a;
+  background-color: var(--bg-panel);
   color: #ffffff;
   font-size: 13px;
   table-layout: fixed; /* Fixed layout for consistent column distribution */
@@ -208,10 +208,10 @@
 
 /* Header styling */
 .custom-table th {
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   padding: 8px 6px; /* Match comfortable padding */
   text-align: center;
-  border-bottom: 2px solid #3a3a3a;
+  border-bottom: 2px solid var(--border);
   font-weight: 600;
   color: #ffffff;
   white-space: nowrap; /* Keep headers on single line */
@@ -226,7 +226,7 @@
 }
 
 .custom-table th.sortable:hover {
-  background-color: #3a3a3a;
+  background-color: var(--border);
 }
 
 .sort-indicator {
@@ -236,7 +236,7 @@
 }
 
 .custom-table td {
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--bg-control);
   text-align: center; /* Center align all cell content */
 }
 
@@ -295,11 +295,11 @@
 }
 
 .table-body-wrapper::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: var(--bg-panel);
 }
 
 .table-body-wrapper::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
+  background: var(--border);
   border-radius: 4px;
 }
 
@@ -308,12 +308,12 @@
 }
 
 .table-body-wrapper::-webkit-scrollbar-corner {
-  background: #1a1a1a;
+  background: var(--bg-panel);
 }
 
 /* Clickable volume cell in daily archive */
 .volume-cell-clickable {
-  color: #B9E42B !important;
+  color: var(--accent) !important;
   text-decoration: underline;
   font-weight: 500;
   transition: all 0.2s ease;

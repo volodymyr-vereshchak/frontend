@@ -1,9 +1,9 @@
 .flow-comparison-table-container {
   width: 100%;
   overflow-x: auto;
-  background: #2a2a2a;
+  background: var(--bg-control);
   border-radius: 6px;
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
 }
 
 .comparison-table {
@@ -14,7 +14,7 @@
 
 .comparison-table thead {
   background: #1f1f1f;
-  border-bottom: 2px solid #3E3E3E;
+  border-bottom: 2px solid var(--bg-hover);
 }
 
 .comparison-table th {
@@ -39,16 +39,16 @@
 }
 
 .comparison-table th.sortable:hover {
-  background: #2a2a2a;
+  background: var(--bg-control);
 }
 
 .sort-indicator {
-  color: #B9E42B;
+  color: var(--accent);
   font-size: 9px;
 }
 
 .comparison-table tbody tr {
-  border-bottom: 1px solid #3E3E3E;
+  border-bottom: 1px solid var(--bg-hover);
   /* Force browser to properly handle hover state changes */
   will-change: background;
   transition: background 0.15s ease-out;
@@ -123,9 +123,9 @@
   padding: 40px;
   text-align: center;
   color: #999999;
-  background: #2a2a2a;
+  background: var(--bg-control);
   border-radius: 8px;
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
 }
 
 /* Responsive adjustments */

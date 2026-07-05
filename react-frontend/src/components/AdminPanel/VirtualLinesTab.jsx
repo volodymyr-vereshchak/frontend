@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { virtualLineApi, branchApi, lumgApi, lineApi, dataApi } from '../../services/api';
+import { useStatusMessage } from './common/useStatusMessage';
 
 const EMPTY_FORM = {
   name: '',
@@ -105,7 +106,7 @@ export default function VirtualLinesTab() {
 
   const [form, setForm]       = useState(EMPTY_FORM);
   const [editId, setEditId]   = useState(null);
-  const [status, setStatus]   = useState(null);
+  const [status, showStatus]  = useStatusMessage();
 
   const [modal, setModal]           = useState(false);
   const [lineSearch, setLineSearch] = useState('');
@@ -161,12 +162,11 @@ export default function VirtualLinesTab() {
   const addLine    = (line)   => setForm(prev => ({ ...prev, physical_line_ids: [...prev.physical_line_ids, line.id] }));
   const removeLine = (lineId) => setForm(prev => ({ ...prev, physical_line_ids: prev.physical_line_ids.filter(id => id !== lineId) }));
 
-  const resetForm = () => { setForm(EMPTY_FORM); setEditId(null); setLineSearch(''); setModal(false); setStatus(null); };
+  const resetForm = () => { setForm(EMPTY_FORM); setEditId(null); setLineSearch(''); setModal(false); };
 
   // ── Submit create/update ──────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus(null);
 
     // When editing keep existing flags; when creating default to false
     const existing = editId ? vlines.find(v => v.id === editId) : null;
@@ -185,11 +185,11 @@ export default function VirtualLinesTab() {
       : await virtualLineApi.create(payload);
 
     if (result) {
-      setStatus({ ok: true, msg: editId ? 'Оновлено' : 'Кільце створено' });
+      showStatus(true, editId ? 'Оновлено' : 'Кільце створено');
       resetForm();
       await load();
     } else {
-      setStatus({ ok: false, msg: 'Помилка збереження' });
+      showStatus(false, 'Помилка збереження');
     }
   };
 
@@ -228,7 +228,6 @@ export default function VirtualLinesTab() {
     });
     setLineSearch('');
     setModal(false);
-    setStatus(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

@@ -1,7 +1,7 @@
 .flow-calc-page {
   padding: 16px;
   min-height: 100vh;
-  background-color: #141414;
+  background-color: var(--bg-page);
 }
 
 .flow-calc-header {
@@ -10,7 +10,7 @@
   gap: 12px;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--bg-control);
 }
 
 .flow-calc-header h2 {
@@ -33,19 +33,19 @@
 
 /* ─── Panel ────────────────────────────────────────────────────────────────── */
 .flow-panel {
-  background-color: #1a1a1a;
-  border: 1px solid #2a2a2a;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--bg-control);
   border-radius: 6px;
   overflow: hidden;
 }
 
 .flow-panel-header {
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 600;
-  color: #B9E42B;
-  border-bottom: 1px solid #3a3a3a;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
   letter-spacing: 0.3px;
 }
 
@@ -79,7 +79,7 @@
 }
 
 .cf-radio input[type="radio"] {
-  accent-color: #B9E42B;
+  accent-color: var(--accent);
   width: 14px;
   height: 14px;
   cursor: pointer;
@@ -141,11 +141,11 @@
 
 .cf-input:focus {
   outline: none;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 
 .cf-input.error {
-  border-color: #f44336;
+  border-color: var(--danger);
 }
 
 .cf-input-placeholder {
@@ -165,7 +165,7 @@
   background-color: #252525;
   border: 1px solid #383838;
   border-radius: 3px;
-  color: #aaaaaa;
+  color: var(--text-secondary);
   font-size: 11px;
   padding: 4px 3px;
   cursor: pointer;
@@ -174,7 +174,7 @@
 
 .cf-unit-select:focus {
   outline: none;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 
 .cf-select {
@@ -190,12 +190,12 @@
 
 .cf-select:focus {
   outline: none;
-  border-color: #B9E42B;
+  border-color: var(--accent);
 }
 
 .cf-error {
   font-size: 11px;
-  color: #f44336;
+  color: var(--danger);
   margin-top: -2px;
   margin-bottom: 2px;
   padding-left: 4px;
@@ -208,7 +208,7 @@
   justify-content: center;
   gap: 8px;
   padding: 9px 20px;
-  background: linear-gradient(135deg, #B9E42B, #A5D323);
+  background: linear-gradient(135deg, var(--accent), #A5D323);
   border: none;
   border-radius: 4px;
   color: #000000;
@@ -219,7 +219,7 @@
 }
 
 .fc-btn-calc:hover {
-  background: linear-gradient(135deg, #c8f030, #B9E42B);
+  background: linear-gradient(135deg, #c8f030, var(--accent));
   transform: translateY(-1px);
 }
 
@@ -235,14 +235,14 @@
 }
 
 .fc-btn-reset:hover {
-  border-color: #555;
+  border-color: var(--text-muted);
   color: #bbb;
 }
 
 /* ─── Results ───────────────────────────────────────────────────────────────── */
 .cf-res-group {
   font-size: 10px;
-  color: #555;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 8px 0 4px;
@@ -272,14 +272,14 @@
 .cf-res-value {
   font-size: 13px;
   font-weight: 600;
-  color: #B9E42B;
+  color: var(--accent);
   text-align: right;
   min-width: 80px;
 }
 
 .cf-res-unit {
   font-size: 11px;
-  color: #555555;
+  color: var(--text-muted);
   min-width: 50px;
   text-align: right;
 }
@@ -308,7 +308,7 @@
   align-items: center;
   justify-content: center;
   padding: 50px 20px;
-  color: #555555;
+  color: var(--text-muted);
   text-align: center;
   gap: 10px;
 }

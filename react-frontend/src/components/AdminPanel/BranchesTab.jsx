@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { branchApi } from '../../services/api';
+import { useStatusMessage } from './common/useStatusMessage';
 
 export default function BranchesTab() {
   const [branches, setBranches] = useState([]);
   const [name, setName] = useState('');
   const [shortName, setShortName] = useState('');
   const [editId, setEditId] = useState(null);
-  const [status, setStatus] = useState(null);
+  const [status, showStatus] = useStatusMessage();
   const [deletingId, setDeletingId] = useState(null);
 
   const load = async () => {
@@ -18,7 +19,6 @@ export default function BranchesTab() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus(null);
     const payload = { name, short_name: shortName || null };
     let result;
     if (editId) {
@@ -27,11 +27,11 @@ export default function BranchesTab() {
       result = await branchApi.create(payload);
     }
     if (result) {
-      setStatus({ ok: true, msg: editId ? 'Оновлено' : 'Створено' });
+      showStatus(true, editId ? 'Оновлено' : 'Створено');
       setName(''); setShortName(''); setEditId(null);
       await load();
     } else {
-      setStatus({ ok: false, msg: 'Помилка' });
+      showStatus(false, 'Помилка');
     }
   };
 
@@ -39,7 +39,6 @@ export default function BranchesTab() {
     setEditId(branch.id);
     setName(branch.name);
     setShortName(branch.short_name || '');
-    setStatus(null);
   };
 
   const handleDelete = async (id) => {
@@ -52,12 +51,12 @@ export default function BranchesTab() {
       await load();
     } else {
       await load(); // restore on failure too
-      setStatus({ ok: false, msg: 'Помилка видалення' });
+      showStatus(false, 'Помилка видалення');
     }
   };
 
   const handleCancel = () => {
-    setEditId(null); setName(''); setShortName(''); setStatus(null);
+    setEditId(null); setName(''); setShortName('');
   };
 
   return (

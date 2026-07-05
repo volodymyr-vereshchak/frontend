@@ -9,14 +9,14 @@
   align-items: center;
   gap: 8px;
   padding: 4px 8px;
-  border: 1px solid #404040;
+  border: 1px solid var(--border-light);
   border-radius: 4px;
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   transition: all 0.2s ease;
 }
 
 .enterprise-controls-wrapper:hover {
-  border-color: #4CAF50;
+  border-color: var(--success);
   background-color: #2f2f2f;
 }
 
@@ -41,7 +41,7 @@
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #4CAF50;
+  accent-color: var(--success);
 }
 
 .enterprise-checkbox:disabled {
@@ -64,7 +64,7 @@
   width: 32px;
   height: 32px;
   padding: 0;
-  border: 1px solid #404040;
+  border: 1px solid var(--border-light);
   background-color: transparent;
   color: #808080;
   cursor: pointer;
@@ -75,13 +75,13 @@
 
 .enterprise-settings-btn:hover:not(:disabled) {
   background-color: rgba(76, 175, 80, 0.1);
-  border-color: #4CAF50;
-  color: #4CAF50;
+  border-color: var(--success);
+  color: var(--success);
 }
 
 .enterprise-settings-btn.active {
-  color: #4CAF50;
-  border-color: #4CAF50;
+  color: var(--success);
+  border-color: var(--success);
 }
 
 .enterprise-settings-btn:disabled {
@@ -117,8 +117,8 @@
   position: absolute;
   top: calc(100% + 4px);
   right: 0; /* Выравнивание по правому краю кнопки */
-  background-color: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background-color: var(--bg-control);
+  border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   z-index: 1000;
@@ -152,8 +152,8 @@
   width: 40px;
   height: 40px;
   margin: 0 auto 12px;
-  border: 3px solid #3a3a3a;
-  border-top-color: #4CAF50;
+  border: 3px solid var(--border);
+  border-top-color: var(--success);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -172,7 +172,7 @@
 .progress-bar {
   width: 100%;
   height: 4px;
-  background-color: #3a3a3a;
+  background-color: var(--border);
   border-radius: 2px;
   overflow: hidden;
   margin-top: 12px;
@@ -180,7 +180,7 @@
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #4CAF50, #66BB6A, #4CAF50);
+  background: linear-gradient(90deg, var(--success), #66BB6A, var(--success));
   background-size: 200% 100%;
   animation: progressAnimation 1.5s ease-in-out infinite;
 }
@@ -245,7 +245,7 @@
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #4CAF50;
+  accent-color: var(--success);
 }
 
 /* Empty State */

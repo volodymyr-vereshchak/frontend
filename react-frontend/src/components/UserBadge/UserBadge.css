@@ -7,7 +7,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
   background-color: #373a3c;
   color: white;
   cursor: pointer;
@@ -23,7 +23,7 @@
 }
 
 .user-badge--loading {
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
   background-color: #373a3c;
   color: #888;
   border-radius: 4px;
@@ -41,7 +41,7 @@
   border-radius: 50%;
   font-size: 12px;
   font-weight: 600;
-  color: #B9E42B;
+  color: var(--accent);
   flex-shrink: 0;
 }
 
@@ -57,7 +57,7 @@
 }
 
 .user-badge__role-dot--admin {
-  background-color: #B9E42B;
+  background-color: var(--accent);
 }
 
 .user-badge__role-dot--viewer {
@@ -70,7 +70,7 @@
   top: 100%;
   right: 0;
   background-color: #373a3c;
-  border: 1px solid #3E3E3E;
+  border: 1px solid var(--bg-hover);
   border-radius: 4px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   z-index: 1000;
@@ -108,7 +108,7 @@
 
 .user-badge-dropdown__role--admin {
   background-color: rgba(185, 228, 43, 0.15);
-  color: #B9E42B;
+  color: var(--accent);
 }
 
 .user-badge-dropdown__role--viewer {
@@ -122,7 +122,7 @@
   width: 100%;
   padding: 10px 15px;
   border: none;
-  border-top: 1px solid #3E3E3E;
+  border-top: 1px solid var(--bg-hover);
   background: none;
   color: #ffffff;
   cursor: pointer;
@@ -134,6 +134,6 @@
 }
 
 .user-badge-dropdown__logout:hover {
-  background-color: #3a3a3a;
-  color: #B9E42B;
+  background-color: var(--border);
+  color: var(--accent);
 }

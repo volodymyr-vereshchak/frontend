@@ -4,16 +4,16 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border: 1px solid #404040;
+  border: 1px solid var(--border-light);
   border-radius: 4px;
-  background-color: #2a2a2a;
+  background-color: var(--bg-control);
   cursor: pointer;
   user-select: none;
   transition: border-color 0.2s, background-color 0.2s;
 }
 
 .trends-enterprise-checkbox:hover {
-  border-color: #4CAF50;
+  border-color: var(--success);
   background-color: #2f2f2f;
 }
 
@@ -21,7 +21,7 @@
   width: 15px;
   height: 15px;
   cursor: pointer;
-  accent-color: #4CAF50;
+  accent-color: var(--success);
 }
 
 .trends-enterprise-checkbox input[type="checkbox"]:disabled {
@@ -69,7 +69,7 @@
   align-items: stretch;
   flex-shrink: 0;
   height: 30px;              /* match the other controls in the row */
-  border: 1px solid #404040;
+  border: 1px solid var(--border-light);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -91,7 +91,7 @@
 }
 
 .grs-toggle-btn.active {
-  background: #B9E42B;
+  background: var(--accent);
   color: #111;
   font-weight: 600;
 }
