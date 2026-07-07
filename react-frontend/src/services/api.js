@@ -17,14 +17,26 @@ const DEFAULT_API_URL = '/api';
 // genuinely heavy work (DPD enterprise data, reports) and only fail fast on
 // trivial/hot metadata endpoints, where anything past a few seconds means a
 // dead connection, not real work — letting the idempotent retry reconnect.
-const TIMEOUT_HEAVY = 120000;   // external DPD API, report generation
+const TIMEOUT_DPD = 610000;     // enterprise DPD polls — just above nginx's 600s,
+                                // so the server (not the browser) produces the error
+const TIMEOUT_HEAVY = 120000;   // report generation
 const TIMEOUT_LIGHT = 12000;    // instant, high-frequency metadata/config
 const TIMEOUT_DEFAULT = 30000;  // archive data queries (daily/hourly/counts/…)
 
 function timeoutForEndpoint(endpoint) {
-  if (/^\/(enterprise\/volumes|get_report)/.test(endpoint)) return TIMEOUT_HEAVY;
+  if (/^\/enterprise\/volumes/.test(endpoint)) return TIMEOUT_DPD;
+  if (/^\/get_report/.test(endpoint)) return TIMEOUT_HEAVY;
   if (/^\/(auth|config|lines|virtual_lines)/.test(endpoint)) return TIMEOUT_LIGHT;
   return TIMEOUT_DEFAULT;
+}
+
+// Enterprise volume fetches fan out into hundreds of DPD requests server-side.
+// Auto-retrying one of these on a 5xx/timeout multiplies that load (each retry
+// launched a fresh full DPD poll — the duplicate storm of 2026-07) and never
+// helped: a poll that just failed after minutes will fail again. One attempt;
+// the user decides whether to retry from the UI.
+function retriesForEndpoint(endpoint, maxRetries) {
+  return /^\/enterprise\/volumes/.test(endpoint) ? 1 : maxRetries;
 }
 
 // ── Session-expiry handling ────────────────────────────────────────────────
@@ -66,6 +78,7 @@ class ApiClient {
     const { timeout: timeoutOpt, headers, _reauthTried = false, ...rest } = options;
     // Endpoint-derived timeout unless the caller passed an explicit one.
     const timeout = timeoutOpt ?? timeoutForEndpoint(endpoint);
+    const maxRetries = retriesForEndpoint(endpoint, this.maxRetries);
     const method = (rest.method || 'GET').toUpperCase();
     // Only idempotent methods are safe to retry on network/5xx errors.
     // POST/PATCH are NOT retried — a network blip after the server already
@@ -84,7 +97,7 @@ class ApiClient {
       ...rest,
     };
 
-    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       // Real per-request timeout: native fetch ignores a `timeout` option, so we
       // enforce it with an AbortController — otherwise a hung request never ends.
       const controller = new AbortController();
@@ -127,7 +140,7 @@ class ApiClient {
         }
 
         const isTimeout = error.name === 'AbortError';
-        const canRetry = isIdempotent && attempt < this.maxRetries;
+        const canRetry = isIdempotent && attempt < maxRetries;
 
         if (!canRetry) {
           if (isTimeout) throw new APIError(`Request timed out after ${timeout}ms`, null, url);
