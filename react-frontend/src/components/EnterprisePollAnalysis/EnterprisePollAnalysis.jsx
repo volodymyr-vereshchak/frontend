@@ -715,7 +715,7 @@ const EnterprisePollAnalysis = () => {
               </button>
             </div>
 
-            <div className="poll-date-pickers">
+            <div className={`poll-date-pickers${periodType === 'hourly' ? ' with-time' : ''}`}>
               <label className="picker-label">{t('periodStart')}</label>
               <DatePicker
                 ref={startPickerRef}

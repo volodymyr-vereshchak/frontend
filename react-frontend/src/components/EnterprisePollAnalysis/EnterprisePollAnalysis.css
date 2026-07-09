@@ -127,6 +127,11 @@
   cursor: pointer;
 }
 
+/* Hourly poll shows "dd.MM.yyyy HH:mm" — needs the extra room */
+.poll-date-pickers.with-time .datetime-picker {
+  width: 135px;
+}
+
 .poll-date-pickers .datetime-picker:focus {
   outline: none;
   border-color: var(--accent);
