@@ -1,5 +1,40 @@
 import React, { useEffect, useState } from 'react';
-import { branchApi, dpdCredentialApi } from '../../services/api';
+import { branchApi, dpdCredentialApi, enterpriseApi } from '../../services/api';
+import { clearEnterpriseCache } from '../../services/enterpriseCache';
+
+function DpdCacheControls() {
+  const [status, setStatus] = useState(null); // { ok, msg }
+  const [busy, setBusy] = useState(false);
+
+  const handleClear = async () => {
+    if (!window.confirm('Очистити серверний кеш даних ДПД? Наступні запити знову опитають ДПД.')) return;
+    setBusy(true);
+    setStatus(null);
+    const result = await enterpriseApi.clearDpdCache(); // null on failure
+    if (result) {
+      clearEnterpriseCache(); // also drop the browser-side cache so views re-fetch
+      setStatus({ ok: true, msg: `Кеш очищено (${result.deleted ?? 0} записів)` });
+    } else {
+      setStatus({ ok: false, msg: 'Помилка очищення кешу' });
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ marginBottom: 16, padding: '12px 16px', background: '#2a2a2a', borderRadius: 8, border: '1px solid #3E3E3E' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <span style={{ color: '#fff', fontWeight: 600, minWidth: 140 }}>Кеш даних ДПД</span>
+        <span style={{ color: '#aaa', fontSize: 12, flex: 1 }}>
+          Опитані дані зберігаються 7 днів. Очищення змушує систему заново опитати ДПД.
+        </span>
+        <button className="btn-danger" onClick={handleClear} disabled={busy}>
+          {busy ? 'Очищення…' : 'Очистити кеш'}
+        </button>
+      </div>
+      {status && <div className={`admin-status ${status.ok ? 'ok' : 'error'}`} style={{ marginTop: 6 }}>{status.msg}</div>}
+    </div>
+  );
+}
 
 function DpdBranchCredentials() {
   const [branches, setBranches] = useState([]);
@@ -169,6 +204,7 @@ export default function DpdCredentialsTab() {
       <p style={{ color: '#aaa', fontSize: 13, marginBottom: 20 }}>
         Налаштування DPD API для опитування промисловості. Кожен філіал має власні URL та облікові дані.
       </p>
+      <DpdCacheControls />
       <DpdBranchCredentials />
     </div>
   );

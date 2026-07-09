@@ -424,6 +424,9 @@ export const enterpriseApi = {
     return await apiClient.get('/enterprise/mappings/');
   },
 
+  // Admin only (any DELETE requires the admin role server-side)
+  clearDpdCache: () => apiClient.delete('/enterprise/cache/'),
+
   // DB CRUD
   getAll:   ()           => apiClient.get('/enterprise-mappings/'),
   create:   (data)       => apiClient.post('/enterprise-mappings/', data),
