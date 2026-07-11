@@ -549,6 +549,91 @@ export const enterprisePollApi = {
   }
 };
 
+// Enterprise volumes over the NDJSON progress stream. Same data as the plain
+// GET endpoints, but the backend emits progress events while the DPD poll
+// runs, so long polls can show a real progress bar.
+export const enterpriseStream = {
+  /**
+   * @param {object} params - { line_id?: number[], serNum?, mfDev?, typeDev?,
+   *   chNum?, from_date, to_date, period_type, virtual?: boolean }
+   * @param {object} [opts] - { onProgress?: ({done,total,phase}) => void,
+   *   signal?: AbortSignal }
+   * @returns {Promise<Array>} aggregated records (same shape as the plain GET)
+   * @throws Error with `.fallback === true` when the stream transport itself
+   *   failed before delivering a result — the caller should retry over the
+   *   plain GET. In-band `error` events (DPD down etc.) throw WITHOUT the
+   *   flag: the plain GET would fail the same way.
+   */
+  async fetchVolumes(params, { onProgress, signal } = {}) {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === null || value === undefined) return;
+      if (Array.isArray(value)) value.forEach(v => query.append(key, v));
+      else query.append(key, value);
+    });
+    const url = `${apiClient.baseUrl}/enterprise/volumes/stream?${query}`;
+
+    let response;
+    try {
+      response = await fetch(url, {
+        credentials: 'include',
+        mode: 'cors',
+        signal,
+        headers: { 'Accept': 'application/x-ndjson' },
+      });
+    } catch (err) {
+      if (err.name !== 'AbortError') err.fallback = true;
+      throw err;
+    }
+    if (!response.ok || !response.body) {
+      const err = new Error(`Stream HTTP ${response.status}`);
+      err.fallback = true;
+      throw err;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let result = null;
+
+    const handleLine = (line) => {
+      if (!line) return;
+      let event;
+      try { event = JSON.parse(line); } catch { return; }
+      if (event.type === 'progress') {
+        onProgress?.({ done: event.done, total: event.total, phase: 'polling' });
+      } else if (event.type === 'status') {
+        onProgress?.({ phase: event.phase });
+      } else if (event.type === 'result') {
+        result = event.data;
+      } else if (event.type === 'error') {
+        throw new Error(event.detail || 'Enterprise poll failed');
+      }
+      // ping events are ignored — they only keep the connection alive
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buffer.indexOf('\n')) >= 0) {
+        const line = buffer.slice(0, nl).trim();
+        buffer = buffer.slice(nl + 1);
+        handleLine(line);
+      }
+    }
+    handleLine(buffer.trim());
+
+    if (result === null) {
+      const err = new Error('Stream ended without a result');
+      err.fallback = true;
+      throw err;
+    }
+    return result;
+  },
+};
+
 // ========================================
 // Virtual Lines API (with virtual lines support)
 // ========================================

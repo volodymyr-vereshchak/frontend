@@ -13,7 +13,7 @@
  * because they differ on purpose (trends/night clamp with Math.max(0, …); the
  * chart overlay and Excel export show the raw line − enterprise difference).
  */
-import { enterpriseApi, enterpriseVirtualApi } from '../services/api';
+import { enterpriseApi, enterpriseStream, enterpriseVirtualApi } from '../services/api';
 
 /**
  * Normalize a period value to the key used to join enterprise records with
@@ -39,13 +39,35 @@ export function enterpriseRecordTotal(record) {
 
 /**
  * Pick the correct fetch function for physical vs virtual lines. The returned
- * function has the signature (lines, from, to, periodType) => Promise<record[]>,
+ * function has the signature
+ * (lines, from, to, periodType, onProgress?) => Promise<record[]>,
  * matching what getEnterpriseWithCache expects.
+ *
+ * Fetches go over the NDJSON progress stream (onProgress gets {done,total,
+ * phase} while the DPD poll runs); when the stream transport itself is
+ * unavailable the call falls back to the plain GET endpoints.
  */
 export function getEnterpriseFetchFn(isVirtualLine) {
-  return isVirtualLine
-    ? (lines, from, to, type) => enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
-    : (lines, from, to, type) => enterpriseApi.getEnterpriseVolumes(lines, from, to, type);
+  return async (lines, from, to, type, onProgress) => {
+    try {
+      return await enterpriseStream.fetchVolumes(
+        {
+          line_id: lines,
+          from_date: from,
+          to_date: to,
+          period_type: type,
+          virtual: isVirtualLine || undefined,
+        },
+        { onProgress },
+      );
+    } catch (err) {
+      if (!err.fallback) throw err;
+      console.warn('[EnterpriseStream] falling back to plain GET:', err.message);
+      return isVirtualLine
+        ? enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
+        : enterpriseApi.getEnterpriseVolumes(lines, from, to, type);
+    }
+  };
 }
 
 /**

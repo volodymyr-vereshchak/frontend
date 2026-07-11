@@ -1,0 +1,41 @@
+.poll-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.poll-progress-track {
+  flex: 1;
+  min-width: 120px;
+  height: 8px;
+  background: #2a2a2a;
+  border: 1px solid #3e3e3e;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.poll-progress-fill {
+  height: 100%;
+  background: var(--accent, #b9e42b);
+  border-radius: 4px;
+  transition: width 0.25s ease;
+}
+
+/* Unknown duration phases (waiting for the branch lock, aggregating) */
+.poll-progress-fill.indeterminate {
+  width: 35%;
+  animation: poll-progress-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes poll-progress-slide {
+  0%   { margin-left: 0; }
+  50%  { margin-left: 65%; }
+  100% { margin-left: 0; }
+}
+
+.poll-progress-label {
+  color: var(--text-secondary, #aaa);
+  font-size: 12px;
+  white-space: nowrap;
+}

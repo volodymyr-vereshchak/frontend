@@ -15,7 +15,8 @@ import {
 import * as XLSX from 'xlsx';
 import './EnterprisePollAnalysis.css';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { enterprisePollApi, enterpriseApi, lineApi, branchApi } from '../../services/api';
+import { enterprisePollApi, enterpriseApi, enterpriseStream, lineApi, branchApi } from '../../services/api';
+import PollProgressBar from '../PollProgressBar';
 import { useUser } from '../../contexts/UserContext';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { TimeAxisTick, labelEveryFor } from '../../utils/timeAxisTick';
@@ -84,6 +85,8 @@ const EnterprisePollAnalysis = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isPollLoading, setIsPollLoading] = useState(false);
   const [isCheckingUnpolled, setIsCheckingUnpolled] = useState(false);
+  const [pollProgress, setPollProgress] = useState(null);   // single-device poll
+  const [checkProgress, setCheckProgress] = useState(null); // branch-wide check
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [periodType, setPeriodType] = useState('daily');
@@ -234,13 +237,25 @@ const EnterprisePollAnalysis = () => {
         return;
       }
 
-      // Fetch volume data for all lines
-      const volumeData = await enterpriseApi.getEnterpriseVolumes(
-        lineIds,
-        formatDateForAPI(threeDaysAgo),
-        formatDateForAPI(today),
-        'daily'
-      );
+      // Fetch volume data for all lines (progress stream, plain GET fallback)
+      let volumeData;
+      try {
+        volumeData = await enterpriseStream.fetchVolumes({
+          line_id: lineIds,
+          from_date: formatDateForAPI(threeDaysAgo),
+          to_date: formatDateForAPI(today),
+          period_type: 'daily',
+        }, { onProgress: setCheckProgress });
+      } catch (streamErr) {
+        if (!streamErr.fallback) throw streamErr;
+        console.warn('[EnterpriseStream] falling back to plain GET:', streamErr.message);
+        volumeData = await enterpriseApi.getEnterpriseVolumes(
+          lineIds,
+          formatDateForAPI(threeDaysAgo),
+          formatDateForAPI(today),
+          'daily'
+        );
+      }
 
       // Collect device keys that have actual volume data (not null)
       const polledDevices = new Set();
@@ -269,6 +284,7 @@ const EnterprisePollAnalysis = () => {
       setError(t('pollError'));
     } finally {
       setIsCheckingUnpolled(false);
+      setCheckProgress(null);
     }
   }, [enterprises, selectedBranchId, t]);
 
@@ -292,16 +308,33 @@ const EnterprisePollAnalysis = () => {
       const apiFrom = isHourly ? formatDateForAPI(addDays(startDateTime, -1)) : formatDateForAPI(startDateTime);
       const apiTo   = isHourly ? formatDateForAPI(addDays(endDateTime, 1))   : formatDateForAPI(endDateTime);
 
-      const data = await enterprisePollApi.pollEnterpriseDevice(
-        selectedEnterprise.line_id,
-        selectedEnterprise.serNum,
-        selectedEnterprise.mfDev,
-        selectedEnterprise.typeDev,
-        selectedEnterprise.chNum,
-        apiFrom,
-        apiTo,
-        periodType
-      );
+      // Progress stream, plain GET fallback (identical params/response shape)
+      let data;
+      try {
+        data = await enterpriseStream.fetchVolumes({
+          serNum: selectedEnterprise.serNum,
+          mfDev: selectedEnterprise.mfDev,
+          typeDev: selectedEnterprise.typeDev,
+          chNum: selectedEnterprise.chNum,
+          line_id: selectedEnterprise.line_id ?? undefined,
+          from_date: apiFrom,
+          to_date: apiTo,
+          period_type: periodType,
+        }, { onProgress: setPollProgress });
+      } catch (streamErr) {
+        if (!streamErr.fallback) throw streamErr;
+        console.warn('[EnterpriseStream] falling back to plain GET:', streamErr.message);
+        data = await enterprisePollApi.pollEnterpriseDevice(
+          selectedEnterprise.line_id,
+          selectedEnterprise.serNum,
+          selectedEnterprise.mfDev,
+          selectedEnterprise.typeDev,
+          selectedEnterprise.chNum,
+          apiFrom,
+          apiTo,
+          periodType
+        );
+      }
 
       if (data && Array.isArray(data)) {
         // Backend returns device data in devices array
@@ -337,6 +370,7 @@ const EnterprisePollAnalysis = () => {
       setError(t('pollError'));
     } finally {
       setIsPollLoading(false);
+      setPollProgress(null);
     }
   }, [selectedEnterprise, startDateTime, endDateTime, periodType, t]);
 
@@ -764,6 +798,11 @@ const EnterprisePollAnalysis = () => {
                 {isPollLoading ? '...' : t('poll')}
               </button>
             </div>
+            {isPollLoading && pollProgress && (
+              <div style={{ marginTop: 8 }}>
+                <PollProgressBar progress={pollProgress} />
+              </div>
+            )}
           </div>
         </div>
 
@@ -778,6 +817,11 @@ const EnterprisePollAnalysis = () => {
             >
               {isCheckingUnpolled ? '...' : t('unpolledEnterprises')}
             </button>
+            {isCheckingUnpolled && checkProgress && (
+              <div style={{ marginTop: 8 }}>
+                <PollProgressBar progress={checkProgress} />
+              </div>
+            )}
           </div>
         </div>
 

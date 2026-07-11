@@ -9,12 +9,14 @@ import ReportModalShell, { BranchSelect, ErrorBlock, LoadingBlock } from './comm
 import ExcelIcon from './common/ExcelIcon';
 import DateTimePickers from './DateTimePickers';
 import NightConsumptionCharts from './NightConsumptionCharts';
+import PollProgressBar from './PollProgressBar';
 import * as XLSX from 'xlsx';
 import './NightConsumption.css';
 
 const NightConsumption = ({ isOpen, onClose }) => {
   const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
+  const [pollProgress, setPollProgress] = useState(null);
   const [error, setError] = useState(null);
   const [tableData, setTableData] = useState([]);
   // Per-line hourly export tabs (ALL lines), built once on "Load" so the Excel
@@ -112,7 +114,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
           : Promise.resolve([]),
         getEnterpriseWithCache(
           grsLines, commercialFrom, commercialTo, 'hourly',
-          getEnterpriseFetchFn(true)
+          getEnterpriseFetchFn(true), setPollProgress
         )
       ]);
       const hourlyData = [...(physHourly || []), ...(virtHourly || [])];
@@ -143,6 +145,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
       console.error('Error calculating night consumption:', err);
     } finally {
       setIsLoading(false);
+      setPollProgress(null);
     }
   };
 
@@ -412,7 +415,12 @@ const NightConsumption = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {isLoading && <LoadingBlock text={t('loading')} />}
+        {isLoading && pollProgress && (
+          <div style={{ margin: '8px 0' }}>
+            <PollProgressBar progress={pollProgress} />
+          </div>
+        )}
+        {isLoading && !pollProgress && <LoadingBlock text={t('loading')} />}
 
         {error && <ErrorBlock error={error} />}
 

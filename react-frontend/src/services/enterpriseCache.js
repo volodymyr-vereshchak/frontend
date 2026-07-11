@@ -184,10 +184,12 @@ export function clearEnterpriseCache() {
  * @param {string}   fromDate   - YYYY-MM-DD (or datetime, date part used)
  * @param {string}   toDate     - YYYY-MM-DD (or datetime, date part used)
  * @param {string}   periodType - 'daily' | 'hourly'
- * @param {Function} fetchFn    - async (lineIds, fromDate, toDate, periodType) => record[]
+ * @param {Function} fetchFn    - async (lineIds, fromDate, toDate, periodType, onProgress?) => record[]
+ * @param {Function} [onProgress] - poll progress callback ({done,total,phase});
+ *                                  forwarded to fetchFn, fires only on cache miss
  * @returns {Promise<Array>}    - same structure as raw API response
  */
-export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodType, fetchFn) {
+export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodType, fetchFn, onProgress) {
   const periods = generatePeriods(fromDate, toDate, periodType);
   const cachedRecords = [];
   const missingByLine = {}; // lineId → period[]
@@ -236,7 +238,7 @@ export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodTy
   // ── 3. Fetch from API ───────────────────────────────────────────────────────
   let freshData = [];
   try {
-    freshData = await fetchFn(missingLines, fetchFrom, fetchTo, periodType) || [];
+    freshData = await fetchFn(missingLines, fetchFrom, fetchTo, periodType, onProgress) || [];
   } catch (err) {
     console.error('[EnterpriseCache] Fetch error:', err);
     return cachedRecords; // return what we have

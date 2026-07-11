@@ -8,11 +8,13 @@ import { useBranchLines } from '../hooks/useBranchLines';
 import ReportModalShell, { BranchSelect, ErrorBlock, LoadingBlock } from './common/ReportModalShell';
 import DateTimePickers from './DateTimePickers';
 import InteractiveChart from './InteractiveChart';
+import PollProgressBar from './PollProgressBar';
 import './GRSTrends.css';
 
 const GRSTrends = ({ isOpen, onClose }) => {
   const { t } = useLanguage();
   const [isLoading, setIsLoading]     = useState(false);
+  const [pollProgress, setPollProgress] = useState(null);
   const [error, setError]             = useState(null);
   const [chartData, setChartData]     = useState([]);
   const [showEnterprise, setShowEnterprise] = useState(false);
@@ -118,7 +120,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
       if (showEnterprise) {
         entData = await getEnterpriseWithCache(
           grsLines, range.from, range.to, periodType,
-          getEnterpriseFetchFn(true)
+          getEnterpriseFetchFn(true), setPollProgress
         ) || [];
       }
 
@@ -128,6 +130,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
       console.error('Error calculating GRS trends:', err);
     } finally {
       setIsLoading(false);
+      setPollProgress(null);
     }
   };
 
@@ -147,7 +150,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
           : { from: loadedDateRange.fromDate, to: loadedDateRange.toDate };
         entData = await getEnterpriseWithCache(
           loadedLines.all, range.from, range.to, loadedPeriodType,
-          getEnterpriseFetchFn(true)
+          getEnterpriseFetchFn(true), setPollProgress
         ) || [];
       }
       recalculate(rawData, loadedPeriodType, loadedLines.all, entData);
@@ -155,6 +158,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
       console.error('Error loading enterprise data:', err);
     } finally {
       setIsLoading(false);
+      setPollProgress(null);
     }
   };
 
@@ -261,7 +265,12 @@ const GRSTrends = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {isLoading && <LoadingBlock text={t('calculatingTrends')} />}
+        {isLoading && pollProgress && (
+          <div style={{ margin: '8px 0' }}>
+            <PollProgressBar progress={pollProgress} />
+          </div>
+        )}
+        {isLoading && !pollProgress && <LoadingBlock text={t('calculatingTrends')} />}
 
         {error && <ErrorBlock error={error} />}
 

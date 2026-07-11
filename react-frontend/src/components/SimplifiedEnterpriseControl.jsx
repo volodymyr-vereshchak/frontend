@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { enterprisePeriodKey, enterpriseRecordTotal, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { useLanguage } from '../contexts/LanguageContext';
+import PollProgressBar from './PollProgressBar';
 import './SimplifiedEnterpriseControl.css';
 
 const SimplifiedEnterpriseControl = ({
@@ -19,6 +20,7 @@ const SimplifiedEnterpriseControl = ({
   const [showNetVolume, setShowNetVolume] = useState(true);
   const [showTotal, setShowTotal] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [pollProgress, setPollProgress] = useState(null);
   const [enterpriseData, setEnterpriseData] = useState(null);
 
   // Refs
@@ -127,7 +129,8 @@ const SimplifiedEnterpriseControl = ({
         dateRange.fromDate,
         dateRange.toDate,
         periodType,
-        fetchFn
+        fetchFn,
+        setPollProgress
       );
 
       console.log('Enterprise data fetched:', data);
@@ -149,6 +152,7 @@ const SimplifiedEnterpriseControl = ({
       setEnterpriseData(null);
     } finally {
       setLoading(false);
+      setPollProgress(null);
     }
   }, [selectedLines, dateRange, archiveType]);
 
@@ -249,7 +253,12 @@ const SimplifiedEnterpriseControl = ({
       {isActive && isDropdownOpen && (
         <div className="enterprise-panel">
           {/* Loading state */}
-          {loading && (
+          {loading && pollProgress && (
+            <div className="enterprise-loading">
+              <PollProgressBar progress={pollProgress} />
+            </div>
+          )}
+          {loading && !pollProgress && (
             <div className="enterprise-loading">
               <div className="loading-spinner"></div>
               <p>{t('loadingEnterpriseData')}</p>
