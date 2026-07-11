@@ -564,7 +564,7 @@ export const enterpriseStream = {
    *   plain GET. In-band `error` events (DPD down etc.) throw WITHOUT the
    *   flag: the plain GET would fail the same way.
    */
-  async fetchVolumes(params, { onProgress, signal } = {}) {
+  async fetchVolumes(params, { onProgress, signal, _reauthTried = false } = {}) {
     const query = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       if (value === null || value === undefined) return;
@@ -584,6 +584,11 @@ export const enterpriseStream = {
     } catch (err) {
       if (err.name !== 'AbortError') err.fallback = true;
       throw err;
+    }
+    // Session expired → one transparent re-auth + retry, mirroring apiClient.
+    // Without this a 401 would silently degrade to the no-progress fallback.
+    if (response.status === 401 && !_reauthTried && await _tryReauth(apiClient.baseUrl)) {
+      return this.fetchVolumes(params, { onProgress, signal, _reauthTried: true });
     }
     if (!response.ok || !response.body) {
       const err = new Error(`Stream HTTP ${response.status}`);
