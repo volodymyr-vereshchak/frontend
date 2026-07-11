@@ -11,9 +11,11 @@
  */
 
 const TTL = 60 * 60 * 1000; // 1 hour
-const PREFIX = 'ent3_'; // v3: fixed commercial-day null-poisoning of 00:00–06:00 hours
+// v4: v3 entries were zero-poisoned by summing the devices array, which
+// include_devices=false responses no longer carry — bump invalidates them.
+const PREFIX = 'ent4_';
 const BUDGET_BYTES = 3 * 1024 * 1024; // 3 MB UTF-16 (out of ~5 MB Chrome quota)
-const ALL_PREFIXES = ['ent3_', 'ent2_', 'ent_']; // older — legacy, evicted naturally as oldest
+const ALL_PREFIXES = ['ent4_', 'ent3_', 'ent2_', 'ent_']; // older — legacy, evicted naturally as oldest
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -148,10 +150,14 @@ export function generatePeriods(fromDate, toDate, periodType) {
   return periods;
 }
 
-/** Remove all expired enterprise cache entries. Call on app startup. */
+/** Remove expired entries and whole legacy-version caches. Call on app startup. */
 export function cleanExpired() {
   for (const key of Object.keys(localStorage)) {
-    if (!key.startsWith(PREFIX)) continue;
+    if (!ALL_PREFIXES.some(p => key.startsWith(p))) continue;
+    if (!key.startsWith(PREFIX)) {
+      localStorage.removeItem(key); // an older cache version — drop entirely
+      continue;
+    }
     try {
       const entry = JSON.parse(localStorage.getItem(key));
       if (!entry || Date.now() - entry.ts > TTL) localStorage.removeItem(key);
@@ -167,7 +173,7 @@ export function cleanExpired() {
  */
 export function clearEnterpriseCache() {
   Object.keys(localStorage)
-    .filter(k => k.startsWith(PREFIX) || k.startsWith('ent_'))
+    .filter(k => ALL_PREFIXES.some(p => k.startsWith(p)))
     .forEach(k => localStorage.removeItem(k));
   window.dispatchEvent(new CustomEvent('enterprise-cache-cleared'));
 }
@@ -245,12 +251,15 @@ export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodTy
   }
 
   // ── 4. Build lookup from fresh data ────────────────────────────────────────
-  const freshLookup = {}; // lineId → { normalizedPeriod → devices[] }
+  const freshLookup = {}; // lineId → { normalizedPeriod → total volume }
   for (const record of freshData) {
     const lid = record.line_id;
     const pk  = normalizePeriod(record.period, periodType);
     if (!freshLookup[lid]) freshLookup[lid] = {};
-    freshLookup[lid][pk] = record.devices || [];
+    // total_volume first: include_devices=false responses carry no devices
+    // array (summing it cached zeros for every period — the v3 poisoning).
+    freshLookup[lid][pk] = record.total_volume ?? (record.devices || [])
+      .reduce((s, d) => s + (d.volume || 0), 0);
   }
 
   // ── 5. Greedy write: newest periods first; evict oldest existing on demand ─
@@ -258,14 +267,11 @@ export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodTy
   const writeKeys = new Set();
   for (const lineId of missingLines) {
     for (const period of missingByLine[lineId]) {
-      const devices = freshLookup[lineId]?.[period];
+      const totalVol = freshLookup[lineId]?.[period];
       const key = makeKey(periodType, lineId, period);
       // Store only total volume (number) instead of full devices array.
       // Reduces cache size by ~100x (300 devices × N periods fits in 3 MB now).
-      const totalVol = devices !== undefined
-        ? (devices || []).reduce((s, d) => s + (d.volume || 0), 0)
-        : null;
-      writeQueue.push({ key, data: totalVol, period });
+      writeQueue.push({ key, data: totalVol !== undefined ? totalVol : null, period });
       writeKeys.add(key);
     }
   }
