@@ -57,6 +57,9 @@ export function getEnterpriseFetchFn(isVirtualLine) {
           to_date: to,
           period_type: type,
           virtual: isVirtualLine || undefined,
+          // The overlay/report consumers only read per-line totals; the
+          // per-device breakdown made a month of hourly data ~18 MB.
+          include_devices: false,
         },
         { onProgress },
       );
@@ -64,8 +67,8 @@ export function getEnterpriseFetchFn(isVirtualLine) {
       if (!err.fallback) throw err;
       console.warn('[EnterpriseStream] falling back to plain GET:', err.message);
       return isVirtualLine
-        ? enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type)
-        : enterpriseApi.getEnterpriseVolumes(lines, from, to, type);
+        ? enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type, false)
+        : enterpriseApi.getEnterpriseVolumes(lines, from, to, type, false);
     }
   };
 }

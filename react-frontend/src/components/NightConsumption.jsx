@@ -384,12 +384,14 @@ const NightConsumption = ({ isOpen, onClose }) => {
               <button
                 className={`nc-toggle-btn ${reportType === 'min' ? 'active' : ''}`}
                 onClick={() => setReportType('min')}
+                disabled={isLoading}
               >
                 {t('nightReportMin')}
               </button>
               <button
                 className={`nc-toggle-btn ${reportType === 'avg23' ? 'active' : ''}`}
                 onClick={() => setReportType('avg23')}
+                disabled={isLoading}
               >
                 {t('nightReportAvg')}
               </button>

@@ -410,13 +410,14 @@ export const paramArchiveApi = {
 
 // Enterprise volume API methods
 export const enterpriseApi = {
-  async getEnterpriseVolumes(lineIds, fromDate, toDate, periodType = 'daily') {
+  async getEnterpriseVolumes(lineIds, fromDate, toDate, periodType = 'daily', includeDevices = true) {
     const params = {
       line_id: lineIds,
       from_date: fromDate,
       to_date: toDate,
       period_type: periodType
     };
+    if (!includeDevices) params.include_devices = false;
     return await apiClient.get('/enterprise/volumes/', params);
   },
 
@@ -598,7 +599,10 @@ export const enterpriseStream = {
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
+    // Fragments of the current (possibly multi-chunk) line. Joined once per
+    // newline — repeated string concatenation would be O(n²) on the final
+    // multi-megabyte result line.
+    let parts = [];
     let result = null;
 
     const handleLine = (line) => {
@@ -617,18 +621,27 @@ export const enterpriseStream = {
       // ping events are ignored — they only keep the connection alive
     };
 
+    const processChunk = (text) => {
+      let start = 0;
+      while (true) {
+        const nl = text.indexOf('\n', start);
+        if (nl < 0) break;
+        parts.push(text.slice(start, nl));
+        const line = parts.join('').trim();
+        parts = [];
+        handleLine(line);
+        start = nl + 1;
+      }
+      if (start < text.length) parts.push(start === 0 ? text : text.slice(start));
+    };
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      let nl;
-      while ((nl = buffer.indexOf('\n')) >= 0) {
-        const line = buffer.slice(0, nl).trim();
-        buffer = buffer.slice(nl + 1);
-        handleLine(line);
-      }
+      processChunk(decoder.decode(value, { stream: true }));
     }
-    handleLine(buffer.trim());
+    processChunk(decoder.decode());
+    if (parts.length) handleLine(parts.join('').trim());
 
     if (result === null) {
       const err = new Error('Stream ended without a result');
@@ -684,13 +697,14 @@ export const archiveDataVirtualApi = {
 };
 
 export const enterpriseVirtualApi = {
-  async getEnterpriseVolumesVirtual(lineIds, fromDate, toDate, periodType = 'daily') {
+  async getEnterpriseVolumesVirtual(lineIds, fromDate, toDate, periodType = 'daily', includeDevices = true) {
     const params = {
       line_id: lineIds,
       from_date: fromDate,
       to_date: toDate,
       period_type: periodType
     };
+    if (!includeDevices) params.include_devices = false;
     return await apiClient.get('/enterprise/volumes_virtual/', params);
   }
 };
