@@ -256,10 +256,11 @@ export async function getEnterpriseWithCache(lineIds, fromDate, toDate, periodTy
     const lid = record.line_id;
     const pk  = normalizePeriod(record.period, periodType);
     if (!freshLookup[lid]) freshLookup[lid] = {};
-    // total_volume first: include_devices=false responses carry no devices
-    // array (summing it cached zeros for every period — the v3 poisoning).
-    freshLookup[lid][pk] = record.total_volume ?? (record.devices || [])
-      .reduce((s, d) => s + (d.volume || 0), 0);
+    // Strictly total_volume — the API always provides it. Summing the devices
+    // array is forbidden here: include_devices=false responses carry it empty
+    // (summing cached zeros for every period — the v3 poisoning). A record
+    // without total_volume ends up cached as null ("no data").
+    freshLookup[lid][pk] = record.total_volume ?? null;
   }
 
   // ── 5. Greedy write: newest periods first; evict oldest existing on demand ─
