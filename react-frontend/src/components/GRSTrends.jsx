@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { archiveDataApi, archiveDataVirtualApi } from '../services/api';
-import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { enterprisePeriodKey, buildEnterpriseByLinePeriod, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { commercialHourlyRange } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -118,9 +117,8 @@ const GRSTrends = ({ isOpen, onClose }) => {
 
       let entData = [];
       if (showEnterprise) {
-        entData = await getEnterpriseWithCache(
-          grsLines, range.from, range.to, periodType,
-          getEnterpriseFetchFn(true), setPollProgress
+        entData = await getEnterpriseFetchFn(true)(
+          grsLines, range.from, range.to, periodType, setPollProgress
         ) || [];
       }
 
@@ -148,9 +146,8 @@ const GRSTrends = ({ isOpen, onClose }) => {
         const range = loadedPeriodType === 'hourly'
           ? commercialHourlyRange(loadedDateRange.fromDate, loadedDateRange.toDate)
           : { from: loadedDateRange.fromDate, to: loadedDateRange.toDate };
-        entData = await getEnterpriseWithCache(
-          loadedLines.all, range.from, range.to, loadedPeriodType,
-          getEnterpriseFetchFn(true), setPollProgress
+        entData = await getEnterpriseFetchFn(true)(
+          loadedLines.all, range.from, range.to, loadedPeriodType, setPollProgress
         ) || [];
       }
       recalculate(rawData, loadedPeriodType, loadedLines.all, entData);

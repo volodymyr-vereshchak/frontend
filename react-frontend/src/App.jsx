@@ -18,15 +18,9 @@ import { useIsMobile } from './hooks/useIsMobile'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { UserProvider } from './contexts/UserContext'
 import { useUser } from './contexts/UserContext'
-import { clearEnterpriseCache, cleanExpired, enforceCacheBudget } from './services/enterpriseCache'
-
 function safeSetItem(key, value) {
   const s = JSON.stringify(value);
-  try { localStorage.setItem(key, s); }
-  catch {
-    enforceCacheBudget(1 * 1024 * 1024);
-    try { localStorage.setItem(key, s); } catch {}
-  }
+  try { localStorage.setItem(key, s); } catch {}
 }
 
 function AppInner() {
@@ -146,22 +140,14 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
   const [selectedLineIsVirtual, setSelectedLineIsVirtual] = useState(false);
   const [selectedLineUnits, setSelectedLineUnits] = useState(null);
 
-  // Clean expired enterprise cache entries on app startup
-  useEffect(() => { cleanExpired(); }, []);
-
-  // Ctrl+Shift+E — clear enterprise cache and re-fetch in all open components
+  // Drop entries of the removed browser-side enterprise cache on startup
+  // (the server archive is the single source of enterprise data now).
   useEffect(() => {
-    const handler = (e) => {
-      // Use e.code (physical key) not e.key — e.key is 'У' on a Cyrillic layout,
-      // so the shortcut would otherwise silently fail when RU/UK is active.
-      if (e.ctrlKey && e.shiftKey && e.code === 'KeyE') {
-        e.preventDefault();
-        clearEnterpriseCache();
-        console.log('[EnterpriseCache] Cache cleared via Ctrl+Shift+E');
+    for (const k of Object.keys(localStorage)) {
+      if (['ent4_', 'ent3_', 'ent2_', 'ent_'].some(p => k.startsWith(p))) {
+        localStorage.removeItem(k);
       }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    }
   }, []);
 
   useEffect(() => {

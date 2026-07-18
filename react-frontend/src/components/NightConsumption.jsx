@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { archiveDataApi, archiveDataVirtualApi } from '../services/api';
-import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { enterprisePeriodKey, buildEnterpriseByLinePeriod, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { commercialHourlyRange, commercialDayOf } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -112,9 +111,8 @@ const NightConsumption = ({ isOpen, onClose }) => {
         reportVirtualLineIds.length > 0
           ? archiveDataVirtualApi.getHourlyDataVirtual(reportVirtualLineIds, commercialFrom, commercialTo)
           : Promise.resolve([]),
-        getEnterpriseWithCache(
-          grsLines, commercialFrom, commercialTo, 'hourly',
-          getEnterpriseFetchFn(true), setPollProgress
+        getEnterpriseFetchFn(true)(
+          grsLines, commercialFrom, commercialTo, 'hourly', setPollProgress
         )
       ]);
       const hourlyData = [...(physHourly || []), ...(virtHourly || [])];

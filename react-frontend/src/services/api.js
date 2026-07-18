@@ -425,8 +425,23 @@ export const enterpriseApi = {
     return await apiClient.get('/enterprise/mappings/');
   },
 
-  // Admin only (any DELETE requires the admin role server-side)
+  // Admin only (DELETE/POST require the admin role server-side)
   clearDpdCache: () => apiClient.delete('/enterprise/cache/'),
+  async triggerArchiveRefresh() {
+    try {
+      return await apiClient.post('/enterprise/archive/refresh');
+    } catch (err) {
+      console.warn('Archive refresh trigger failed:', err.message);
+      return null;
+    }
+  },
+  async getArchiveRefreshStatus() {
+    try {
+      return await apiClient.get('/enterprise/archive/refresh/status');
+    } catch (err) {
+      return null;
+    }
+  },
 
   // DB CRUD
   getAll:   ()           => apiClient.get('/enterprise-mappings/'),

@@ -1,36 +1,91 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { branchApi, dpdCredentialApi, enterpriseApi } from '../../services/api';
-import { clearEnterpriseCache } from '../../services/enterpriseCache';
 
-function DpdCacheControls() {
-  const [status, setStatus] = useState(null); // { ok, msg }
+function DpdArchiveControls() {
+  const [status, setStatus] = useState(null);   // { ok, msg }
+  const [jobStatus, setJobStatus] = useState(null); // refresh job row from the API
   const [busy, setBusy] = useState(false);
+  const pollTimer = useRef(null);
 
-  const handleClear = async () => {
-    if (!window.confirm('Очистити серверний кеш даних ДПД? Наступні запити знову опитають ДПД.')) return;
+  const loadJobStatus = async () => {
+    const s = await enterpriseApi.getArchiveRefreshStatus();
+    if (s) setJobStatus(s);
+    return s;
+  };
+
+  // Poll the job status while a refresh is running (mirrors UpdateTab).
+  const startPolling = () => {
+    if (pollTimer.current) return;
+    pollTimer.current = setInterval(async () => {
+      const s = await loadJobStatus();
+      if (s && s.status !== 'running') {
+        clearInterval(pollTimer.current);
+        pollTimer.current = null;
+        // Data changed on the server — make open views re-fetch.
+        window.dispatchEvent(new CustomEvent('enterprise-cache-cleared'));
+      }
+    }, 3000);
+  };
+
+  useEffect(() => {
+    loadJobStatus().then(s => { if (s?.status === 'running') startPolling(); });
+    return () => { if (pollTimer.current) clearInterval(pollTimer.current); };
+  }, []);
+
+  const handleRefresh = async () => {
     setBusy(true);
     setStatus(null);
-    const result = await enterpriseApi.clearDpdCache(); // null on failure
+    const result = await enterpriseApi.triggerArchiveRefresh(); // null on failure/409
     if (result) {
-      clearEnterpriseCache(); // also drop the browser-side cache so views re-fetch
-      setStatus({ ok: true, msg: `Кеш очищено (${result.deleted ?? 0} записів)` });
+      setStatus({ ok: true, msg: 'Оновлення запущено' });
+      await loadJobStatus();
+      startPolling();
     } else {
-      setStatus({ ok: false, msg: 'Помилка очищення кешу' });
+      setStatus({ ok: false, msg: 'Не вдалося запустити (можливо, вже виконується)' });
+      await loadJobStatus();
     }
     setBusy(false);
   };
 
+  const handleClear = async () => {
+    if (!window.confirm('Очистити архів даних ДПД? Дані буде завантажено заново при наступному оновленні.')) return;
+    setBusy(true);
+    setStatus(null);
+    const result = await enterpriseApi.clearDpdCache(); // null on failure
+    if (result) {
+      setStatus({ ok: true, msg: 'Архів очищено' });
+      window.dispatchEvent(new CustomEvent('enterprise-cache-cleared'));
+    } else {
+      setStatus({ ok: false, msg: 'Помилка очищення архіву' });
+    }
+    setBusy(false);
+  };
+
+  const running = jobStatus?.status === 'running';
+  const jobLine = jobStatus && (
+    running
+      ? `Виконується з ${new Date(jobStatus.started_at).toLocaleTimeString()}`
+      : jobStatus.finished_at
+        ? `Останнє оновлення: ${new Date(jobStatus.finished_at).toLocaleString()}` +
+          (jobStatus.status === 'error' ? ` — помилка: ${jobStatus.error}` : '')
+        : null
+  );
+
   return (
     <div style={{ marginBottom: 16, padding: '12px 16px', background: '#2a2a2a', borderRadius: 8, border: '1px solid #3E3E3E' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <span style={{ color: '#fff', fontWeight: 600, minWidth: 140 }}>Кеш даних ДПД</span>
+        <span style={{ color: '#fff', fontWeight: 600, minWidth: 140 }}>Архів даних ДПД</span>
         <span style={{ color: '#aaa', fontSize: 12, flex: 1 }}>
-          Опитані дані зберігаються 7 днів. Очищення змушує систему заново опитати ДПД.
+          Дані оновлюються автоматично о 10:00 та 16:00 (останні 30 днів по всіх підприємствах).
         </span>
-        <button className="btn-danger" onClick={handleClear} disabled={busy}>
-          {busy ? 'Очищення…' : 'Очистити кеш'}
+        <button className="btn-primary" onClick={handleRefresh} disabled={busy || running}>
+          {running ? 'Виконується…' : 'Оновити зараз'}
+        </button>
+        <button className="btn-danger" onClick={handleClear} disabled={busy || running}>
+          Очистити архів
         </button>
       </div>
+      {jobLine && <div style={{ color: '#aaa', fontSize: 12, marginTop: 6 }}>{jobLine}</div>}
       {status && <div className={`admin-status ${status.ok ? 'ok' : 'error'}`} style={{ marginTop: 6 }}>{status.msg}</div>}
     </div>
   );
@@ -204,7 +259,7 @@ export default function DpdCredentialsTab() {
       <p style={{ color: '#aaa', fontSize: 13, marginBottom: 20 }}>
         Налаштування DPD API для опитування промисловості. Кожен філіал має власні URL та облікові дані.
       </p>
-      <DpdCacheControls />
+      <DpdArchiveControls />
       <DpdBranchCredentials />
     </div>
   );

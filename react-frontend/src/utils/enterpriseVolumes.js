@@ -40,14 +40,18 @@ export function enterpriseRecordTotal(record) {
 /**
  * Pick the correct fetch function for physical vs virtual lines. The returned
  * function has the signature
- * (lines, from, to, periodType, onProgress?) => Promise<record[]>,
- * matching what getEnterpriseWithCache expects.
+ * (lines, from, to, periodType, onProgress?) => Promise<record[]>.
  *
  * Fetches go over the NDJSON progress stream (onProgress gets {done,total,
- * phase} while the DPD poll runs); when the stream transport itself is
- * unavailable the call falls back to the plain GET endpoints.
+ * phase} while an on-demand backfill runs); when the stream transport itself
+ * is unavailable the call falls back to the plain GET endpoints.
+ *
+ * `includeDevices` controls the response size, not the data source: a month
+ * of hourly data with per-device breakdowns is ~18 MB / 118k objects.
+ * Totals-only consumers (night report, trends, chart overlay) keep the
+ * default false; breakdown consumers (Excel export, poll page) pass true.
  */
-export function getEnterpriseFetchFn(isVirtualLine) {
+export function getEnterpriseFetchFn(isVirtualLine, { includeDevices = false } = {}) {
   return async (lines, from, to, type, onProgress) => {
     try {
       return await enterpriseStream.fetchVolumes(
@@ -57,9 +61,7 @@ export function getEnterpriseFetchFn(isVirtualLine) {
           to_date: to,
           period_type: type,
           virtual: isVirtualLine || undefined,
-          // The overlay/report consumers only read per-line totals; the
-          // per-device breakdown made a month of hourly data ~18 MB.
-          include_devices: false,
+          include_devices: includeDevices ? undefined : false,
         },
         { onProgress },
       );
@@ -67,8 +69,8 @@ export function getEnterpriseFetchFn(isVirtualLine) {
       if (!err.fallback) throw err;
       console.warn('[EnterpriseStream] falling back to plain GET:', err.message);
       return isVirtualLine
-        ? enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type, false)
-        : enterpriseApi.getEnterpriseVolumes(lines, from, to, type, false);
+        ? enterpriseVirtualApi.getEnterpriseVolumesVirtual(lines, from, to, type, includeDevices)
+        : enterpriseApi.getEnterpriseVolumes(lines, from, to, type, includeDevices);
     }
   };
 }

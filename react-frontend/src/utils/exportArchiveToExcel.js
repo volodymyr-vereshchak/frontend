@@ -46,9 +46,10 @@ async function exportWithEnterpriseBreakdown({
   // commercial day) are included.
   const fromDate = periodType === 'hourly' ? addDays(firstDate, -1) : firstDate;
 
-  // Excel needs full per-enterprise breakdown — always fetch fresh from API
-  // (cache stores only total volumes, which is enough for the chart overlay).
-  const rawEnterprise = await getEnterpriseFetchFn(isVirtualLine)(
+  // Excel needs the full per-enterprise breakdown, so request the devices
+  // arrays (totals-only responses carry them empty — that made every
+  // enterprise column zero).
+  const rawEnterprise = await getEnterpriseFetchFn(isVirtualLine, { includeDevices: true })(
     selectedLines, fromDate, toDate, periodType
   ) || [];
 

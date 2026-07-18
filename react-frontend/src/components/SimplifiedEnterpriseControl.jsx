@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { getEnterpriseWithCache } from '../services/enterpriseCache';
 import { enterprisePeriodKey, enterpriseRecordTotal, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { useLanguage } from '../contexts/LanguageContext';
 import PollProgressBar from './PollProgressBar';
@@ -124,12 +123,11 @@ const SimplifiedEnterpriseControl = ({
 
       const fetchFn = getEnterpriseFetchFn(isVirtualLine);
 
-      const data = await getEnterpriseWithCache(
+      const data = await fetchFn(
         selectedLines,
         dateRange.fromDate,
         dateRange.toDate,
         periodType,
-        fetchFn,
         setPollProgress
       );
 
