@@ -147,10 +147,10 @@ export function useOverviewData() {
         throw new Error(t('noDataFor24h'));
       }
 
-      // Each source anchors its own 24h window on ITS last archived period:
-      // hostlib and DPD archives update independently, so a shared (global)
-      // anchor would truncate the lagging source's day and understate its
-      // 24h volume.
+      // Per-LINE 24h windows: every line's volume anchors on ITS own last
+      // archived period (hostlib lines and DPD lines alike — a lagging line
+      // keeps a full, untruncated day). Only "activity" (active-lines
+      // counter, header) compares against the global hostlib anchor below.
       const maxTs = (rows) => {
         const ts = rows
           .map(r => r.period ? new Date(r.period).getTime() : null)
@@ -176,10 +176,18 @@ export function useOverviewData() {
         }
         return { current, previous };
       };
-      const physWin = window24(physHourly, physEndMs);
-      const dpdWin = window24(dpdHourly, dpdEndMs);
-      const last24hData = [...physWin.current, ...dpdWin.current];
-      const previous24hData = [...physWin.previous, ...dpdWin.previous];
+      const rowsByLine = new Map();
+      for (const r of allHourlyData) {
+        if (!rowsByLine.has(r.line_id)) rowsByLine.set(r.line_id, []);
+        rowsByLine.get(r.line_id).push(r);
+      }
+      const last24hData = [];
+      const previous24hData = [];
+      for (const rows of rowsByLine.values()) {
+        const win = window24(rows, maxTs(rows));
+        last24hData.push(...win.current);
+        previous24hData.push(...win.previous);
+      }
 
       // Display bounds (header/"last update") anchor on the hostlib archives'
       // max period — the overview's "actual" date (user decision 2026-07-19).
