@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { archiveDataApi, archiveDataVirtualApi } from '../services/api';
+import { archiveDataApi, archiveDataVirtualApi, dpdLineApi } from '../services/api';
 import { enterprisePeriodKey, buildEnterpriseByLinePeriod, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { commercialHourlyRange, commercialDayOf } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -30,6 +30,7 @@ const NightConsumption = ({ isOpen, onClose }) => {
     setSelectedBranchId,
     physicalLines: physicalLinesAll,
     virtualLines: virtualLinesAll,
+    dpdLines: dpdLinesAll,
     lineNames,
     linesLoading,
   } = useBranchLines(isOpen);
@@ -62,11 +63,13 @@ const NightConsumption = ({ isOpen, onClose }) => {
   // recomputes the table from memory without re-querying the API.
   const [netMap, setNetMap] = useState({});
 
-  // Report lines = physical with include_in_report + ALL virtual lines. Both the
-  // on-screen table and the Excel export (one sheet per line) use this same set.
+  // Report lines = physical with include_in_report + ALL virtual and DPD lines.
+  // Both the on-screen table and the Excel export (one sheet per line) use this
+  // same set.
   const reportPhysicalLineIds = useMemo(() => physicalLinesAll.filter(l => l.include_in_report).map(l => l.id), [physicalLinesAll]);
   const reportVirtualLineIds  = useMemo(() => virtualLinesAll.map(l => l.id), [virtualLinesAll]);
-  const grsLines              = useMemo(() => [...reportPhysicalLineIds, ...reportVirtualLineIds], [reportPhysicalLineIds, reportVirtualLineIds]);
+  const reportDpdLineIds      = useMemo(() => dpdLinesAll.filter(l => l.active !== false).map(l => l.id), [dpdLinesAll]);
+  const grsLines              = useMemo(() => [...reportPhysicalLineIds, ...reportVirtualLineIds, ...reportDpdLineIds], [reportPhysicalLineIds, reportVirtualLineIds, reportDpdLineIds]);
 
   // Column widths sized to the DATA (not the header). Data is monospace, so char
   // count maps to a predictable px width; with table-layout:fixed the long line-name
@@ -104,18 +107,21 @@ const NightConsumption = ({ isOpen, onClose }) => {
       // Fetch hourly + enterprise for the report lines (one load), so the summary
       // table AND the per-line Excel tabs are both served from memory — the export
       // never re-queries the API.
-      const [physHourly, virtHourly, enterpriseData] = await Promise.all([
+      const [physHourly, virtHourly, dpdHourly, enterpriseData] = await Promise.all([
         reportPhysicalLineIds.length > 0
           ? archiveDataApi.getHourlyData(reportPhysicalLineIds, commercialFrom, commercialTo)
           : Promise.resolve([]),
         reportVirtualLineIds.length > 0
           ? archiveDataVirtualApi.getHourlyDataVirtual(reportVirtualLineIds, commercialFrom, commercialTo)
           : Promise.resolve([]),
+        reportDpdLineIds.length > 0
+          ? dpdLineApi.getHourlyData(reportDpdLineIds, commercialFrom, commercialTo)
+          : Promise.resolve([]),
         getEnterpriseFetchFn(true)(
           grsLines, commercialFrom, commercialTo, 'hourly', setPollProgress
         )
       ]);
-      const hourlyData = [...(physHourly || []), ...(virtHourly || [])];
+      const hourlyData = [...(physHourly || []), ...(virtHourly || []), ...(dpdHourly || [])];
 
       if (!hourlyData || hourlyData.length === 0) {
         setError(t('noDataAvailable'));

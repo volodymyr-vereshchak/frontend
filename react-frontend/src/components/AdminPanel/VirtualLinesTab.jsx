@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { virtualLineApi, branchApi, lumgApi, lineApi, dataApi } from '../../services/api';
+import { virtualLineApi, branchApi, lumgApi, lineApi, dataApi, dpdLineApi } from '../../services/api';
 import { useStatusMessage } from './common/useStatusMessage';
 
 const EMPTY_FORM = {
@@ -102,6 +102,7 @@ export default function VirtualLinesTab() {
   const [branches, setBranches] = useState([]);
   const [lumgs, setLumgs]       = useState([]);
   const [allLines, setAllLines] = useState([]);
+  const [dpdLines, setDpdLines] = useState([]);
   const [gvcs, setGvcs]         = useState([]);
 
   const [form, setForm]       = useState(EMPTY_FORM);
@@ -114,18 +115,20 @@ export default function VirtualLinesTab() {
   const [saving, setSaving] = useState({});   // { `${id}_${field}`: true }
 
   const load = async () => {
-    const [vlData, brData, lgData, lnData, gvcData] = await Promise.all([
+    const [vlData, brData, lgData, lnData, gvcData, dpdData] = await Promise.all([
       virtualLineApi.getAll(),
       branchApi.getAll(),
       lumgApi.getAll(),
       lineApi.getAll(),
       dataApi.getGasVolumeCalcs(),
+      dpdLineApi.getAll().catch(() => []),
     ]);
     if (vlData) setVlines(vlData);
     if (brData) setBranches(brData);
     if (lgData) setLumgs(lgData);
     if (lnData) setAllLines(lnData);
     if (gvcData) setGvcs(gvcData);
+    if (dpdData) setDpdLines(dpdData);
   };
 
   useEffect(() => { load(); }, []);
@@ -140,15 +143,28 @@ export default function VirtualLinesTab() {
     ? new Set(gvcs.filter(g => g.lumg_id === parseInt(form.lumg_id)).map(g => g.id))
     : null;
 
-  const availableLines = allLines.filter(l => {
+  // DPD lines are pickable ring members alongside physical ones. They carry
+  // no calculator — match them by LUMG (or branch when the LUMG is not set).
+  const dpdOptions = dpdLines.map(d => ({ ...d, name: `[ДПД] ${d.name}`, is_dpd: true }));
+
+  const availableLines = [...allLines, ...dpdOptions].filter(l => {
     if (form.physical_line_ids.includes(l.id)) return false;
-    // If LUMG is selected — show only lines from that LUMG's GVCs
-    if (lumgGvcIds && !lumgGvcIds.has(l.gas_volume_calc_id)) return false;
+    if (l.is_dpd) {
+      const matchesLumg = form.lumg_id && l.lumg_id === parseInt(form.lumg_id);
+      const matchesBranch = !l.lumg_id && form.branch_id && l.branch_id === parseInt(form.branch_id);
+      if (!matchesLumg && !matchesBranch) return false;
+    } else if (lumgGvcIds && !lumgGvcIds.has(l.gas_volume_calc_id)) {
+      // If LUMG is selected — show only lines from that LUMG's GVCs
+      return false;
+    }
     if (lineSearch === '') return true;
     return String(l.id).includes(lineSearch) || l.name.toLowerCase().includes(lineSearch.toLowerCase());
   });
 
-  const getLineName = (id) => allLines.find(l => l.id === id)?.name || String(id);
+  const getLineName = (id) =>
+    allLines.find(l => l.id === id)?.name
+    || dpdOptions.find(l => l.id === id)?.name
+    || String(id);
   const branchName  = (id) => branches.find(b => b.id === id)?.name || String(id);
   const lumgName    = (id) => lumgs.find(l => l.id === id)?.name || '—';
 
