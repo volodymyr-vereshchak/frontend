@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { enterpriseApi, lineApi, lumgApi, branchApi, gasVolumeApi, deviceCatalogApi } from '../../services/api';
+import { enterpriseApi, lineApi, lumgApi, branchApi, gasVolumeApi, deviceCatalogApi, dpdLineApi } from '../../services/api';
 import Pagination from './common/Pagination';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -67,6 +67,7 @@ function CorectorTypeSelect({ value, onChange, options }) {
 export default function EnterprisesTab() {
   const [enterprises, setEnterprises] = useState([]);
   const [lines, setLines]             = useState([]);
+  const [dpdLines, setDpdLines]       = useState([]);
   const [calcs, setCalcs]             = useState([]);
   const [lumgs, setLumgs]             = useState([]);
   const [branches, setBranches]       = useState([]);
@@ -105,6 +106,15 @@ export default function EnterprisesTab() {
   const calcById   = Object.fromEntries(calcs.map(c => [c.id, c]));
   const lumgById   = Object.fromEntries(lumgs.map(l => [l.id, l]));
   const branchById = Object.fromEntries(branches.map(b => [b.id, b]));
+  const dpdById    = Object.fromEntries(dpdLines.map(d => [d.id, d]));
+  // Line ids never collide across kinds (shared sequence), so the enterprise
+  // form keeps ONE line select; on save the id routes to line_id or dpd_line_id.
+  const dpdIds     = new Set(dpdLines.map(d => d.id));
+  const lineOptions = [
+    ...lines,
+    ...dpdLines.map(d => ({ ...d, name: `[ДПД] ${d.name}` })),
+  ];
+  const entLineId  = (ent) => ent.line_id ?? ent.dpd_line_id ?? null;
   const mfrShortById = Object.fromEntries(manufacturers.map(m => [m.id, m.short_name]));
   const ctById     = Object.fromEntries(corectorTypes.map(c => [c.id, c]));
   // Corrector-type dropdown options: "Виробник / Модель", sorted.
@@ -117,6 +127,7 @@ export default function EnterprisesTab() {
   // 2. derived from line → calc → lumg → branch_id
   const effectiveBranchId = (ent) => {
     if (ent.branch_id) return ent.branch_id;
+    if (ent.dpd_line_id) return dpdById[ent.dpd_line_id]?.branch_id ?? null;
     const line = lines.find(l => l.id === ent.line_id);
     if (!line) return null;
     const calc = calcById[line.gas_volume_calc_id];
@@ -125,6 +136,7 @@ export default function EnterprisesTab() {
   };
 
   const effectiveLumgId = (ent) => {
+    if (ent.dpd_line_id) return dpdById[ent.dpd_line_id]?.lumg_id ?? null;
     const line = lines.find(l => l.id === ent.line_id);
     if (!line) return null;
     const calc = calcById[line.gas_volume_calc_id];
@@ -143,7 +155,8 @@ export default function EnterprisesTab() {
       branchApi.getAll().catch(() => []),
       deviceCatalogApi.getManufacturers().catch(() => []),
       deviceCatalogApi.getCorectorTypes().catch(() => []),
-    ]).then(([ent, lns, cls, lmgs, brs, mfrs, cts]) => {
+      dpdLineApi.getAll().catch(() => []),
+    ]).then(([ent, lns, cls, lmgs, brs, mfrs, cts, dpd]) => {
       setEnterprises(Array.isArray(ent)  ? ent  : []);
       setLines(      Array.isArray(lns)  ? lns  : []);
       setCalcs(      Array.isArray(cls)  ? cls  : []);
@@ -151,6 +164,7 @@ export default function EnterprisesTab() {
       setBranches(   Array.isArray(brs)  ? brs  : []);
       setManufacturers(Array.isArray(mfrs) ? mfrs : []);
       setCorectorTypes(Array.isArray(cts)  ? cts  : []);
+      setDpdLines(   Array.isArray(dpd)  ? dpd  : []);
     }).finally(() => setLoading(false));
   };
 
@@ -169,8 +183,10 @@ export default function EnterprisesTab() {
     ? calcs.filter(c => c.lumg_id === Number(filterLumgId)).map(c => c.id)
     : null;
   const linesForLumg = calcIdsForLumg
-    ? lines.filter(l => calcIdsForLumg.includes(l.gas_volume_calc_id))
-    : lines;
+    ? lineOptions.filter(l => l.gas_volume_calc_id
+        ? calcIdsForLumg.includes(l.gas_volume_calc_id)
+        : l.lumg_id === Number(filterLumgId))
+    : lineOptions;
 
   const filtered = enterprises.filter(ent => {
     if (search) {
@@ -181,8 +197,8 @@ export default function EnterprisesTab() {
     if (filterActive  !== '' && String(ent.active)  !== filterActive)  return false;
     if (filterEnabled !== '' && String(ent.enabled) !== filterEnabled) return false;
     if (filterLineId) {
-      if (filterLineId === 'null' && ent.line_id !== null) return false;
-      if (filterLineId !== 'null' && String(ent.line_id) !== filterLineId) return false;
+      if (filterLineId === 'null' && entLineId(ent) !== null) return false;
+      if (filterLineId !== 'null' && String(entLineId(ent)) !== filterLineId) return false;
     }
     if (filterLumgId && effectiveLumgId(ent) !== Number(filterLumgId)) return false;
     if (filterBranchId && effectiveBranchId(ent) !== Number(filterBranchId)) return false;
@@ -196,7 +212,7 @@ export default function EnterprisesTab() {
     setEditForm({
       enterprise_name: e.enterprise_name,
       branch_id: e.branch_id ?? '',
-      line_id:   e.line_id  ?? '',
+      line_id:   entLineId(e) ?? '',
       ser_num:   e.ser_num,
       corector_type_id: e.corector_type_id ?? '',
       ch_num:    e.ch_num,
@@ -208,12 +224,22 @@ export default function EnterprisesTab() {
 
   const cancelEdit = () => { setEditingId(null); setEditForm({}); };
 
+  // The single form field holds the effective line id; route it into line_id
+  // (physical) or dpd_line_id (DPD) — the backend allows at most one of them.
+  const splitLineId = (raw) => {
+    const id = raw === '' || raw == null ? null : Number(raw);
+    return {
+      line_id:     id !== null && !dpdIds.has(id) ? id : null,
+      dpd_line_id: id !== null &&  dpdIds.has(id) ? id : null,
+    };
+  };
+
   const saveEdit = async () => {
     setSaving(true);
     const payload = {
       ...editForm,
       branch_id: editForm.branch_id === '' ? null : Number(editForm.branch_id),
-      line_id:   editForm.line_id   === '' ? null : Number(editForm.line_id),
+      ...splitLineId(editForm.line_id),
       ser_num:   Number(editForm.ser_num),
       corector_type_id: editForm.corector_type_id === '' ? null : Number(editForm.corector_type_id),
       ch_num:    Number(editForm.ch_num),
@@ -233,7 +259,7 @@ export default function EnterprisesTab() {
     const payload = {
       enterprise_name: addForm.enterprise_name,
       branch_id: addForm.branch_id === '' ? null : Number(addForm.branch_id),
-      line_id:   addForm.line_id   === '' ? null : Number(addForm.line_id),
+      ...splitLineId(addForm.line_id),
       ser_num:   Number(addForm.ser_num),
       corector_type_id: addForm.corector_type_id === '' ? null : Number(addForm.corector_type_id),
       ch_num:    Number(addForm.ch_num),
@@ -284,7 +310,7 @@ export default function EnterprisesTab() {
 
   // ─── Label helpers ─────────────────────────────────────────────────────────
 
-  const lineLabel   = (id) => lines.find(l => l.id === id)?.name || '—';
+  const lineLabel   = (id) => lineOptions.find(l => l.id === id)?.name || '—';
   const lumgLabel   = (ent) => {
     const lid = effectiveLumgId(ent);
     return lid ? (lumgById[lid]?.name || String(lid)) : '—';
@@ -440,7 +466,7 @@ export default function EnterprisesTab() {
             </div>
             <div className="admin-form-group">
               <label>Лінія</label>
-              <LineSelect value={addForm.line_id} lines={lines}
+              <LineSelect value={addForm.line_id} lines={lineOptions}
                 onChange={v => setAddForm(f => ({ ...f, line_id: v }))} />
             </div>
             <div className="admin-form-group">
@@ -559,11 +585,11 @@ export default function EnterprisesTab() {
                     </td>
 
                     <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        title={lineLabel(ent.line_id)}>
+                        title={lineLabel(entLineId(ent))}>
                       {isEditing
-                        ? <LineSelect value={editForm.line_id} lines={lines}
+                        ? <LineSelect value={editForm.line_id} lines={lineOptions}
                             onChange={v => setEditForm(f => ({ ...f, line_id: v }))} />
-                        : lineLabel(ent.line_id)}
+                        : lineLabel(entLineId(ent))}
                     </td>
 
                     <td>
