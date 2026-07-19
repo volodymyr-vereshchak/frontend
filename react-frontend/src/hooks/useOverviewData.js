@@ -181,8 +181,9 @@ export function useOverviewData() {
       const last24hData = [...physWin.current, ...dpdWin.current];
       const previous24hData = [...physWin.previous, ...dpdWin.previous];
 
-      // Display bounds (header/"last update") use the freshest source.
-      const currentEnd = new Date(Math.max(physEndMs ?? 0, dpdEndMs ?? 0));
+      // Display bounds (header/"last update") anchor on the hostlib archives'
+      // max period — the overview's "actual" date (user decision 2026-07-19).
+      const currentEnd = new Date(physEndMs ?? dpdEndMs);
       const currentStart = new Date(currentEnd.getTime() - 23 * 60 * 60 * 1000);
       const previousEnd = new Date(currentStart.getTime() - 60 * 60 * 1000);
       const previousStart = new Date(previousEnd.getTime() - 23 * 60 * 60 * 1000);
