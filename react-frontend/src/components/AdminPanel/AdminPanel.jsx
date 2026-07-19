@@ -8,6 +8,7 @@ import UpdateTab from './UpdateTab';
 import LinesConfigTab from './LinesConfigTab';
 import CalcsTab from './CalcsTab';
 import VirtualLinesTab from './VirtualLinesTab';
+import DpdLinesTab from './DpdLinesTab';
 import EnterprisesTab from './EnterprisesTab';
 import DeviceMappingsTab from './DeviceMappingsTab';
 import CalcTypesTab from './CalcTypesTab';
@@ -44,6 +45,7 @@ const GROUPS = [
       { id: 'lines_config',  label: 'Конфігурація' },
       { id: 'calcs',         label: 'Обчислювачі' },
       { id: 'virtual_lines', label: 'Кільця' },
+      { id: 'dpd_lines',     label: 'ДПД-лінії' },
     ],
   },
   {
@@ -68,6 +70,7 @@ const CONTENT_MAP = {
   lines_config:   <LinesConfigTab />,
   calcs:          <CalcsTab />,
   virtual_lines:  <VirtualLinesTab />,
+  dpd_lines:      <DpdLinesTab />,
   dpd_credentials: <DpdCredentialsTab />,
   enterprises:    <EnterprisesTab />,
   device_catalog: <DeviceMappingsTab />,

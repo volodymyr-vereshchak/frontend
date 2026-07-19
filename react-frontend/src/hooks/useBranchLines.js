@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { branchApi, lumgApi, lineApi, virtualLinesApi } from '../services/api';
+import { branchApi, lumgApi, lineApi, virtualLinesApi, dpdLineApi } from '../services/api';
 
 /**
  * Спільні дані звітів по філії: список філій + лумгів, вибрана філія та ВСІ
@@ -15,6 +15,7 @@ export function useBranchLines(enabled) {
   const [selectedBranchId, setSelectedBranchId] = useState(null);
   const [physicalLines, setPhysicalLines] = useState([]);
   const [virtualLines, setVirtualLines] = useState([]);
+  const [dpdLines, setDpdLines] = useState([]);
   const [linesLoading, setLinesLoading] = useState(false);
 
   // Load branches + lumgs when enabled
@@ -49,12 +50,14 @@ export function useBranchLines(enabled) {
           phys = arrays.flat().filter(Boolean);
         }
 
-        const virt = await virtualLinesApi
-          .getByBranch(selectedBranchId)
-          .catch(() => []);
+        const [virt, dpd] = await Promise.all([
+          virtualLinesApi.getByBranch(selectedBranchId).catch(() => []),
+          dpdLineApi.getByBranch(selectedBranchId).catch(() => []),
+        ]);
 
         setPhysicalLines(phys);
         setVirtualLines(Array.isArray(virt) ? virt : []);
+        setDpdLines(Array.isArray(dpd) ? dpd : []);
       } catch (err) {
         console.error('Error loading lines for branch:', err);
       } finally {
@@ -68,11 +71,11 @@ export function useBranchLines(enabled) {
   // id → name для всіх ліній філії
   const lineNames = useMemo(() => {
     const map = {};
-    [...physicalLines, ...virtualLines].forEach(l => {
+    [...physicalLines, ...virtualLines, ...dpdLines].forEach(l => {
       map[l.id] = l.name || `Лінія ${l.id}`;
     });
     return map;
-  }, [physicalLines, virtualLines]);
+  }, [physicalLines, virtualLines, dpdLines]);
 
   return {
     branches,
@@ -81,6 +84,7 @@ export function useBranchLines(enabled) {
     setSelectedBranchId,
     physicalLines,
     virtualLines,
+    dpdLines,
     lineNames,
     linesLoading,
   };

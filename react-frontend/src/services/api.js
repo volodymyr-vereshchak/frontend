@@ -711,6 +711,29 @@ export const archiveDataVirtualApi = {
   }
 };
 
+// ========================================
+// DPD Lines API (lines fed from the DPD API with a device history)
+// ========================================
+
+export const dpdLineApi = {
+  getAll:     (params = {}) => apiClient.get('/dpd_lines/', params),
+  // Всі ДПД-лінії філії (опційно лише з include_in_trends)
+  getByBranch: (branchId, { trendsOnly = false } = {}) => {
+    const params = { branch_id: branchId };
+    if (trendsOnly) params.include_in_trends = true;
+    return apiClient.get('/dpd_lines/', params);
+  },
+  create:     (data)       => apiClient.post('/dpd_lines/', data),
+  update:     (id, data)   => apiClient.patch(`/dpd_lines/${id}`, data),
+  delete:     (id)         => apiClient.delete(`/dpd_lines/${id}`),
+  init:       (id)         => apiClient.post(`/dpd_lines/${id}/init`),
+  initStatus: (id)         => apiClient.get(`/dpd_lines/${id}/init/status`),
+  getDailyData:  (lineIds, fromDate, toDate) =>
+    apiClient.get('/daily_dpd/',  { line_id: lineIds, from_date: fromDate, to_date: toDate }),
+  getHourlyData: (lineIds, fromDate, toDate) =>
+    apiClient.get('/hourly_dpd/', { line_id: lineIds, from_date: fromDate, to_date: toDate }),
+};
+
 export const enterpriseVirtualApi = {
   async getEnterpriseVolumesVirtual(lineIds, fromDate, toDate, periodType = 'daily', includeDevices = true) {
     const params = {

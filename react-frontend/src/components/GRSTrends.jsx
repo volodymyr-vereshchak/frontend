@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { archiveDataApi, archiveDataVirtualApi } from '../services/api';
+import { archiveDataApi, archiveDataVirtualApi, dpdLineApi } from '../services/api';
 import { enterprisePeriodKey, buildEnterpriseByLinePeriod, getEnterpriseFetchFn } from '../utils/enterpriseVolumes';
 import { commercialHourlyRange } from '../utils/commercialDay';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -23,7 +23,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
   const [rawData, setRawData]                 = useState([]);
   const [loadedDateRange, setLoadedDateRange] = useState(null);
   const [loadedPeriodType, setLoadedPeriodType] = useState('daily');
-  const [loadedLines, setLoadedLines]         = useState({ phys: [], virt: [], all: [] });
+  const [loadedLines, setLoadedLines]         = useState({ phys: [], virt: [], dpd: [], all: [] });
 
   // Branch + line data (shared hook); trends use only include_in_trends lines
   const {
@@ -32,6 +32,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
     setSelectedBranchId,
     physicalLines: allPhysicalLines,
     virtualLines: allVirtualLines,
+    dpdLines: allDpdLines,
     lineNames,
     linesLoading,
   } = useBranchLines(isOpen);
@@ -54,9 +55,13 @@ const GRSTrends = ({ isOpen, onClose }) => {
     () => allVirtualLines.filter(l => l.include_in_trends).map(l => l.id),
     [allVirtualLines]
   );
+  const dpdLineIds = useMemo(
+    () => allDpdLines.filter(l => l.include_in_trends).map(l => l.id),
+    [allDpdLines]
+  );
   const grsLines = useMemo(
-    () => [...physicalLineIds, ...virtualLineIds],
-    [physicalLineIds, virtualLineIds]
+    () => [...physicalLineIds, ...virtualLineIds, ...dpdLineIds],
+    [physicalLineIds, virtualLineIds, dpdLineIds]
   );
 
   const handleBranchChange = (e) => {
@@ -87,7 +92,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
       : { from: dateRange.fromDate, to: dateRange.toDate };
 
     try {
-      const [physData, virtData] = await Promise.all([
+      const [physData, virtData, dpdData] = await Promise.all([
         physicalLineIds.length > 0
           ? (periodType === 'daily'
               ? archiveDataApi.getDailyData(physicalLineIds, range.from, range.to)
@@ -98,9 +103,14 @@ const GRSTrends = ({ isOpen, onClose }) => {
               ? archiveDataVirtualApi.getDailyDataVirtual(virtualLineIds, range.from, range.to)
               : archiveDataVirtualApi.getHourlyDataVirtual(virtualLineIds, range.from, range.to))
           : Promise.resolve([]),
+        dpdLineIds.length > 0
+          ? (periodType === 'daily'
+              ? dpdLineApi.getDailyData(dpdLineIds, range.from, range.to)
+              : dpdLineApi.getHourlyData(dpdLineIds, range.from, range.to))
+          : Promise.resolve([]),
       ]);
 
-      const allData = [...(physData || []), ...(virtData || [])];
+      const allData = [...(physData || []), ...(virtData || []), ...(dpdData || [])];
 
       if (allData.length === 0) {
         setError(t('noDataAvailable'));
@@ -113,7 +123,7 @@ const GRSTrends = ({ isOpen, onClose }) => {
       setRawData(allData);
       setLoadedDateRange({ ...dateRange });
       setLoadedPeriodType(periodType);
-      setLoadedLines({ phys: physicalLineIds, virt: virtualLineIds, all: grsLines });
+      setLoadedLines({ phys: physicalLineIds, virt: virtualLineIds, dpd: dpdLineIds, all: grsLines });
 
       let entData = [];
       if (showEnterprise) {
