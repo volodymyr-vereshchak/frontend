@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { branchApi, dpdCredentialApi, enterpriseApi } from '../../services/api';
+import PollProgressBar from '../PollProgressBar';
 
 function DpdArchiveControls() {
   const [status, setStatus] = useState(null);   // { ok, msg }
@@ -24,7 +25,7 @@ function DpdArchiveControls() {
         // Data changed on the server — make open views re-fetch.
         window.dispatchEvent(new CustomEvent('enterprise-cache-cleared'));
       }
-    }, 3000);
+    }, 2000);
   };
 
   useEffect(() => {
@@ -85,6 +86,17 @@ function DpdArchiveControls() {
           Очистити архів
         </button>
       </div>
+      {running && (
+        <div style={{ marginTop: 8 }}>
+          <PollProgressBar
+            progress={{
+              done: jobStatus.progress_done ?? 0,
+              total: jobStatus.progress_total ?? 0,
+              phase: 'polling',
+            }}
+          />
+        </div>
+      )}
       {jobLine && <div style={{ color: '#aaa', fontSize: 12, marginTop: 6 }}>{jobLine}</div>}
       {status && <div className={`admin-status ${status.ok ? 'ok' : 'error'}`} style={{ marginTop: 6 }}>{status.msg}</div>}
     </div>
