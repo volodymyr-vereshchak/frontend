@@ -410,7 +410,7 @@ export const paramArchiveApi = {
 
 // Enterprise volume API methods
 export const enterpriseApi = {
-  async getEnterpriseVolumes(lineIds, fromDate, toDate, periodType = 'daily', includeDevices = true) {
+  async getEnterpriseVolumes(lineIds, fromDate, toDate, periodType = 'daily', includeDevices = true, { live = false } = {}) {
     const params = {
       line_id: lineIds,
       from_date: fromDate,
@@ -418,6 +418,7 @@ export const enterpriseApi = {
       period_type: periodType
     };
     if (!includeDevices) params.include_devices = false;
+    if (live) params.live = true;
     return await apiClient.get('/enterprise/volumes/', params);
   },
 
@@ -550,7 +551,7 @@ export const enterprisePollApi = {
   }
   ,
 
-  async pollEnterpriseDevice(lineId, serNum, mfDev, typeDev, chNum, fromDate, toDate, periodType = 'daily') {
+  async pollEnterpriseDevice(lineId, serNum, mfDev, typeDev, chNum, fromDate, toDate, periodType = 'daily', { live = false } = {}) {
     const params = {
       serNum: serNum,
       mfDev: mfDev,
@@ -561,6 +562,7 @@ export const enterprisePollApi = {
       period_type: periodType
     };
     if (lineId != null) params.line_id = lineId;
+    if (live) params.live = true;
     return await apiClient.get('/enterprise/volumes/', params);
   }
 };

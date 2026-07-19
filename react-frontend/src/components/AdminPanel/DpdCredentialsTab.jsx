@@ -90,8 +90,10 @@ function DpdArchiveControls() {
         <div style={{ marginTop: 8 }}>
           <PollProgressBar
             progress={{
-              done: jobStatus.progress_done ?? 0,
-              total: jobStatus.progress_total ?? 0,
+              // The job counts each device twice (daily + hourly pass) —
+              // show progress in device units, not request units.
+              done: Math.floor((jobStatus.progress_done ?? 0) / 2),
+              total: Math.ceil((jobStatus.progress_total ?? 0) / 2),
               phase: 'polling',
             }}
           />

@@ -245,6 +245,7 @@ const EnterprisePollAnalysis = () => {
           from_date: formatDateForAPI(threeDaysAgo),
           to_date: formatDateForAPI(today),
           period_type: 'daily',
+          live: true,
         }, { onProgress: setCheckProgress });
       } catch (streamErr) {
         if (!streamErr.fallback) throw streamErr;
@@ -253,7 +254,9 @@ const EnterprisePollAnalysis = () => {
           lineIds,
           formatDateForAPI(threeDaysAgo),
           formatDateForAPI(today),
-          'daily'
+          'daily',
+          true,
+          { live: true }
         );
       }
 
@@ -320,6 +323,7 @@ const EnterprisePollAnalysis = () => {
           from_date: apiFrom,
           to_date: apiTo,
           period_type: periodType,
+          live: true,
         }, { onProgress: setPollProgress });
       } catch (streamErr) {
         if (!streamErr.fallback) throw streamErr;
@@ -332,7 +336,8 @@ const EnterprisePollAnalysis = () => {
           selectedEnterprise.chNum,
           apiFrom,
           apiTo,
-          periodType
+          periodType,
+          { live: true }
         );
       }
 
