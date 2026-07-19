@@ -22,6 +22,7 @@ export function resolveEditName(editName, rawOldValue, rawNewValue) {
 export function getArchiveColumns({
   archiveType,
   isVirtualLine,
+  isDpdLine,
   lineUnits,
   showOutputPressure,
   pressureUnit,
@@ -41,6 +42,16 @@ export function getArchiveColumns({
         return [
           { key: 'period', label: t('period'), sortable: true },
           { key: 'volume', label: t('volume'), sortable: true, isSummable: true }
+        ];
+      }
+
+      // ДПД-линии: объём + давление + температура (без dP/плотности/счётчиков)
+      if (isDpdLine) {
+        return [
+          { key: 'period', label: t('period'), sortable: true },
+          { key: 'volume', label: t('volume'), sortable: true, isSummable: true },
+          { key: 'pressure', label: `${t('pressure')}, ${pressureUnit}`, sortable: true, isAveragable: true },
+          { key: 'temperature', label: t('temperature'), sortable: true, isAveragable: true },
         ];
       }
 

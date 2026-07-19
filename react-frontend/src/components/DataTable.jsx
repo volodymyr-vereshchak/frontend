@@ -8,7 +8,7 @@ import { useArchiveData } from '../hooks/useArchiveData';
 import { useLanguage } from '../contexts/LanguageContext';
 import ExcelIcon from './common/ExcelIcon';
 
-const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType, onDataChange, isVirtualLine, lineUnits }) => {
+const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType, onDataChange, isVirtualLine, isDpdLine, lineUnits }) => {
   const { t, getLocale } = useLanguage();
   const [sortConfig, setSortConfig] = useState({ key: 'period', direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
@@ -21,7 +21,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   // day, so for physical lines they are fetched one page at a time from the
   // server (/sys/paged/, /edit/paged/) with server-side sorting. Everything else
   // (daily/hourly/param, and virtual lines) loads fully and sorts client-side.
-  const serverPaged = !isVirtualLine && (archiveType === 'sys' || archiveType === 'edit');
+  const serverPaged = !isVirtualLine && !isDpdLine && (archiveType === 'sys' || archiveType === 'edit');
 
   const { rowData, loading, error, totalRows } = useArchiveData({
     selectedLines,
@@ -29,6 +29,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
     isDateFilterEnabled,
     archiveType,
     isVirtualLine,
+    isDpdLine,
     serverPaged,
     currentPage,
     itemsPerPage,
@@ -60,6 +61,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   const columns = getArchiveColumns({
     archiveType,
     isVirtualLine,
+    isDpdLine,
     lineUnits,
     showOutputPressure,
     pressureUnit,
@@ -73,7 +75,7 @@ const DataTable = ({ selectedLines, dateRange, isDateFilterEnabled, archiveType,
   useEffect(() => {
     setCurrentPage(p => (p === 1 ? p : 1));
     setSortConfig(s => (s.key === 'period' && s.direction === 'asc' ? s : { key: 'period', direction: 'asc' }));
-  }, [JSON.stringify(selectedLines), JSON.stringify(dateRange), isDateFilterEnabled, archiveType, isVirtualLine]);
+  }, [JSON.stringify(selectedLines), JSON.stringify(dateRange), isDateFilterEnabled, archiveType, isVirtualLine, isDpdLine]);
 
   // Keep the manual page-number input in sync when the page changes via the
   // arrows, page-size change, or a context reset.

@@ -38,7 +38,7 @@ function periodHasTime(value) {
   return /T\d{2}/.test(String(value ?? '').replace(' ', 'T'));
 }
 
-const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lineNames = {}, lineUnits = null, trendsEnterpriseChecked = false, onTrendsEnterpriseChange = null, visibilityStorageKey = null }) => {
+const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, isDpdLine = false, lineNames = {}, lineUnits = null, trendsEnterpriseChecked = false, onTrendsEnterpriseChange = null, visibilityStorageKey = null }) => {
   const { t, getLocale } = useLanguage();
 
   // Where the per-line visibility (which lines are toggled on) is persisted.
@@ -351,6 +351,14 @@ const InteractiveChart = ({ data, archiveType, selectedLines, isVirtualLine, lin
         if (isVirtualLine) {
           return [
             { key: 'volume', label: t('volumeLabel'), color: '#8884d8', yAxisId: 'left' }
+          ];
+        }
+        if (isDpdLine) {
+          // DPD lines carry volume + pressure + temperature (no dP/density)
+          return [
+            { key: 'volume', label: t('volumeLabel'), color: '#8884d8', yAxisId: 'left' },
+            { key: 'pressure', label: `${t('pressureLabel')}, ${pressureUnit}`, color: '#ffc658', yAxisId: 'right' },
+            { key: 'temperature', label: t('temperatureLabel'), color: '#ff7300', yAxisId: 'right' },
           ];
         }
         return [

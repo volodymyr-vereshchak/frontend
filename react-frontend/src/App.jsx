@@ -138,6 +138,7 @@ function AppContent({ user }) {
   const [chartData, setChartData] = useState([]);
 const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
   const [selectedLineIsVirtual, setSelectedLineIsVirtual] = useState(false);
+  const [selectedLineIsDpd, setSelectedLineIsDpd] = useState(false);
   const [selectedLineUnits, setSelectedLineUnits] = useState(null);
 
   // Drop entries of the removed browser-side enterprise cache on startup
@@ -160,17 +161,18 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
     safeSetItem('hlv-selected-line', selectedLines[0] ?? null);
   }, [selectedLines]);
 
-  // Auto-switch to daily archive when virtual line is selected with non-allowed archive type
+  // Auto-switch to daily archive when a virtual or DPD line is selected with a
+  // non-allowed archive type (both kinds only have daily/hourly data)
   useEffect(() => {
-    if (selectedLineIsVirtual) {
-      // Виртуальные линии поддерживают только daily, hourly, overview, poll, admin
+    if (selectedLineIsVirtual || selectedLineIsDpd) {
+      // Виртуальные и ДПД линии поддерживают только daily, hourly, overview, poll, admin
       if (archiveType !== 'daily' && archiveType !== 'hourly' && archiveType !== 'overview' &&
           archiveType !== 'poll' && archiveType !== 'admin' && archiveType !== 'accidents' &&
           archiveType !== 'grs-trends' && archiveType !== 'night-consumption' && archiveType !== 'flow-calc') {
         setArchiveType('daily');
       }
     }
-  }, [selectedLineIsVirtual, archiveType]);
+  }, [selectedLineIsVirtual, selectedLineIsDpd, archiveType]);
 
   const handleLinesSelected = useCallback((lineIds, lineMetadata) => {
     setSelectedLines(lineIds);
@@ -180,9 +182,11 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
     if (lineIds && lineIds.length > 0) {
       const firstLineId = lineIds[0];
       const isVirtual = lineMetadata?.is_virtual === true;
+      const isDpd = lineMetadata?.is_dpd === true;
       setSelectedLineIsVirtual(isVirtual);
+      setSelectedLineIsDpd(isDpd);
       setSelectedLineUnits(
-        lineMetadata && !lineMetadata.is_virtual
+        lineMetadata && !lineMetadata.is_virtual && !lineMetadata.is_dpd
           ? {
               meter: lineMetadata.meter,
               is_high_pressure: lineMetadata.is_high_pressure,
@@ -193,6 +197,7 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
       );
     } else {
       setSelectedLineIsVirtual(false);
+      setSelectedLineIsDpd(false);
       setSelectedLineUnits(null);
     }
   }, []);
@@ -231,7 +236,7 @@ const [lineIdFromURL, setLineIdFromURL] = useState(initialState.lineIdFromURL);
         <TopMenu
           onArchiveTypeChange={handleArchiveTypeChange}
           archiveType={archiveType}
-isVirtualLine={selectedLineIsVirtual}
+          isVirtualLine={selectedLineIsVirtual || selectedLineIsDpd}
         />
         <hr className="separator" />
 
@@ -295,6 +300,7 @@ isVirtualLine={selectedLineIsVirtual}
                   isDateFilterEnabled={isDateFilterEnabled}
                   archiveType={archiveType}
                   isVirtualLine={selectedLineIsVirtual}
+                  isDpdLine={selectedLineIsDpd}
                   lineUnits={selectedLineUnits}
                   onDataChange={handleDataChange}
                 />
@@ -308,6 +314,7 @@ isVirtualLine={selectedLineIsVirtual}
                 archiveType={archiveType}
                 selectedLines={selectedLines}
                 isVirtualLine={selectedLineIsVirtual}
+                isDpdLine={selectedLineIsDpd}
                 lineUnits={selectedLineUnits}
               />
             )}

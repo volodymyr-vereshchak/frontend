@@ -187,6 +187,7 @@ grsTrends: "Тренди ГРС",
   // Virtual Lines
   virtualLines: "Віртуальні лінії",
   virtualLineTooltip: "Віртуальна лінія (агрегація кількох фізичних ліній)",
+  dpdLineTooltip: "Лінія ДПД (дані з API ДПД за серійним номером коректора)",
   notAvailableForVirtualLines: "Недоступно для віртуальних ліній",
   virtualLinesSupportOnlyDailyHourly: "Віртуальні лінії підтримують тільки добовий та годинний архіви",
 

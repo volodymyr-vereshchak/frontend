@@ -270,6 +270,30 @@
   background-color: rgba(255, 255, 255, 0.3);
 }
 
+/* DPD lines: same layout as virtual, blue accent */
+.tree-line.dpd-line {
+  border-left: 3px solid #29B6F6;
+  background: linear-gradient(90deg, rgba(41, 182, 246, 0.05) 0%, rgba(26, 26, 26, 1) 100%);
+}
+
+.tree-line.dpd-line:hover {
+  background: linear-gradient(90deg, rgba(41, 182, 246, 0.15) 0%, rgba(42, 42, 42, 1) 100%);
+  border-left-color: #4FC3F7;
+}
+
+.tree-line.dpd-line.selected {
+  background: linear-gradient(135deg, #0288D1, #29B6F6);
+  border-left-color: #0288D1;
+}
+
+.dpd-badge {
+  background-color: #0288D1;
+}
+
+.tree-line.dpd-line.selected .dpd-badge {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
 .selection-info {
   padding: 6px 10px;
   background-color: var(--bg-control);

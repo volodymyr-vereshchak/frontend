@@ -4,6 +4,7 @@ import apiClient, {
   archiveDataApi,
   archiveDataVirtualApi,
   commercialDayUtils,
+  dpdLineApi,
   editArchiveApi,
   sysArchiveApi,
 } from '../services/api';
@@ -23,6 +24,7 @@ export function useArchiveData({
   isDateFilterEnabled,
   archiveType,
   isVirtualLine,
+  isDpdLine,
   serverPaged,
   currentPage,
   itemsPerPage,
@@ -62,6 +64,26 @@ export function useArchiveData({
     setError(null);
 
     try {
+      // ДПД-линии: свои endpoints, только daily/hourly (как виртуальные)
+      if (isDpdLine) {
+        if (archiveType !== 'daily' && archiveType !== 'hourly') {
+          setError(t('virtualLinesSupportOnlyDailyHourly'));
+          setRowData([]);
+          if (onDataChange) onDataChange([]);
+          return;
+        }
+
+        const archiveData = archiveType === 'daily'
+          ? await dpdLineApi.getDailyData(selectedLines, dateRange.fromDate, dateRange.toDate)
+          : await dpdLineApi.getHourlyData(selectedLines, dateRange.fromDate, dateRange.toDate);
+
+        if (abortController?.signal?.aborted || fetchCountRef.current !== myFetchId) return;
+
+        setRowData(archiveData || []);
+        if (onDataChange) onDataChange(archiveData || []);
+        return;
+      }
+
       // Для виртуальных линий используем виртуальные endpoints
       if (isVirtualLine) {
         // Виртуальные линии поддерживают только daily и hourly
@@ -228,8 +250,8 @@ export function useArchiveData({
   // fetch key to avoid needless reloads.
   const fetchKey = JSON.stringify(
     serverPaged
-      ? [selectedLines, dateRange, isDateFilterEnabled, archiveType, isVirtualLine, currentPage, itemsPerPage, sortConfig]
-      : [selectedLines, dateRange, isDateFilterEnabled, archiveType, isVirtualLine]
+      ? [selectedLines, dateRange, isDateFilterEnabled, archiveType, isVirtualLine, isDpdLine, currentPage, itemsPerPage, sortConfig]
+      : [selectedLines, dateRange, isDateFilterEnabled, archiveType, isVirtualLine, isDpdLine]
   );
 
   useEffect(() => {

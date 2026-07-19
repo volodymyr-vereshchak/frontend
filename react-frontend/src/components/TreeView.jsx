@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import './TreeView.css';
-import { branchApi, lumgApi, lineApi, dataApi, virtualLinesApi, virtualLinesHelper, calcTypeApi } from '../services/api';
+import { branchApi, lumgApi, lineApi, dataApi, virtualLinesApi, virtualLinesHelper, calcTypeApi, dpdLineApi } from '../services/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 // SVG Icon Components
@@ -78,6 +78,22 @@ const VirtualLineIcon = ({ selected = false }) => (
   </svg>
 );
 
+const DpdLineIcon = ({ selected = false }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Antenna/telemetry: corrector polled remotely over the DPD API */}
+    <path
+      d="M6 9C7.5 7.5 9.5 6.5 12 6.5C14.5 6.5 16.5 7.5 18 9"
+      stroke={selected ? "#ffffff" : "#29B6F6"} strokeWidth="1.5" strokeLinecap="round" fill="none"
+    />
+    <path
+      d="M8 12C9 11 10.5 10.5 12 10.5C13.5 10.5 15 11 16 12"
+      stroke={selected ? "#ffffff" : "#29B6F6"} strokeWidth="1.5" strokeLinecap="round" fill="none"
+    />
+    <circle cx="12" cy="15" r="2" fill={selected ? "#ffffff" : "#4FC3F7"} />
+    <path d="M12 17V20" stroke={selected ? "#ffffff" : "#29B6F6"} strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
 const TreeView = ({ onLinesSelected, initialLineId }) => {
   const { t } = useLanguage();
   const [treeData, setTreeData] = useState([]);
@@ -105,24 +121,40 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
       setError(null);
 
       try {
-        const [branches, lumgs, gvcs, calcTypes, allLines, virtualLines] = await Promise.all([
+        const [branches, lumgs, gvcs, calcTypes, allLines, virtualLines, dpdLines] = await Promise.all([
           branchApi.getAll(),
           lumgApi.getAll(),
           dataApi.getGasVolumeCalcs(),
           calcTypeApi.getAll(),
           lineApi.getAll(),
           virtualLinesApi.getVisibleLines(),
+          dpdLineApi.getAll().catch(() => []),
         ]);
 
         const calcTypeMap = {};
         (calcTypes || []).forEach(ct => { calcTypeMap[ct.id] = ct.type_name; });
 
-        // Group virtual lines by lumg_id; null-lumg_id entries by branch_id
+        // Group virtual and DPD lines by lumg_id; null-lumg_id entries by
+        // branch_id. Both kinds live in the same per-LUMG list under the
+        // calculators — they only differ by flags/icon and data endpoints.
         const virtualByLumg = {};
         const virtualByBranchForNull = {};
-        (virtualLines || [])
-          .filter(l => virtualLinesHelper.isVirtualLineObject(l))
-          .forEach(vl => {
+        const extraLines = [
+          ...(virtualLines || [])
+            .filter(l => virtualLinesHelper.isVirtualLineObject(l))
+            .map(vl => ({ ...vl, is_virtual: true, is_dpd: false })),
+          ...(dpdLines || [])
+            .filter(l => l.active !== false)
+            .map(dl => ({
+              id: dl.id,
+              name: dl.name,
+              lumg_id: dl.lumg_id,
+              branch_id: dl.branch_id,
+              is_virtual: false,
+              is_dpd: true,
+            })),
+        ];
+        extraLines.forEach(vl => {
             if (vl.lumg_id) {
               if (!virtualByLumg[vl.lumg_id]) virtualByLumg[vl.lumg_id] = [];
               virtualByLumg[vl.lumg_id].push(vl);
@@ -308,7 +340,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         if (node.type === 'branch') {
           for (const lumg of node.children || []) {
             const vline = lumg.virtualLines?.find(c => c.id === selectedItem);
-            if (vline) { lineMetadata = { is_virtual: true }; break outer; }
+            if (vline) { lineMetadata = { is_virtual: !vline.is_dpd, is_dpd: !!vline.is_dpd }; break outer; }
             for (const gvc of lumg.children || []) {
               const line = gvc.children?.find(c => c.id === selectedItem);
               if (line) {
@@ -349,7 +381,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
               });
             }
             setSelectedItem(initialLineId);
-            setSelectedMeta({ name: vline.name, typeName: null, address: null, line: vline.line || null, is_virtual: true });
+            setSelectedMeta({ name: vline.name, typeName: null, address: null, line: vline.line || null, is_virtual: !vline.is_dpd, is_dpd: !!vline.is_dpd });
             setHasInitialized(true);
             return;
           }
@@ -381,7 +413,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
   const renderLines = (lines, gvcMeta = null) => lines.map((line, i) => (
     <div
       key={`line-${line.id}-${i}`}
-      className={`tree-line ${isSelected(line.id) ? 'selected' : ''} ${line.is_virtual ? 'virtual-line' : ''}`}
+      className={`tree-line ${isSelected(line.id) ? 'selected' : ''} ${line.is_virtual ? 'virtual-line' : ''} ${line.is_dpd ? 'dpd-line' : ''}`}
       onClick={() => {
         const next = selectedItem === line.id ? null : line.id;
         setSelectedItem(next);
@@ -393,17 +425,21 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
           address: gvcMeta?.address ?? null,
           line: line.line || null,
           is_virtual: line.is_virtual,
+          is_dpd: !!line.is_dpd,
         } : null);
       }}
-      title={line.is_virtual ? t('virtualLineTooltip') : line.name}
+      title={line.is_dpd ? t('dpdLineTooltip') : line.is_virtual ? t('virtualLineTooltip') : line.name}
     >
       <span className="line-icon">
-        {line.is_virtual
-          ? <VirtualLineIcon selected={isSelected(line.id)} />
-          : <LineIcon selected={isSelected(line.id)} />}
+        {line.is_dpd
+          ? <DpdLineIcon selected={isSelected(line.id)} />
+          : line.is_virtual
+            ? <VirtualLineIcon selected={isSelected(line.id)} />
+            : <LineIcon selected={isSelected(line.id)} />}
       </span>
       <span className="line-name">{line.name}</span>
       {line.is_virtual && <span className="virtual-badge">V</span>}
+      {line.is_dpd && <span className="virtual-badge dpd-badge">D</span>}
     </div>
   ));
 
@@ -516,6 +552,7 @@ const TreeView = ({ onLinesSelected, initialLineId }) => {
         <div className="selection-info">
           <div className="selection-line-name">
             {selectedMeta?.is_virtual && <span className="virtual-badge">V</span>}
+            {selectedMeta?.is_dpd && <span className="virtual-badge dpd-badge">D</span>}
             {selectedMeta?.name || `ID ${selectedItem}`}
           </div>
           <div className="selection-details-row">
