@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { useLanguage } from '../contexts/LanguageContext';
-import { lineApi, archiveDataApi, paramArchiveApi, branchApi, lumgApi } from '../services/api';
+import { lineApi, archiveDataApi, paramArchiveApi, branchApi, lumgApi, dpdLineApi } from '../services/api';
 import { OverviewCalculator } from '../utils/overviewCalculator';
 
 /**
@@ -85,7 +85,21 @@ export function useOverviewData() {
       }
 
       lines = lines.filter(line => line.include_in_report);
-      const reportLineIds = lines.map(line => line.id);
+      const physReportIds = lines.map(line => line.id);
+
+      // DPD lines with the report flag join the overview next to physical
+      // ones; a line without a LUMG lands in the branch's first LUMG group.
+      const dpdAll = await dpdLineApi.getByBranch(selectedBranchId).catch(() => []);
+      const dpdReportLines = (Array.isArray(dpdAll) ? dpdAll : [])
+        .filter(l => l.include_in_report && l.active !== false);
+      dpdReportLines.forEach(dl => {
+        lineToLumg[dl.id] = dl.lumg_id && branchLumgIds.includes(dl.lumg_id)
+          ? dl.lumg_id
+          : branchLumgIds[0];
+      });
+      const dpdReportIds = dpdReportLines.map(l => l.id);
+      lines = [...lines, ...dpdReportLines];
+      const reportLineIds = [...physReportIds, ...dpdReportIds];
 
       if (reportLineIds.length === 0) {
         throw new Error(t('noReportLinesForBranch'));
@@ -93,7 +107,7 @@ export function useOverviewData() {
 
       let paramsMap = {};
       try {
-        const paramsResponse = await paramArchiveApi.getParamsForLines(reportLineIds);
+        const paramsResponse = await paramArchiveApi.getParamsForLines(physReportIds);
         const paramsData = Array.isArray(paramsResponse) ? paramsResponse : paramsResponse?.data || [];
         paramsData.forEach(param => {
           if (param && param.line_id) {
@@ -107,8 +121,27 @@ export function useOverviewData() {
         console.warn('Failed to load dP parameters, using defaults:', err);
       }
 
-      const allHourlyResponse = await archiveDataApi.getHourlyDataLast24h(reportLineIds);
-      const allHourlyData = Array.isArray(allHourlyResponse) ? allHourlyResponse : allHourlyResponse?.data || [];
+      // Physical hourly data anchors on the hostlib archive; DPD lines fetch
+      // the same calendar window from their own archive endpoint.
+      const dpdWindow = (() => {
+        const now = new Date();
+        const fmt = (d) => d.toISOString().split('T')[0];
+        return {
+          from: fmt(new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)),
+          to: fmt(new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000)),
+        };
+      })();
+      const [physHourlyResponse, dpdHourlyResponse] = await Promise.all([
+        physReportIds.length > 0
+          ? archiveDataApi.getHourlyDataLast24h(physReportIds)
+          : Promise.resolve([]),
+        dpdReportIds.length > 0
+          ? dpdLineApi.getHourlyData(dpdReportIds, dpdWindow.from, dpdWindow.to).catch(() => [])
+          : Promise.resolve([]),
+      ]);
+      const physHourly = Array.isArray(physHourlyResponse) ? physHourlyResponse : physHourlyResponse?.data || [];
+      const dpdHourly = Array.isArray(dpdHourlyResponse) ? dpdHourlyResponse : [];
+      const allHourlyData = [...physHourly, ...dpdHourly];
 
       if (!Array.isArray(allHourlyData) || allHourlyData.length === 0) {
         throw new Error(t('noDataFor24h'));

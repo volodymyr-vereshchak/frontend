@@ -177,6 +177,7 @@ export default function DpdLinesTab() {
       lumg_id:           form.lumg_id ? parseInt(form.lumg_id) : null,
       active:            existing ? existing.active            : true,
       include_in_trends: existing ? existing.include_in_trends : false,
+      include_in_report: existing ? existing.include_in_report : false,
       devices: form.devices.map(d => ({
         ser_num:          parseInt(d.ser_num),
         corector_type_id: parseInt(d.corector_type_id),
@@ -212,6 +213,7 @@ export default function DpdLinesTab() {
       lumg_id:           line.lumg_id,
       active:            line.active,
       include_in_trends: line.include_in_trends,
+      include_in_report: line.include_in_report,
       devices: (line.devices || []).map(d => ({
         ser_num: d.ser_num, corector_type_id: d.corector_type_id,
         ch_num: d.ch_num, installed_from: d.installed_from,
@@ -503,6 +505,7 @@ export default function DpdLinesTab() {
             <th>Поточний прилад</th>
             <th style={{ textAlign: 'center' }}>Приладів</th>
             <th style={{ textAlign: 'center' }}>В тренди</th>
+            <th style={{ textAlign: 'center' }}>В звіт</th>
             <th style={{ textAlign: 'center' }}>Активна</th>
             <th>Стан</th>
             <th></th>
@@ -544,6 +547,13 @@ export default function DpdLinesTab() {
                 </td>
                 <td style={{ textAlign: 'center' }}>
                   <FlagToggle
+                    active={line.include_in_report}
+                    busy={saving[`${line.id}_include_in_report`]}
+                    onClick={() => handleFlagToggle(line, 'include_in_report')}
+                  />
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <FlagToggle
                     active={line.active}
                     busy={saving[`${line.id}_active`]}
                     onClick={() => handleFlagToggle(line, 'active')}
@@ -570,7 +580,7 @@ export default function DpdLinesTab() {
           })}
           {lines.length === 0 && (
             <tr>
-              <td colSpan={9} style={{ textAlign: 'center', color: '#555', padding: 20 }}>
+              <td colSpan={10} style={{ textAlign: 'center', color: '#555', padding: 20 }}>
                 Немає ДПД-ліній — створіть першу вище
               </td>
             </tr>
