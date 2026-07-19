@@ -218,14 +218,14 @@ export function useOverviewData() {
         pressureTimestamps[lineId] = pressures[lineId].timestamp;
       });
 
-      // A line is "active" when its last record matches ITS source's anchor
-      // (hostlib vs DPD archives update on independent schedules).
-      const dpdIdSet = new Set(dpdReportIds);
-      const activeLines = Object.entries(pressures).filter(([lineId, p]) => {
-        const endMs = dpdIdSet.has(Number(lineId)) ? dpdEndMs : physEndMs;
-        return endMs !== null && p.timestamp &&
-          Math.abs(new Date(p.timestamp).getTime() - endMs) < 60 * 1000;
-      }).length;
+      // A line counts as "active" when its last record matches the overview's
+      // actual anchor — the hostlib archives' max date/time (user decision
+      // 2026-07-19); a DPD line whose archive lags behind it is NOT active.
+      const activeAnchorMs = physEndMs ?? dpdEndMs;
+      const activeLines = Object.values(pressures).filter(p =>
+        activeAnchorMs !== null && p.timestamp &&
+        Math.abs(new Date(p.timestamp).getTime() - activeAnchorMs) < 60 * 1000
+      ).length;
 
       setData({
         totalVolume24h: currentTotal,
