@@ -147,28 +147,45 @@ export function useOverviewData() {
         throw new Error(t('noDataFor24h'));
       }
 
-      const allTimestamps = allHourlyData
-        .map(r => r.period ? new Date(r.period).getTime() : null)
-        .filter(ts => ts && !isNaN(ts));
-
-      if (allTimestamps.length === 0) {
+      // Each source anchors its own 24h window on ITS last archived period:
+      // hostlib and DPD archives update independently, so a shared (global)
+      // anchor would truncate the lagging source's day and understate its
+      // 24h volume.
+      const maxTs = (rows) => {
+        const ts = rows
+          .map(r => r.period ? new Date(r.period).getTime() : null)
+          .filter(t => t && !isNaN(t));
+        return ts.length ? Math.max(...ts) : null;
+      };
+      const physEndMs = maxTs(physHourly);
+      const dpdEndMs = maxTs(dpdHourly);
+      if (physEndMs === null && dpdEndMs === null) {
         throw new Error(t('noTimeBoundsError'));
       }
 
-      const currentEnd = new Date(Math.max(...allTimestamps));
+      const window24 = (rows, endMs) => {
+        if (endMs === null) return { current: [], previous: [] };
+        const currentStartMs = endMs - 23 * 60 * 60 * 1000;
+        const previousEndMs = currentStartMs - 60 * 60 * 1000;
+        const previousStartMs = previousEndMs - 23 * 60 * 60 * 1000;
+        const current = [], previous = [];
+        for (const r of rows) {
+          const ts = new Date(r.period).getTime();
+          if (ts >= currentStartMs && ts <= endMs) current.push(r);
+          else if (ts >= previousStartMs && ts <= previousEndMs) previous.push(r);
+        }
+        return { current, previous };
+      };
+      const physWin = window24(physHourly, physEndMs);
+      const dpdWin = window24(dpdHourly, dpdEndMs);
+      const last24hData = [...physWin.current, ...dpdWin.current];
+      const previous24hData = [...physWin.previous, ...dpdWin.previous];
+
+      // Display bounds (header/"last update") use the freshest source.
+      const currentEnd = new Date(Math.max(physEndMs ?? 0, dpdEndMs ?? 0));
       const currentStart = new Date(currentEnd.getTime() - 23 * 60 * 60 * 1000);
-
-      const last24hData = allHourlyData.filter(r => {
-        const d = new Date(r.period);
-        return d >= currentStart && d <= currentEnd;
-      });
-
       const previousEnd = new Date(currentStart.getTime() - 60 * 60 * 1000);
       const previousStart = new Date(previousEnd.getTime() - 23 * 60 * 60 * 1000);
-      const previous24hData = allHourlyData.filter(r => {
-        const d = new Date(r.period);
-        return d >= previousStart && d <= previousEnd;
-      });
 
       const lineNames = {};
       lines.forEach(line => {
@@ -201,10 +218,14 @@ export function useOverviewData() {
         pressureTimestamps[lineId] = pressures[lineId].timestamp;
       });
 
-      const currentEndMs = currentEnd.getTime();
-      const activeLines = Object.values(pressures).filter(p =>
-        p.timestamp && Math.abs(new Date(p.timestamp).getTime() - currentEndMs) < 60 * 1000
-      ).length;
+      // A line is "active" when its last record matches ITS source's anchor
+      // (hostlib vs DPD archives update on independent schedules).
+      const dpdIdSet = new Set(dpdReportIds);
+      const activeLines = Object.entries(pressures).filter(([lineId, p]) => {
+        const endMs = dpdIdSet.has(Number(lineId)) ? dpdEndMs : physEndMs;
+        return endMs !== null && p.timestamp &&
+          Math.abs(new Date(p.timestamp).getTime() - endMs) < 60 * 1000;
+      }).length;
 
       setData({
         totalVolume24h: currentTotal,
