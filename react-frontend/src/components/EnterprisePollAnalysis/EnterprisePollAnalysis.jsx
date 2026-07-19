@@ -15,7 +15,7 @@ import {
 import * as XLSX from 'xlsx';
 import './EnterprisePollAnalysis.css';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { enterprisePollApi, enterpriseApi, enterpriseStream, lineApi, branchApi } from '../../services/api';
+import { enterprisePollApi, enterpriseApi, enterpriseStream, lineApi, branchApi, dpdLineApi } from '../../services/api';
 import PollProgressBar from '../PollProgressBar';
 import { useUser } from '../../contexts/UserContext';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
@@ -54,9 +54,12 @@ const getDeviceTypeName = (mfDev, typeDev) => {
 // back to the hardcoded mfDev_typeDev map for rows that aren't linked yet.
 const getEntModelName = (ent) => ent.modelName || getDeviceTypeName(ent.mfDev, ent.typeDev);
 
-// Normalize DB (snake_case) fields to camelCase used throughout this component
+// Normalize DB (snake_case) fields to camelCase used throughout this component.
+// line_id becomes the EFFECTIVE line id: an enterprise is bound to a physical
+// line OR a DPD line (ids share one space), and this page treats both the same.
 const normalizeEnt = (e) => ({
   ...e,
+  line_id: e.line_id ?? e.dpd_line_id ?? null,
   serNum:  e.ser_num  ?? e.serNum,
   mfDev:   e.mf_dev   ?? e.mfDev,
   typeDev: e.type_dev ?? e.typeDev,
@@ -163,17 +166,23 @@ const EnterprisePollAnalysis = () => {
 
     try {
       // Load enterprises, lines and branches in parallel
-      const [enterprisesData, linesData, branchesData] = await Promise.all([
+      const [enterprisesData, linesData, branchesData, dpdLinesData] = await Promise.all([
         enterpriseApi.getAll(),
         lineApi.getAll(),
         branchApi.getAll(),
+        dpdLineApi.getAll().catch(() => []),
       ]);
 
-      // Build line names map
+      // Build line names map (physical + DPD lines share one id space)
       const namesMap = {};
       if (linesData && Array.isArray(linesData)) {
         linesData.forEach(line => {
           namesMap[line.id] = line.name || `${t('lineName')} ${line.id}`;
+        });
+      }
+      if (Array.isArray(dpdLinesData)) {
+        dpdLinesData.forEach(line => {
+          namesMap[line.id] = `[ДПД] ${line.name || line.id}`;
         });
       }
       setLineNames(namesMap);
