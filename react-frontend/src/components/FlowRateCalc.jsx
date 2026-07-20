@@ -8,7 +8,6 @@ import './FlowRateCalc.css';
 
 const T0 = 293.15;       // standard temperature, K (20°C, ДСТУ 8585)
 const P0 = 0.101325;     // standard pressure, MPa
-const Z0 = 0.99988;      // Z at standard conditions
 const RHO_AIR = 1.2041;  // density of air at standard conditions, kg/m³
 
 // P_UNITS (pressure unit list) lives in ../constants/pressureUnits so the
@@ -70,52 +69,138 @@ const MATERIALS = [
 // The two method names (GERG-91 / NX-19) are kept untranslated (standard notation).
 const KST_METHOD_NAMES = ['', 'GERG-91 мод.', 'NX-19 мод.'];
 
+// Standard + formula each displayed quantity is computed by. These are document
+// designations, identical in both UI languages, so they are not localised.
+// Numbering follows CalcDSTU8586/GOST30319, which this module ports 1:1 — the
+// formula numbers below match the ones cited in those assemblies' own methods.
+const STD = {
+  zGerg: 'ГОСТ 30319.2, ф. 37',
+  zNx:   'ГОСТ 30319.2, ф. 6',
+  zc:    'ГОСТ 30319.1, ф. 36',
+  k:     'ГОСТ 30319.1',
+  rhoW:  'ГОСТ 30319.1, ф. 6',
+  mu:    'ГОСТ 30319.1, ф. 44/45',
+  tpk:   'ГОСТ 30319.2, ф. 18',
+  ppk:   'ГОСТ 30319.2, ф. 17',
+  DT:    'ДСТУ ГОСТ 8.586.1, ф. 5.5',
+  dT:    'ДСТУ ГОСТ 8.586.1, ф. 5.4',
+  beta:  'ДСТУ ГОСТ 8.586.1, ф. 3.1',
+  C:     'ДСТУ ГОСТ 8.586.2, ф. 5.6',
+  ksh:   'ДСТУ ГОСТ 8.586.2, ф. 5.11',
+  kbl:   'ДСТУ ГОСТ 8.586.2, ф. 5.13/5.16',
+  eps:   'ДСТУ ГОСТ 8.586.2, ф. 5.7',
+  re:    'ДСТУ ГОСТ 8.586.5, ф. 5.11',
+  q:     'ДСТУ ГОСТ 8.586.5, ф. 5.8',
+};
+
 // ─── Physics ──────────────────────────────────────────────────────────────────
 
-function pseudocritical(gamma, co2pct, n2pct) {
-  // Sutton (1985) + corrections for CO2 and N2
-  const Tpc = (169.2 + 349.5 * gamma - 74 * gamma ** 2) * (5 / 9);
-  const Ppc = (756.8 - 131 * gamma - 3.6 * gamma ** 2) * 0.006895;
-  return {
-    Tpc: Tpc * (1 - 0.12 * co2pct / 100 - 0.06 * n2pct / 100),
-    Ppc: Ppc * (1 - 0.06 * co2pct / 100 - 0.03 * n2pct / 100),
-  };
+// ─── ГОСТ 30319 (ported 1:1 from GOST30319.dll, as used by Ask2) ─────────────
+// Common argument convention: rho — standard density kg/m³, xa — N₂ mole
+// fraction, xy — CO₂ mole fraction, P_MPa — absolute pressure, Ts — K.
+
+// ф. 36 — compressibility factor at standard conditions.
+function zStd(rho, xa, xy) {
+  return 1 - (0.0741 * rho - 0.006 - 0.063 * xa - 0.0575 * xy) ** 2;
 }
 
-// GERG-91 / ГОСТ 30319.2: Dranchuk-Abou-Kassem iterative method
-function zGERG91(Pr, Tr) {
-  const c = [0.3265,-1.0700,-0.5339,0.01569,-0.05165,
-              0.5475,-0.7361,0.1844,0.1056,0.6134,0.7210];
-  const [A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,A11] = c;
-  let Z = 1.0;
-  for (let i = 0; i < 60; i++) {
-    const rho = 0.27 * Pr / (Z * Tr);
-    const r2 = rho * rho;
-    const r5 = r2 * r2 * rho;
-    const ex = Math.exp(-A11 * r2);
-    const Zn = 1
-      + (A1 + A2/Tr + A3/Tr**3 + A4/Tr**4 + A5/Tr**5) * rho
-      + (A6 + A7/Tr + A8/Tr**2) * r2
-      - A9 * (A7/Tr + A8/Tr**2) * r5
-      + A10 * (1 + A11*r2) * (r2/Tr**3) * ex;
-    if (Math.abs(Zn - Z) < 1e-7) { Z = Zn; break; }
-    Z = Zn;
+// ф. 17 / 18 — pseudocritical pressure (MPa) and temperature (K).
+function ppk(rho, xa, xy) { return 2.9585 * (1.608 - 0.05994 * rho + xy - 0.392 * xa); }
+function tpk(rho, xa, xy) { return 88.25 * (0.9915 + 1.759 * rho - xy - 1.681 * xa); }
+
+// NX-19 мод. — ГОСТ 30319.2, ф. 6…16.
+function zNX19(rho, xa, xy, P_MPa, Ts) {
+  const Ta  = 0.71892 * (Ts / tpk(rho, xa, xy)) + 0.0007;
+  const Pa  = 0.6714 * (P_MPa / ppk(rho, xa, xy)) + 0.0147;
+  const dTa = Ta - 1.09;
+
+  // F is piecewise over (Pa, ΔTa). The DLL applies these as three sequential
+  // (not mutually exclusive) tests, so on an overlapping boundary the last
+  // matching branch wins — preserved here deliberately.
+  let F = NaN;
+  if (Pa >= 0 && Pa <= 2 && dTa >= 0 && dTa <= 0.3) {
+    F = 75e-5 * Pa ** 2.3 / Math.exp(20 * dTa)
+      + 0.0011 * Math.sqrt(dTa) * (Pa * (2.17 - Pa + 1.4 * Math.sqrt(dTa))) ** 2;
   }
-  return Z;
+  if (Pa >= 0 && Pa <= 1.3 && dTa >= -0.25 && dTa <= 0) {
+    F = 75e-5 * Pa ** 2.3 * (2 - Math.exp(20 * dTa))
+      + 1.317 * Pa * (1.69 - Pa ** 2) * dTa ** 4;
+  }
+  if (Pa >= 1.3 && Pa <= 2 && dTa >= -0.21 && dTa <= 0) {
+    F = 75e-5 * Pa ** 2.3 * (2 - Math.exp(20 * dTa))
+      + 0.455 * (1.3 - Pa) * (1.69 * 2 ** 1.25 - Pa ** 2)
+        * (dTa * (0.03249 + 18.028 * dTa ** 2) + dTa ** 2 * (42.844 + 200 * dTa ** 2));
+  }
+
+  const O1 = Ta ** 5 / (Ta ** 2 * (6.60756 * Ta - 4.42646) + 3.22706);       // ф. 11
+  const O0 = (Ta ** 2 * (1.77218 - 0.8879 * Ta) + 0.305131) * O1 / Ta ** 4;  // ф. 10
+  const B1 = 2 * O1 / 3 - O0 ** 2;                                           // ф. 9
+  const B0 = O0 * (O1 - O0 ** 2) + 0.1 * O1 * Pa * (F - 1);                  // ф. 8
+  const B2 = (B0 + Math.sqrt(B0 ** 2 + B1 ** 3)) ** (1 / 3);                 // ф. 7
+  return (1 + 0.00132 / Ta ** 3.25) ** 2 * Pa / (10 * (B1 / B2 - B2 + O0));  // ф. 6
 }
 
-// NX-19 / ГОСТ 30319.1: Papay simplified correlation
-function zNX19(Pr, Tr) {
-  return 1 - 3.52 * Pr / 10 ** (0.9813 * Tr) + 0.274 * Pr ** 2 / 10 ** (0.8157 * Tr);
+// GERG-91 мод. — ГОСТ 30319.2, ф. 20…22, 34, 35, 37, 43.
+function zGERG91(rho, xa, xy, P_MPa, Ts) {
+  const xe = 1 - xa - xy;                                       // ф. 22
+  const Me = (24.05525 * zStd(rho, xa, xy) * rho
+              - 28.0135 * xa - 44.01 * xy) / xe;                // ф. 35
+  const H  = 128.64 + 47.479 * Me;                              // ф. 34
+
+  // ф. 20 — second virial coefficient Bm
+  const F0  = 0.72 + 1.875e-5 * (320 - Ts) ** 2;
+  const B22 = -0.86834 + 0.0040376 * Ts - 5.1657e-6 * Ts ** 2;
+  const B12 = -0.339693 + 0.00161176 * Ts - 2.04429e-6 * Ts ** 2;
+  const B11 = -0.1446 + 0.00074091 * Ts - 9.1195e-7 * Ts ** 2;
+  const Bee = -0.425468 + 0.002865 * Ts - 4.62073e-6 * Ts ** 2
+    + (8.77118e-4 - 5.56281e-6 * Ts + 8.81514e-9 * Ts ** 2) * H
+    + (-8.24747e-7 + 4.31436e-9 * Ts - 6.08319e-12 * Ts ** 2) * H * H;
+  const Bm = xe ** 2 * Bee + xe * xa * F0 * (Bee + B11)
+    - 1.73 * xe * xy * Math.sqrt(Bee * B22)
+    + xa ** 2 * B11 + 2 * xa * xy * B12 + xy ** 2 * B22;
+
+  // ф. 21 — third virial coefficient Cm
+  const G0   = 0.92 + 0.0013 * (Ts - 270);
+  const C122 = 0.00358783 + 8.06674e-6 * Ts - 3.25798e-8 * Ts ** 2;
+  const C112 = 0.00552066 - 1.68609e-5 * Ts + 1.57169e-8 * Ts ** 2;
+  const C222 = 0.0020513 + 3.4888e-5 * Ts - 8.3703e-8 * Ts ** 2;
+  const C111 = 0.0078498 - 3.9895e-5 * Ts + 6.1187e-8 * Ts ** 2;
+  const Ceee = -0.302488 + 0.00195861 * Ts - 3.16302e-6 * Ts ** 2
+    + (6.46422e-4 - 4.22876e-6 * Ts + 6.88157e-9 * Ts ** 2) * H
+    + (-3.32805e-7 + 2.2316e-9 * Ts - 3.67713e-12 * Ts ** 2) * H ** 2;
+  const Cm = xe ** 3 * Ceee
+    + 3 * xe ** 2 * xa * G0 * (Ceee * Ceee * C111) ** (1 / 3)
+    + 2.76 * xe ** 2 * xy * (Ceee * Ceee * C222) ** (1 / 3)
+    + 3 * xe * xa * xa * G0 * (Ceee * C111 * C111) ** (1 / 3)
+    + 6.6 * xe * xa * xy * (Ceee * C111 * C222) ** (1 / 3)
+    + 2.76 * xe * xy ** 2 * (Ceee * C222 * C222) ** (1 / 3)
+    + xa ** 3 * C111 + 3 * xa * xa * xy * C112
+    + 3 * xa * xy * xy * C122 + xy ** 3 * C222;
+
+  const b  = 1000 * P_MPa / (2.7715 * Ts);                      // ф. 43
+  const D1 = 1 + b * Bm;
+  const D2 = 1 + 1.5 * (b * Bm + b * b * Cm);
+  const D3 = (D2 - Math.sqrt(D2 * D2 - D1 ** 3)) ** (1 / 3);
+  return (1 + D3 + D1 / D3) / 3;                                // ф. 37
 }
 
-// Dynamic viscosity, ГОСТ 30319.1 formula 44/45
-function gasViscosity(gamma, T_K) {
-  const M = gamma * 28.97;
-  return (9.4 + 0.02 * M) * T_K ** 1.5 / (209 + 19 * M + T_K) * 1e-7;
+// Dynamic viscosity, ф. 44/45 ГОСТ 30319.1. Result in Pa·s.
+function gasViscosity(rho, xa, xy, P_MPa, Ts) {
+  const corr = 1 + (P_MPa / ppk(rho, xa, xy)) ** 2
+                   / (30 * (Ts / tpk(rho, xa, xy) - 1));
+  return 3.24 * (Math.sqrt(Ts) + 1.37 - 9.09 * rho ** 0.125)
+       / (Math.sqrt(rho) + 2.08 - 1.5 * (xa + xy)) * corr * 1e-6;
 }
 
-// ISO 5167-2 Reader-Harris/Gallagher discharge coefficient
+// Isentropic exponent (adiabat), ф. 28 ГОСТ 30319.1. CO₂ does not enter it.
+function adiabat(rho, xa, P_MPa, Ts) {
+  const r = P_MPa / Ts;
+  return 1.556 * (1 + 0.074 * xa) - 0.00039 * Ts * (1 - 0.68 * xa) - 0.208 * rho
+       + r ** 1.43 * (384 * (1 - xa) * r ** 0.8 + 26.4 * xa);
+}
+
+// Reader-Harris/Gallagher discharge coefficient, ф. 5.6 ДСТУ ГОСТ 8.586.2.
+// D_mm is the *working* (thermally expanded) pipe bore, matching GetC() in the DLL.
 function dischargeCoeff(beta, Re_D, otborIdx, D_mm) {
   let L1, L2p;
   if (otborIdx === 1) { L1 = 1; L2p = 0.47; }            // трьохрадіусний (D-D/2)
@@ -124,12 +209,124 @@ function dischargeCoeff(beta, Re_D, otborIdx, D_mm) {
 
   const A = (19000 * beta / Re_D) ** 0.8;
   const M2 = 2 * L2p / (1 - beta);
+  // Small-bore correction: applies only below D = 71.12 mm (2.8").
+  const smallBore = D_mm >= 71.12 ? 0 : 0.011 * (0.75 - beta) * (2.8 - D_mm / 25.4);
   return 0.5961 + 0.0261 * beta ** 2 - 0.216 * beta ** 8
     + 0.000521 * (1e6 * beta / Re_D) ** 0.7
     + (0.0188 + 0.0063 * A) * beta ** 3.5 * (1e6 / Re_D) ** 0.3
     + (0.043 + 0.080 * Math.exp(-10 * L1) - 0.123 * Math.exp(-7 * L1))
       * (1 - 0.11 * A) * beta ** 4 / (1 - beta ** 4)
-    - 0.031 * (M2 - 0.8 * M2 ** 1.1) * beta ** 1.3;
+    - 0.031 * (M2 - 0.8 * M2 ** 1.1) * beta ** 1.3
+    + smallBore;
+}
+
+// ─── Correction factors Кш / Кп (ported 1:1 from CalcDSTU8586.dll) ────────────
+// Without these the pipe roughness, the orifice edge radius and the operating
+// time have no effect on the result at all — see ф. 5.8 ДСТУ ГОСТ 8.586.5,
+// where the flow is C·E·Кш·Кп·ε·…
+
+// Table 2 coefficients for Ra_max, ф. 5.10. Indexed [Re band][power of lg(Re)][k].
+// Re bands: 0 → (1e4, 1e5], 1 → (1e5, 3e6], 2 → (3e6, 1e8].
+const RA_MAX_BK = [
+  [[8.87,     6.7307,   -10.244  ], [-3.7114,  -5.5844,   5.7094  ],
+   [0.41841,  0.732485, -0.76477 ], [0,         0,        0       ]],
+  [[27.23,   -25.928,    1.7622  ], [-11.458,  12.426,   -3.8765  ],
+   [1.6117,  -2.09397,   1.05567 ], [-0.07567,  0.106143,-0.076764]],
+  [[16.5416, 322.594,  -92.029   ], [-6.60709,-132.2,    37.935   ],
+   [0.88147,  17.795,   -5.1885  ], [-0.039226,-0.799765, 0.23583 ]],
+];
+
+// C#'s Math.Round is banker's rounding (half-to-even); JS Math.round is half-up.
+// Ra_max feeds a rounded intermediate, so match the DLL exactly.
+function roundHalfEven(v, digits) {
+  const f = 10 ** digits;
+  const x = v * f;
+  if (Math.abs(x - Math.trunc(x)) === 0.5) {
+    const fl = Math.floor(x);
+    return (fl % 2 === 0 ? fl : fl + 1) / f;
+  }
+  return Math.round(x) / f;
+}
+
+// ф. 5.10 — upper bound of admissible pipe roughness Ra. D_m, result in metres.
+function raMax(Re, beta, D_m) {
+  let v;
+  if (Re <= 1e4) {
+    v = 0.718866 * beta ** -3.887 + 0.36;
+  } else {
+    const band = Re <= 1e5 ? 0 : Re <= 3e6 ? 1 : Re <= 1e8 ? 2 : -1;
+    if (band < 0) return NaN;
+    const lg = Math.log10(Re);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let k = 0; k <= 3; k++) {
+      b0 += RA_MAX_BK[band][k][0] * lg ** k;
+      b1 += RA_MAX_BK[band][k][1] * lg ** k;
+      b2 += RA_MAX_BK[band][k][2] * lg ** k;
+    }
+    v = b0 * (beta < 0.65 ? beta : 0.65) ** b1 + b2;
+  }
+  const r = v < 1 ? roundHalfEven(v, 2) : v < 10 ? roundHalfEven(v, 1) : roundHalfEven(v, 0);
+  return r >= 15 ? 0.0015 * D_m : D_m * r / 1e4;
+}
+
+// ф. 5.10 — lower bound of admissible pipe roughness Ra, metres.
+function raMin(Re, beta, D_m) {
+  if (Re < 3e6) return 0;
+  const lg = Math.log10(Re);
+  const v = beta < 0.65
+    ? 7.1592 - 12.387 * beta - (2.0118 - 3.469 * beta) * lg
+      + (0.1382 - 0.23762 * beta) * lg ** 2
+    : -0.892353 + 0.24308 * lg - 0.0162562 * lg ** 2;
+  return v <= 0 ? 0 : D_m * (Math.trunc(v * 1000) / 1000) / 1e4;
+}
+
+// ф. 5.12 — friction factor λ.
+function lambdaFriction(Re, Ash, kd, kr, D_m) {
+  return 1 / (1.74 - 2 * Math.log10(
+    2 * Ash / D_m - 37.36 * Math.log10(kd - kr * Math.log10(kd + 3.3333 * kr)) / Re
+  )) ** 2;
+}
+
+// ф. 5.11 — pipe roughness correction Кш. Rsh_m, D_m in metres.
+// Equals 1 while Ra sits inside the admissible band; only outside it does the
+// roughness bite.
+function roughnessCoeff(Re, beta, D_m, Rsh_m) {
+  const rMin = raMin(Re, beta, D_m);
+  const rMax = raMax(Re, beta, D_m);
+  const Ra = Rsh_m / Math.PI;
+  if (!(Ra < rMin) && !(Ra > rMax)) return 1;
+  const bound = Ra < rMin ? rMin : rMax;
+  const kr = 5.035 / Re;
+  const Ash = Math.PI * bound;
+  // 0.84678488… = π · 0.26954
+  const kd = 0.8467848838485929 * bound / D_m;
+  const l1 = lambdaFriction(Re, Rsh_m, 0.26954 * Rsh_m / D_m, kr, D_m);
+  const l2 = lambdaFriction(Re, Ash, kd, kr, D_m);
+  return 1 + 5.22 * beta ** 3.5 * (l1 - l2);
+}
+
+// Asymptotic edge-blunting radius, m (ф. 5.14 ДСТУ ГОСТ 8.586.2).
+const R_EDGE_MAX = 0.000195;
+
+// ф. 5.13/5.16 — orifice edge blunting correction Кп. d_m, rn_m in metres,
+// years = operating time. timeType 0 = наработка (ttwoRun, radius at that
+// moment), 1 = міжконтрольний інтервал (ttwoPeriod, radius averaged over it).
+//
+// NOTE: the two branches test the 0.0004·d threshold against *different*
+// radii — ttwoRun against the initial rn, ttwoPeriod against the averaged
+// value. That asymmetry is what CalcDSTU8586.dll does; kept for parity.
+function bluntnessCoeff({ d_m, rn_m, years, timeType }) {
+  if (timeType === 1) {
+    // As years → 0 the average degenerates to rn (l'Hôpital), so guard the
+    // division rather than returning NaN.
+    const rAvg = years > 0
+      ? R_EDGE_MAX - (3 / years) * (R_EDGE_MAX - rn_m) * (1 - Math.exp(-years / 3))
+      : rn_m;
+    return rAvg <= 0.0004 * d_m ? 1 : 0.9826 + (rAvg / d_m + 0.0007773) ** 0.6;
+  }
+  if (rn_m <= 0.0004 * d_m) return 1;
+  const rk = R_EDGE_MAX - (R_EDGE_MAX - rn_m) * Math.exp(-years / 3);
+  return 0.9826 + (rk / d_m + 0.0007773) ** 0.6;
 }
 
 // ISO 5167-2 expansibility factor for gas (κ uses adiabat from ГОСТ 30319.1 ф.28)
@@ -138,25 +335,34 @@ function expansibility(beta, dP_Pa, P1_Pa, kappa) {
   return 1 - (0.351 + 0.256 * beta ** 4 + 0.93 * beta ** 8) * (1 - tau ** (1 / kappa));
 }
 
-function orificeFlow({ D_mm, d_mm, alphaD, alphad, T, dP_Pa, P1_Pa, rho_w, mu, otborIdx, kappa }) {
-  const DT = D_mm * 1e-3 * (1 + alphaD * (T - 20));
-  const dT = d_mm * 1e-3 * (1 + alphad * (T - 20));
+// kD / kd are the linear-expansion factors (1 + α(t)·(t−20)) of pipe and orifice.
+// Rsh_mm — pipe roughness, rEdge_mm — orifice edge radius, years/timeType — the
+// operating time pair. All of these reach the result through Кш and Кп.
+function orificeFlow({ D_mm, d_mm, kD, kd, dP_Pa, P1_Pa, rho_w, mu, otborIdx, kappa,
+                       Rsh_mm, rEdge_mm, years, timeType }) {
+  const DT = D_mm * 1e-3 * kD;
+  const dT = d_mm * 1e-3 * kd;
   const beta = dT / DT;
   const E = 1 / Math.sqrt(1 - beta ** 4);
   const A0 = Math.PI / 4 * dT ** 2;
   const eps = expansibility(beta, dP_Pa, P1_Pa, kappa);
+  // Кп depends only on geometry and time, so it is constant across the iteration.
+  const Kbl = bluntnessCoeff({ d_m: dT, rn_m: rEdge_mm * 1e-3, years, timeType });
 
-  let C = 0.6;
+  const DT_mm = DT * 1e3;
+  let C = 0.6, Ksh = 1;
   let qm = C * eps * E * A0 * Math.sqrt(2 * dP_Pa * rho_w);
   for (let i = 0; i < 25; i++) {
     const Re = qm > 0 ? 4 * qm / (Math.PI * mu * DT) : 1;
-    const Cn = dischargeCoeff(beta, Re, otborIdx, D_mm);
-    const qn = Cn * eps * E * A0 * Math.sqrt(2 * dP_Pa * rho_w);
+    const Cn = dischargeCoeff(beta, Re, otborIdx, DT_mm);
+    // Кш is Re-dependent, so it must be re-evaluated inside the loop.
+    Ksh = roughnessCoeff(Re, beta, DT, Rsh_mm * 1e-3);
+    const qn = Cn * Ksh * Kbl * eps * E * A0 * Math.sqrt(2 * dP_Pa * rho_w);
     if (Math.abs(qn - qm) < 1e-12) { C = Cn; qm = qn; break; }
     C = Cn; qm = qn;
   }
   const Re_D = 4 * qm / (Math.PI * mu * DT);
-  return { qm, C, eps, beta, DT_mm: DT * 1e3, dT_mm: dT * 1e3, Re_D };
+  return { qm, C, Ksh, Kbl, eps, beta, DT_mm, dT_mm: dT * 1e3, Re_D };
 }
 
 // ─── Sub-components (defined outside to prevent focus loss on re-render) ──────
@@ -212,10 +418,14 @@ function SelectRow({ id, label, value, onChange, opts, placeholderIdx }) {
   );
 }
 
-function ResRow({ label, value, unit }) {
+// `std` names the standard and formula the value was computed by — see STD below.
+function ResRow({ label, value, unit, std }) {
   return (
     <div className="cf-res-row">
-      <span className="cf-res-label" dangerouslySetInnerHTML={{ __html: label }} />
+      <span className="cf-res-label">
+        <span dangerouslySetInnerHTML={{ __html: label }} />
+        {std && <span className="cf-res-std">{std}</span>}
+      </span>
       <span className="cf-res-value">{value}</span>
       <span className="cf-res-unit" dangerouslySetInnerHTML={{ __html: unit }} />
     </div>
@@ -282,6 +492,17 @@ const MATERIAL_COEFFS = [
   [10.819, 15.487, -9.28],     // 43 40Х
   [11.6,   0.0,    0],         // 44 45Л
 ];
+
+// Linear-expansion factor K = 1 + α(t)·(t − 20), ф. 5.6/5.7 ДСТУ ГОСТ 8.586.1
+// (GetKpipe/GetKorifice in the DLL). α is temperature-dependent via the table Г.1
+// polynomial; materials missing from that table fall back to the constant α.
+function expansionFactor(matIdx, tC) {
+  const c = MATERIAL_COEFFS[matIdx];
+  const alpha = c
+    ? 1e-6 * (c[0] + c[1] * (tC / 1000) + c[2] * (tC / 1000) ** 2)
+    : (MATERIALS[matIdx]?.a ?? 11.9e-6);
+  return 1 + alpha * (tC - 20);
+}
 
 // Recover the MATERIALS index from the param's expansion polynomial (A0,A1,A2 —
 // the displayed ParamList values, equal to table Г.1's a0/a1/a2). Matches the
@@ -510,7 +731,8 @@ export default function FlowRateCalc() {
     // Kst must be selected
     if (s.kst === 0) { setErrors({ kst: t('fcSelectKst') }); return; }
 
-    const rho = req('rho', pf(s.rho), 0.66, 1.0);
+    // Ranges are the ГОСТ 30319 validity limits (InputParameters.CheckValues).
+    const rho = req('rho', pf(s.rho), 0.67, 1.0);
     const co2 = pf(s.co2) ?? 0;
     const n2  = pf(s.n2)  ?? 0;
     if (co2 < 0 || co2 > 16) errs.co2 = t('fcRangeCo2N2');
@@ -529,16 +751,24 @@ export default function FlowRateCalc() {
     const gamma = rho / RHO_AIR;
     const T_K   = tC + 273.15;
     const P_MPa = P1_Pa * 1e-6;
-    const { Tpc, Ppc } = pseudocritical(gamma, co2, n2);
-    const Pr = P_MPa / Ppc;
-    const Tr = T_K / Tpc;
-    const Z  = s.kst === 1 ? zGERG91(Pr, Tr) : zNX19(Pr, Tr);
-    const Kp = (P_MPa / P0) * (T0 / T_K) * (Z0 / Z);
-    const rho_w = rho * Kp;
-    const mu    = gasViscosity(gamma, T_K);
+    // The Z correlations are only defined over 0.1…11 MPa absolute.
+    if (P_MPa < 0.1 || P_MPa > 11) { setErrors({ p: t('fcPRangeAbs') }); return; }
 
-    // Isentropic exponent (adiabat) – ГОСТ 30319.1 ф.28 simplified
-    const kappa = 1.31 + 0.02 * (P_MPa - 0.101325) / 9.9;
+    const xa = n2 / 100, xy = co2 / 100;
+    const Tpc = tpk(rho, xa, xy);
+    const Ppc = ppk(rho, xa, xy);
+    const Pr  = P_MPa / Ppc;
+    const Tr  = T_K / Tpc;
+    const Zc = zStd(rho, xa, xy);
+    const Z  = s.kst === 1 ? zGERG91(rho, xa, xy, P_MPa, T_K)
+                           : zNX19(rho, xa, xy, P_MPa, T_K);
+    // K = Z/Zc is what ГОСТ 30319 calls the compressibility ratio; the working
+    // density and the conversion factor both go through it (ф. 6 ГОСТ 30319.1).
+    const K  = Z / Zc;
+    const Kp = (P_MPa / P0) * (T0 / T_K) / K;
+    const rho_w = rho * Kp;
+    const mu    = gasViscosity(rho, xa, xy, P_MPa, T_K);
+    const kappa = adiabat(rho, xa, P_MPa, T_K);
 
     let oRes = null, Q_w = 0, Q_std = null;
 
@@ -551,18 +781,27 @@ export default function FlowRateCalc() {
       const dP_Pa = dpv * P_UNITS[s.dpU].k;
       if (dP_Pa >= P1_Pa) { setErrors({ dp: t('fcDpMustLessP') }); return; }
 
-      const alphaD = MATERIALS[s.matPipe]?.a   ?? 11.9e-6;
-      const alphad = MATERIALS[s.matOrifice]?.a ?? 16.7e-6;
-      const DT = D20v * (1 + alphaD * (tC - 20));
-      const dT = d20v * (1 + alphad * (tC - 20));
+      // Ranges match TrySetRsh/TrySetRn/TrySetTorifice in CalcDSTU8586.dll.
+      // Edge radius and operating time default to 0 (a freshly sharp orifice),
+      // which drives Кп to 1 rather than erroring out.
+      const rshv   = req('rsh', pf(s.rsh), 0.001, 2.5);
+      const rEdgev = s.rEdge === '' ? 0 : req('rEdge', pf(s.rEdge), 0, 1.0);
+      const yearsv = s.timeOrifice === '' ? 0 : req('timeOrifice', pf(s.timeOrifice), 0, 100);
+      if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+
+      const kD = expansionFactor(s.matPipe, tC);
+      const kd = expansionFactor(s.matOrifice, tC);
+      const DT = D20v * kD;
+      const dT = d20v * kd;
       const beta = dT / DT;
       if (beta < 0.1 || beta > 0.75) {
         setErrors({ d20: `β = ${beta.toFixed(4)} ${t('fcBetaRange')}` });
         return;
       }
 
-      oRes = orificeFlow({ D_mm: D20v, d_mm: d20v, alphaD, alphad, T: tC,
-        dP_Pa, P1_Pa, rho_w, mu, otborIdx: s.otbor, kappa });
+      oRes = orificeFlow({ D_mm: D20v, d_mm: d20v, kD, kd,
+        dP_Pa, P1_Pa, rho_w, mu, otborIdx: s.otbor, kappa,
+        Rsh_mm: rshv, rEdge_mm: rEdgev, years: yearsv, timeType: s.timeType });
       Q_w   = oRes.qm / rho_w * 3600;
       Q_std = oRes.qm / rho  * 3600;
     } else {
@@ -570,7 +809,7 @@ export default function FlowRateCalc() {
       Q_std = Q_w > 0 ? Q_w * Kp : null;
     }
 
-    setResults({ Z, Kp, rho_w, rho, gamma, Tpc, Ppc, Pr, Tr, P_MPa, T_K, mu, kappa, oRes, Q_w, Q_std });
+    setResults({ kst: s.kst, Z, Zc, K, Kp, rho_w, rho, gamma, Tpc, Ppc, Pr, Tr, P_MPa, T_K, mu, kappa, oRes, Q_w, Q_std });
     setErrors({});
   }, [s, mtype, t]);
 
@@ -664,7 +903,7 @@ export default function FlowRateCalc() {
                 {errors.kst && <div className="cf-error">{errors.kst}</div>}
                 <InputRow id="rho" label={t('fcDensityLabel')} value={s.rho}
                   onChange={v => set('rho', v)} unit="кг/м³"
-                  min={0.66} max={1.0} step="0.0001" error={errors.rho} />
+                  min={0.67} max={1.0} step="0.0001" error={errors.rho} />
                 <InputRow id="co2" label={t('fcCo2Label')} value={s.co2}
                   onChange={v => set('co2', v)} unit="мол.%"
                   min={0} max={16} step="0.01" placeholder="0" error={errors.co2} />
@@ -714,7 +953,7 @@ export default function FlowRateCalc() {
                     onChange={v => set('matPipe', v)} opts={MATERIALS} />
                   <InputRow id="rsh" label={t('fcRoughnessLabel')} value={s.rsh}
                     onChange={v => set('rsh', v)} unit="мм"
-                    min={0} max={2.5} step="0.001" />
+                    min={0.001} max={2.5} step="0.001" error={errors.rsh} />
                 </div>
                 <div>
                   <InputRow id="d20" label="d₂₀, мм:" value={s.d20}
@@ -724,12 +963,12 @@ export default function FlowRateCalc() {
                     onChange={v => set('matOrifice', v)} opts={MATERIALS} />
                   <InputRow id="rEdge" label={t('fcEdgeRadiusLabel')} value={s.rEdge}
                     onChange={v => set('rEdge', v)} unit="мм"
-                    min={0} max={1.0} step="0.01" placeholder="0" />
+                    min={0} max={1.0} step="0.01" placeholder="0" error={errors.rEdge} />
                   <SelectRow id="timeType" label={t('fcTimeTypeLabel')} value={s.timeType}
                     onChange={v => set('timeType', v)} opts={TIME_TYPES} />
                   <InputRow id="timeOrifice" label={t('fcTimeOrificeLabel')} value={s.timeOrifice}
                     onChange={v => set('timeOrifice', v)} unit={t('fcUnitYear')}
-                    min={0} max={100} step="0.1" placeholder="0" />
+                    min={0} max={100} step="0.1" placeholder="0" error={errors.timeOrifice} />
                 </div>
               </div>
             </div>
@@ -771,39 +1010,50 @@ export default function FlowRateCalc() {
               <>
                 <div className="cf-res-group">{t('fcGasParams')}</div>
                 <ResRow label={t('fcGamma')} value={fmt(results.gamma, 4)} unit="—" />
-                <ResRow label={t('fcZ')} value={fmt(results.Z, 5)} unit="—" />
-                <ResRow label={t('fcRhoW')} value={fmt(results.rho_w, 4)} unit="кг/м³" />
-                <ResRow label={t('fcMu')} value={fmt(results.mu * 1e6, 3)} unit="мкПа·с" />
+                <ResRow label={t('fcZ')} value={fmt(results.Z, 5)} unit="—"
+                  std={results.kst === 1 ? STD.zGerg : STD.zNx} />
+                <ResRow label={t('fcZc')} value={fmt(results.Zc, 5)} unit="—" std={STD.zc} />
+                <ResRow label={t('fcKcompr')} value={fmt(results.K, 5)} unit="—" std={STD.k} />
+                <ResRow label={t('fcRhoW')} value={fmt(results.rho_w, 4)} unit="кг/м³" std={STD.rhoW} />
+                <ResRow label={t('fcMu')} value={fmt(results.mu * 1e6, 3)} unit="мкПа·с" std={STD.mu} />
 
                 <div className="cf-res-group">{t('fcPseudocritical')}</div>
-                <ResRow label="T<sub>пк</sub>" value={fmt(results.Tpc, 2)} unit="K" />
-                <ResRow label="P<sub>пк</sub>" value={fmt(results.Ppc, 4)} unit="МПа" />
+                <ResRow label="T<sub>пк</sub>" value={fmt(results.Tpc, 2)} unit="K" std={STD.tpk} />
+                <ResRow label="P<sub>пк</sub>" value={fmt(results.Ppc, 4)} unit="МПа" std={STD.ppk} />
                 <ResRow label="P<sub>пр</sub>" value={fmt(results.Pr, 4)} unit="—" />
                 <ResRow label="T<sub>пр</sub>" value={fmt(results.Tr, 4)} unit="—" />
 
                 {results.oRes && (
                   <>
                     <div className="cf-res-group">{t('fcOrificeGroup')}</div>
-                    <ResRow label="D<sub>T</sub>" value={fmt(results.oRes.DT_mm, 3)} unit="мм" />
-                    <ResRow label="d<sub>T</sub>" value={fmt(results.oRes.dT_mm, 3)} unit="мм" />
-                    <ResRow label="β = d/D" value={fmt(results.oRes.beta, 4)} unit="—" />
-                    <ResRow label={t('fcC')} value={fmt(results.oRes.C, 5)} unit="—" />
-                    <ResRow label={t('fcEps')} value={fmt(results.oRes.eps, 5)} unit="—" />
-                    <ResRow label="Re<sub>D</sub>" value={results.oRes.Re_D.toFixed(0)} unit="—" />
+                    <ResRow label="D<sub>T</sub>" value={fmt(results.oRes.DT_mm, 3)} unit="мм" std={STD.DT} />
+                    <ResRow label="d<sub>T</sub>" value={fmt(results.oRes.dT_mm, 3)} unit="мм" std={STD.dT} />
+                    <ResRow label="β = d/D" value={fmt(results.oRes.beta, 4)} unit="—" std={STD.beta} />
+                    <ResRow label={t('fcC')} value={fmt(results.oRes.C, 5)} unit="—" std={STD.C} />
+                    <ResRow label={t('fcKsh')} value={fmt(results.oRes.Ksh, 5)} unit="—" std={STD.ksh} />
+                    <ResRow label={t('fcKbl')} value={fmt(results.oRes.Kbl, 5)} unit="—" std={STD.kbl} />
+                    <ResRow label={t('fcEps')} value={fmt(results.oRes.eps, 5)} unit="—" std={STD.eps} />
+                    <ResRow label="Re<sub>D</sub>" value={results.oRes.Re_D.toFixed(0)} unit="—" std={STD.re} />
                   </>
                 )}
 
                 <div className="cf-res-group">{t('fcVolumeReduction')}</div>
-                <ResRow label={t('fcKp')} value={fmt(results.Kp, 5)} unit="—" />
+                <ResRow label={t('fcKp')} value={fmt(results.Kp, 5)} unit="—" std={STD.rhoW} />
                 {results.Q_w > 0 && (
                   <ResRow label={t('fcQw')}
-                    value={fmt(results.Q_w, 4)} unit={t('fcUnitM3h')} />
+                    value={fmt(results.Q_w, 4)} unit={t('fcUnitM3h')}
+                    std={mtype === 'orifice' ? STD.q : undefined} />
                 )}
                 {results.Q_std !== null && (
                   <div className="cf-res-row cf-res-highlight">
-                    <span className="cf-res-label" dangerouslySetInnerHTML={{ __html:
-                      mtype === 'orifice' ? t('fcQstOrifice') : t('fcVstMeter')
-                    }} />
+                    <span className="cf-res-label">
+                      <span dangerouslySetInnerHTML={{ __html:
+                        mtype === 'orifice' ? t('fcQstOrifice') : t('fcVstMeter')
+                      }} />
+                      <span className="cf-res-std">
+                        {mtype === 'orifice' ? STD.q : STD.rhoW}
+                      </span>
+                    </span>
                     <span className="cf-res-value">{fmt(results.Q_std, 4)}</span>
                     <span className="cf-res-unit">
                       {mtype === 'orifice' ? t('fcUnitM3hStd') : t('fcUnitM3Std')}
@@ -812,8 +1062,13 @@ export default function FlowRateCalc() {
                 )}
 
                 <div className="fc-info-box" style={{ marginTop: 12 }}>
-                  <strong>К<sub>ст</sub>:</strong> {kstMethod} (ГОСТ 30319)<br />
-                  {results.oRes ? <><strong>C, ε:</strong> ДСТУ ГОСТ 8.586.2<br /></> : null}
+                  <strong>К<sub>ст</sub>:</strong> {kstMethod} — ГОСТ 30319.2<br />
+                  {results.oRes ? (
+                    <>
+                      <strong>{t('fcStdOrifice')}:</strong> ДСТУ ГОСТ 8.586.1, 8.586.2, 8.586.5<br />
+                      <strong>κ:</strong> {fmt(results.kappa, 4)} — ГОСТ 30319.1, ф. 28<br />
+                    </>
+                  ) : null}
                   T₀ = 20 °C, P₀ = 101.325 кПа (ДСТУ 8585)
                 </div>
               </>

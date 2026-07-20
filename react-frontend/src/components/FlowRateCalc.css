@@ -269,6 +269,15 @@
   flex: 1;
 }
 
+/* Standard + formula the value was computed by, under its label. */
+.cf-res-std {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.75;
+  margin-top: 1px;
+}
+
 .cf-res-value {
   font-size: 13px;
   font-weight: 600;
