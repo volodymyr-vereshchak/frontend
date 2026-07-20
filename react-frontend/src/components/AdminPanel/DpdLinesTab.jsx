@@ -23,7 +23,7 @@ const fmtDT = (iso) => {
   if (!iso) return null;
   const d = new Date(iso);
   const p = (n) => String(n).padStart(2, '0');
-  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:00`;
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 
 // ── Flag toggle button (same as VirtualLinesTab) ──────────────────────────────
